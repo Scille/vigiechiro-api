@@ -7,6 +7,9 @@ Partie API (backend)
 
 ## Install
 ```
+sudo apt-get install mongodb
+sudo apt-get install redis
+
 virtualenv venv
 . ./venv/bin/activate
 export SECRET_KEY=xxx

@@ -1,4 +1,3 @@
-
 DOMAIN = {
     'item_title': 'utilisateur',
     'resource_methods': ['GET'],
@@ -17,18 +16,8 @@ DOMAIN = {
             'type': 'list',
             'schema': {'type': 'string'}
         },
-        'professionnel': {'type': 'string'},
+        'professionnel': {'type': 'boolean'},
         'donnees_publiques': {'type': 'boolean'},
         # Private data : tokens list
     }
 }
-
-# def check_auth(user, method):
-#     if resource == 'utilisateurs':
-#         if method == 'PUT':
-#     print(token, allowed_roles, resource, method)
-#     lookup = {'tokens': token}
-#     if allowed_roles:
-#         lookup['role'] = {'$in': allowed_roles}
-#     accounts = app.data.driver.db['utilisateurs']
-#     return accounts.find_one(lookup)

@@ -1,7 +1,7 @@
 from os import environ
 from authomatic.providers import oauth2
 
-from vigiechiro import utilisateurs
+from vigiechiro import utilisateurs, taxons, donnees
 
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
@@ -9,6 +9,11 @@ FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN', 'http://www.lvh.me:9000')
 PORT = int(environ.get('BACKEND_PORT', 8080))
 BACKEND_DOMAIN = environ.get('BACKEND_DOMAIN', 'http://api.lvh.me:{}'.format(PORT))
 
+### Redis ###
+REDIS_PORT = environ.get('REDIS_PORT', 6379)
+REDIS_HOST = environ.get('REDIS_HOST', 'localhost')
+
+### MongoDB ###
 MONGO_HOST = environ.get('MONGO_HOST', 'localhost')
 MONGO_PORT = int(environ.get('MONGO_PORT', 27017))
 MONGO_USERNAME = environ.get('MONGO_USERNAME', '')
@@ -24,7 +29,9 @@ RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
 ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
 
 DOMAIN = {
-    'utilisateurs': utilisateurs.DOMAIN
+    'utilisateurs': utilisateurs.DOMAIN,
+    'taxons': taxons.DOMAIN,
+    'donnees': donnees.DOMAIN
 }
 
 ### Authomatic ###
