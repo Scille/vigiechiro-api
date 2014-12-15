@@ -7,7 +7,7 @@ MONGO_PORT = int(environ.get('MONGO_PORT', 27017))
 MONGO_USERNAME = environ.get('MONGO_USERNAME', '')
 MONGO_PASSWORD = environ.get('MONGO_PASSWORD', '')
 
-MONGO_DBNAME = 'scille-nature'
+MONGO_DBNAME = 'vigichiros'
 X_DOMAINS=environ['FRONTEND_DOMAIN']
 X_HEADERS=['Accept', 'Content-type', 'Authorization']
 X_EXPOSE_HEADERS=X_HEADERS

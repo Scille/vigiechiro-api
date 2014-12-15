@@ -2,21 +2,16 @@
 
 from setuptools import setup, find_packages
 
-import scille_nature_api
+import vigichiros
 
 setup(
 
-    name='scille_nature_api',
-    version=scille_nature_api.__version__,
+    name='vigichiros',
+    version=vigichiros.__version__,
 
-    # Liste les packages à insérer dans la distribution
-    # plutôt que de le faire à la main, on utilise la foncton
-    # find_packages() de setuptools qui va cherche tous les packages
-    # python recursivement dans le dossier courant.
-    # C'est pour cette raison que l'on a tout mis dans un seul dossier:
-    # on peut ainsi utiliser cette fonction facilement
-    # packages=find_packages(),
-    packages=["scille_nature_api", "eve", "authomatic"],
+    # Use custom Eve (using dev branch) and Authomatics (custom
+    # python3 port) packages
+    packages=["vigichiros", "eve", "authomatic"],
     author="Scille SAS",
     author_email="contact@scille.eu",
     description="Projet viginature du Museum national d'histoire naturelle",
@@ -42,10 +37,10 @@ setup(
 	"six"
     ],
 
-    # Active la prise en compte du fichier MANIFEST.in
+    # Add non-python files with MANIFEST.in
     # include_package_data=True,
 
-    url='http://github.com/scille/scille-nature-api',
+    url='http://github.com/scille/vigichiros-api',
     classifiers=[
         "Programming Language :: Python",
 		"License :: OSI Approved :: GNU General Public License v2 (GPLv2)"
