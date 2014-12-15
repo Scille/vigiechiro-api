@@ -12,20 +12,28 @@ import eve.auth
 import eve.render
 from authomatic.extras.flask import FlaskAuthomatic
 
-import settings
+from vigiechiro import settings
+
 
 __all__ = ['auth_factory', 'TokenAuth']
 
 
 class TokenAuth(eve.auth.TokenAuth):
+    """Custom token & roles authentification"""
     def check_auth(self, token, allowed_roles, resource, method):
-        users = app.data.driver.db['users']
-        return users.find_one({'tokens': token})
+        lookup = {'tokens': token}
+        if allowed_roles:
+            lookup['role'] = {'$in': allowed_roles}
+        accounts = app.data.driver.db['utilisateurs']
+        account = accounts.find_one(lookup)
+        if account and '_id' in account:
+            self.set_request_auth_value(account['_id'])
+        return account
 
 
 def auth_factory(services):
     """Generate flask blueprint of login endpoints
-       :params: dict services : list of services to generate endpoints
+       :params services: list of services to generate endpoints
 
        >>> from flask import Flask
        >>> f = Flask('test')
@@ -49,7 +57,7 @@ def auth_factory(services):
     def logout():
         if request.authorization:
             token = request.authorization['username']
-            users = auth_blueprint.data.driver.db['users']
+            users = auth_blueprint.data.driver.db['utilisateurs']
             if users.find_one({'tokens': token}):
                 logging.info('Destroying token {}'.format(token))
                 users.update({'tokens': token}, {'$pull': {'tokens': token}})
@@ -60,6 +68,7 @@ def auth_factory(services):
 
 
 def login(authomatic, provider_name):
+    """Login/user register endpoint using authomatic for the heavy lifting"""
     if authomatic.result:
         if authomatic.result.error:
             return authomatic.result.error.message

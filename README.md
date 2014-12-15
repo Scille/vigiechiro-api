@@ -14,3 +14,8 @@ export FRONTEND_DOMAIN='http://www.lvh.me:9000'
 pip install -e .
 cd vigiechiro && ./run.py
 ```
+
+## Run tests
+```
+py.test tests
+```

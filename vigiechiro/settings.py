@@ -1,6 +1,7 @@
 from os import environ
 from authomatic.providers import oauth2
 
+from vigiechiro import utilisateurs
 
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
@@ -23,25 +24,7 @@ RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
 ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
 
 DOMAIN = {
-    'entries': {
-    	'item_title': 'entry',
-        'resource_methods': ['GET', 'POST'],
-    	'schema': {
-    	    'date': {'type': 'datetime', 'required': True},
-            # 'picture': {'type': 'string', 'required': True},
-            'picture': {'type': 'base64image', 'required': True},
-    	    'location': {'type': 'point', 'required': True},
-    	    'comment': {'type': 'string'}
-    	}
-    },
-    'users': {
-        'item_title': 'user',
-        'resource_methods': ['GET'],
-        'schema': {
-            'name': {'type': 'string'},
-            'email': {'type': 'string'}
-        }
-    }
+    'utilisateurs': utilisateurs.DOMAIN
 }
 
 ### Authomatic ###
