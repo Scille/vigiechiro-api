@@ -1,7 +1,7 @@
 from os import environ
 from authomatic.providers import oauth2
 
-from vigiechiro import utilisateurs, taxons, donnees
+from vigiechiro import resources
 
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
@@ -31,11 +31,7 @@ X_EXPOSE_HEADERS = X_HEADERS
 RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
 ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
 
-DOMAIN = {
-    'utilisateurs': utilisateurs.DOMAIN,
-    'taxons': taxons.DOMAIN,
-    'donnees': donnees.DOMAIN
-}
+DOMAIN = resources.DOMAIN
 
 ### Authomatic ###
 AUTHOMATIC = {
