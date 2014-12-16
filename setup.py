@@ -11,9 +11,8 @@ setup(
     description="Projet viginature du Museum national d'histoire naturelle",
     long_description=open('README.md').read(),
     # Eve 0.5 is not yet available
-    dependency_links=['https://github.com/nicolaiarocci/eve/tarball/master#egg=Eve-0.5'],
     install_requires=[
-        "Eve<=0.5",
+        "Eve==0.4",
         "redis",
         # authomatic (not available for the moment for Python3)
         # authomatic's dependancies
