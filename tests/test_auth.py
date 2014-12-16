@@ -3,7 +3,7 @@ import pytest
 import base64
 import json
 
-from common import db, AuthRequests
+from common import db
 from vigiechiro import settings
 
 
@@ -47,9 +47,8 @@ def test_token_access(users_base):
     user = users_base[0]
     for token in user['tokens']:
         r = requests.get(settings.BACKEND_DOMAIN,
-            headers={'Authorization': auth_header(token)})
+            auth=(token, None))
         assert r.status_code == 200
-
     dummy_token = 'J9QV87RDUW9UFE8D6WSKXYYZ6CGBG17G'
     r = requests.get(settings.BACKEND_DOMAIN,
         headers={'Authorization': auth_header(dummy_token)})

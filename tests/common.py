@@ -71,7 +71,6 @@ class AuthRequests:
 
     def get(self, url, **kwargs):
         url, kwargs = self._auth(url, kwargs)
-        print(kwargs)
         return requests.request('get', url, **kwargs)
 
     def delete(self, url, **kwargs):

@@ -2,7 +2,7 @@ import requests
 from pymongo import MongoClient
 import pytest
 
-from common import db, administrateur
+from common import db, administrateur, observateur
 
 
 @pytest.fixture
@@ -55,8 +55,8 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
     return db.taxons.find()
 
 
-def test_access(taxons_base, administrateur):
-    r = administrateur.get('/taxons')
+def test_access(taxons_base, observateur):
+    r = observateur.get('/taxons')
     assert r.status_code == 200, r.text
     assert len(r.json()['_items']) == 3
 
@@ -65,6 +65,21 @@ def test_access(taxons_base, administrateur):
 def test_circular_parent(taxons_base, administrateur):
     url = '/taxons/{}'.format(taxons_base[0]['_id'])
     r = administrateur.get(url)
+    assert r.status_code == 200, r.text
     r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
                              json={"parent": str(taxons_base[1]['_id'])})
-    assert r.status_code == 400
+    assert r.status_code == 400, r.text
+
+def test_modif(taxons_base, administrateur, observateur):
+    url = '/taxons/{}'.format(taxons_base[0]['_id'])
+    r = administrateur.get(url)
+    new_tags = ['new_tag1', 'new_tag2']
+    r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
+                             json={"tags": new_tags})
+    r = administrateur.get(url)
+    assert r.status_code == 200, r.text
+    assert r.json()['tags'] == new_tags
+    # Observateur cannot modify taxons
+    r = observateur.patch(url, headers={'If-Match': r.json()['_etag']},
+                             json={"tags": ['new_tag']})
+    assert r.status_code == 401, r.text

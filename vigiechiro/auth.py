@@ -15,6 +15,7 @@ from authomatic.extras.flask import FlaskAuthomatic
 from vigiechiro import settings
 from vigiechiro.utilisateurs import check_role
 
+
 class TokenAuth(eve.auth.TokenAuth):
     """Custom token & roles authentification"""
     def check_auth(self, token, allowed_roles, resource, method):
@@ -22,7 +23,8 @@ class TokenAuth(eve.auth.TokenAuth):
         account = accounts.find_one({'tokens': token})
         if account and 'role' in account:
             self.set_request_auth_value(account['_id'])
-            return check_role(account['role'], allowed_roles)
+            print(method)
+            return check_role(account['role'], allowed_roles, resource)
         return False
 
 

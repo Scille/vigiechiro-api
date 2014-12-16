@@ -8,6 +8,8 @@ SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
 FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN', 'http://www.lvh.me:9000')
 PORT = int(environ.get('BACKEND_PORT', 8080))
 BACKEND_DOMAIN = environ.get('BACKEND_DOMAIN', 'http://api.lvh.me:{}'.format(PORT))
+ALLOWED_READ_ROLES=['Lecteur']
+ALLOWED_READ_ITEM_ROLES=['Lecteur']
 
 ### Redis ###
 REDIS_PORT = environ.get('REDIS_PORT', 6379)
