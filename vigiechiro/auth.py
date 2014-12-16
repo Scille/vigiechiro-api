@@ -15,9 +15,6 @@ from authomatic.extras.flask import FlaskAuthomatic
 from vigiechiro import settings
 
 
-__all__ = ['auth_factory', 'TokenAuth']
-
-
 class TokenAuth(eve.auth.TokenAuth):
     """Custom token & roles authentification"""
     def check_auth(self, token, allowed_roles, resource, method):
