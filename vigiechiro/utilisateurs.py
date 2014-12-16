@@ -21,3 +21,15 @@ DOMAIN = {
         # Private data : tokens list
     }
 }
+
+def check_role(role, allowed_roles):
+    """
+    Role are handled using least priviledge, thus a higher priviledged role
+    also include it lower roles.
+    """
+    role_rules = {
+        'Observateur': ['Observateur'],
+        'Validateur': ['Observateur', 'Validateur'],
+        'Administrateur': ['Observateur', 'Validateur', 'Administrateur']
+    }
+    return bool([r for r in role_rules[role] if r in allowed_roles])

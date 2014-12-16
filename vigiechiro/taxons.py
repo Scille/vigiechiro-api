@@ -1,7 +1,7 @@
 DOMAIN = {
     'item_title': 'taxon',
     'resource_methods': ['GET', 'POST'],
-    'item_methods': ['GET', 'PUT'],
+    'item_methods': ['GET', 'PATCH', 'PUT'],
     'allowed_read_roles': ['Observateur'],
     'allowed_write_roles': ['Administrateur'],
     'schema': {
@@ -19,6 +19,6 @@ DOMAIN = {
         },
         # TODO : use more robust file type
         'photos': {'type': 'list', 'schema': {'type': 'base64image'}},
-        'date_valide': {'type': 'date'},
+        'date_valide': {'type': 'datetime'},
     }
 }

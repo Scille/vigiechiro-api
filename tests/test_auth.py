@@ -1,13 +1,10 @@
 import requests
-from pymongo import MongoClient
 import pytest
 import base64
 import json
 
+from common import db, AuthRequests
 from vigiechiro import settings
-
-
-db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[settings.MONGO_DBNAME]
 
 
 def auth_header(token):
@@ -38,7 +35,12 @@ def users_base(request):
              'role': 'Administrateur',
              'tokens': ['IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE']}
     db.utilisateurs.insert(user2)
-    return db.utilisateurs.find()
+    users = db.utilisateurs.find()
+    def finalizer():
+        for user in users:
+            db.utilisateurs.remove({'_id': user['_id']})
+    # request.addfinalizer(finalizer)
+    return users
 
 
 def test_token_access(users_base):
