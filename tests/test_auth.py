@@ -8,7 +8,7 @@ from vigiechiro import settings
 
 
 def auth_header(token):
-    return b'Basic ' + base64.encodebytes(token.encode()+b':')
+    return b'Basic ' + base64.encodebytes(token.encode() + b':')
 
 
 def test_allowed():
@@ -36,6 +36,7 @@ def users_base(request):
              'tokens': ['IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE']}
     db.utilisateurs.insert(user2)
     users = db.utilisateurs.find()
+
     def finalizer():
         for user in users:
             db.utilisateurs.remove({'_id': user['_id']})
@@ -47,19 +48,19 @@ def test_token_access(users_base):
     user = users_base[0]
     for token in user['tokens']:
         r = requests.get(settings.BACKEND_DOMAIN,
-            auth=(token, None))
+                         auth=(token, None))
         assert r.status_code == 200
     dummy_token = 'J9QV87RDUW9UFE8D6WSKXYYZ6CGBG17G'
     r = requests.get(settings.BACKEND_DOMAIN,
-        headers={'Authorization': auth_header(dummy_token)})
+                     headers={'Authorization': auth_header(dummy_token)})
     assert r.status_code == 401
 
 
 @pytest.mark.xfail
 def test_user_route(users_base):
     user = users_base[0]
-    r = requests.get(settings.BACKEND_DOMAIN+'/utilisateurs/moi',
-        headers={'Authorization': auth_header(user['tokens'][0])})
+    r = requests.get(settings.BACKEND_DOMAIN + '/utilisateurs/moi',
+                     headers={'Authorization': auth_header(user['tokens'][0])})
     assert r.status_code == 200
     content = r.json()
     for key in ['nom', 'email']:
@@ -72,28 +73,31 @@ def test_rights(users_base):
     auth = auth_header(me['tokens'][0])
     payload = {'donnes_publiques': True}
     # Change data for myself is allowed...
-    r = requests.get(settings.BACKEND_DOMAIN+'/utilisateurs/moi',
-        headers= {'Authorization': auth, 'Content-type': 'application/json'},
-        data=json.dumps(payload))
+    r = requests.get(settings.BACKEND_DOMAIN + '/utilisateurs/moi',
+                     headers={
+                         'Authorization': auth, 'Content-type': 'application/json'},
+                     data=json.dumps(payload))
     assert r.status_code == 200
     assert r.json()['donnes_publiques'] == True
     # ...but I can't change for others !
     admin = users_base[1]
-    r = requests.get(settings.BACKEND_DOMAIN+'/utilisateurs/'+admin['_id'],
-        headers= {'Authorization': auth, 'Content-type': 'application/json'},
-        data=json.dumps(payload))
+    r = requests.get(settings.BACKEND_DOMAIN + '/utilisateurs/' + admin['_id'],
+                     headers={
+                         'Authorization': auth, 'Content-type': 'application/json'},
+                     data=json.dumps(payload))
     assert r.status_code == 403
     # Same thing, cannot change my own rights
     payload = {'role': 'Administrateur'}
-    r = requests.get(settings.BACKEND_DOMAIN+'/utilisateurs/me',
-        headers= {'Authorization': auth, 'Content-type': 'application/json'},
-        data=json.dumps(payload))
+    r = requests.get(settings.BACKEND_DOMAIN + '/utilisateurs/me',
+                     headers={
+                         'Authorization': auth, 'Content-type': 'application/json'},
+                     data=json.dumps(payload))
     assert r.status_code == 403
     # Of courses, admin can
     payload = {'role': 'Validateur'}
-    r = requests.get(settings.BACKEND_DOMAIN+'/utilisateurs/'+me['_id'],
-        headers= {'Authorization': auth_header(admin['tokens'][0]),
-                  'Content-type': 'application/json'},
-        data=json.dumps(payload))
+    r = requests.get(settings.BACKEND_DOMAIN + '/utilisateurs/' + me['_id'],
+                     headers={'Authorization': auth_header(admin['tokens'][0]),
+                              'Content-type': 'application/json'},
+                     data=json.dumps(payload))
     assert r.status_code == 200
     assert r.json()['role'] == 'Validateur'

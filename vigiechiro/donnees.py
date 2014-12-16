@@ -14,7 +14,8 @@ SCHEMA = {
         'schema': {
             # 'fichier': {'type': 'File', 'required': True},
             'version': {'type': 'string', 'required': True},
-            'origine': {'type': 'string', 'required': True}, # TODO : use regex OBSERVATEUR / SERVEUR
+            # TODO : use regex OBSERVATEUR / SERVEUR
+            'origine': {'type': 'string', 'required': True},
         },
         'observations': {
             'type': 'list',
@@ -35,9 +36,11 @@ SCHEMA = {
                             }
                         },
                         'observateur_taxon': {'type': 'objectid'},
-                        'observateur_probabilite': {'type': 'string'}, # SUR / PROBABLE / POSSIBLE
+                        # SUR / PROBABLE / POSSIBLE
+                        'observateur_probabilite': {'type': 'string'},
                         'validateur_taxon': {'type': 'objectid'},
-                        'validateur_probabilite': {'type': 'string'}, # SUR / PROBABLE / POSSIBLE
+                        # SUR / PROBABLE / POSSIBLE
+                        'validateur_probabilite': {'type': 'string'},
                         'commentaire': {
                             'type': 'list',
                             'schema': {

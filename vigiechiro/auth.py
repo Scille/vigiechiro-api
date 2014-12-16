@@ -17,7 +17,9 @@ from vigiechiro.utilisateurs import check_role
 
 
 class TokenAuth(eve.auth.TokenAuth):
+
     """Custom token & roles authentification"""
+
     def check_auth(self, token, allowed_roles, resource, method):
         accounts = app.data.driver.db['utilisateurs']
         account = accounts.find_one({'tokens': token})
@@ -43,10 +45,11 @@ def auth_factory(services):
                                  secret=settings.SECRET_KEY,
                                  debug=True)
     auth_blueprint = Blueprint('auth', __name__)
+
     def login_factory(service):
         return authomatic.login(service)(lambda: login(authomatic, service))
     for service in services:
-        auth_blueprint.add_url_rule('/login/'+service, 'login_'+service,
+        auth_blueprint.add_url_rule('/login/' + service, 'login_' + service,
                                     login_factory(service))
 
     @auth_blueprint.route('/logout', methods=['OPTIONS', 'POST'])
@@ -89,7 +92,7 @@ def login(authomatic, provider_name):
                                               'tokens': [token]})
                 logging.info('Create user {}'.format(user.email))
             logging.info('Update user {} token: {}, Authorization: Basic {}'.format(
-                user.email, token, base64.encodebytes((token+':').encode())))
+                user.email, token, base64.encodebytes((token + ':').encode())))
             return redirect('{}/#/?token={}&id={}&name={}&email={}'.format(
                 settings.FRONTEND_DOMAIN, token, user_db_id, user.name, user.email), code=302)
     else:

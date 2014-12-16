@@ -25,6 +25,7 @@ DOMAIN = {
     }
 }
 
+
 def check_role(role, allowed_roles, rr):
     """
     Role are handled using least priviledge, thus a higher priviledged role
@@ -37,5 +38,5 @@ def check_role(role, allowed_roles, rr):
         'Administrateur': ['Lecteur', 'Observateur', 'Validateur', 'Administrateur']
     }
     print('in {} user : {} should be in {} ? {}'.format(rr, role, allowed_roles,
-        bool([r for r in role_rules[role] if r in allowed_roles])))
+                                                        bool([r for r in role_rules[role] if r in allowed_roles])))
     return bool([r for r in role_rules[role] if r in allowed_roles])

@@ -48,6 +48,7 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
         'liens': ['http://fr.wikipedia.org/wiki/Megadermatidae'],
         'tags': ['chiro', 'vigiechiro', 'ultrason']
     })
+
     def finalizer():
         for taxon_id in [parent_id, child1_id, child2_id]:
             db.taxons.remove({'_id': taxon_id})
@@ -70,6 +71,20 @@ def test_circular_parent(taxons_base, administrateur):
                              json={"parent": str(taxons_base[1]['_id'])})
     assert r.status_code == 400, r.text
 
+
+@pytest.mark.xfail
+def test_dummy_parent(taxons_base, administrateur):
+    url = '/taxons/{}'.format(taxons_base[0]['_id'])
+    r = administrateur.get(url)
+    assert r.status_code == 200, r.text
+    # Bad ids : dummy, not existing, own's id and different resource's id
+    for dummy in ['dummy', '5490237a1d41c81800d52c18',
+                  str(taxons_base[1]['_id']), str(administrateur.user['_id'])]:
+        r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
+                                 json={"parent": str(taxons_base[1]['_id'])})
+        assert r.status_code == 400, r.text
+
+
 def test_modif(taxons_base, administrateur, observateur):
     url = '/taxons/{}'.format(taxons_base[0]['_id'])
     r = administrateur.get(url)
@@ -81,5 +96,5 @@ def test_modif(taxons_base, administrateur, observateur):
     assert r.json()['tags'] == new_tags
     # Observateur cannot modify taxons
     r = observateur.patch(url, headers={'If-Match': r.json()['_etag']},
-                             json={"tags": ['new_tag']})
+                          json={"tags": ['new_tag']})
     assert r.status_code == 401, r.text

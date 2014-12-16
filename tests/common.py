@@ -9,7 +9,8 @@ from pymongo import MongoClient
 from vigiechiro import settings
 
 
-db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[settings.MONGO_DBNAME]
+db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
+    settings.MONGO_DBNAME]
 
 
 @pytest.fixture
@@ -35,28 +36,30 @@ def validateur(request):
 
 class AuthRequests:
     COUNT = 0
+
     def __init__(self, role='Observateur', fields=[]):
         # Create a new user for the requests
         self.token = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                        for x in range(32))
+                             for x in range(32))
         self.user_id = AuthRequests.COUNT
         AuthRequests.COUNT + 1
         self.user = {'nom': 'nom_{}'.format(self.user_id),
-                'prenom': 'prenom_{}'.format(self.user_id),
-                'donnes_publiques': False,
-                'email': 'user_{}@email.com'.format(self.user_id),
-                'role': role,
-                'tokens': [self.token]}
+                     'prenom': 'prenom_{}'.format(self.user_id),
+                     'donnes_publiques': False,
+                     'email': 'user_{}@email.com'.format(self.user_id),
+                     'role': role,
+                     'tokens': [self.token]}
         for key, value in fields:
             self.user[key] = value
-        self.authorization = b'Basic ' + base64.encodebytes(self.token.encode()+b':')
+        self.authorization = b'Basic ' + \
+            base64.encodebytes(self.token.encode() + b':')
         self.user['_id'] = db.utilisateurs.insert(self.user)
 
     def finalizer(self):
         db.utilisateurs.remove({'_id': self.user['_id']})
 
     def _auth(self, url, kwargs):
-        kwargs['auth']=(self.token, None)
+        kwargs['auth'] = (self.token, None)
         sep = '' if url.startswith('/') else '/'
         url = settings.BACKEND_DOMAIN + sep + url
         return (url, kwargs)

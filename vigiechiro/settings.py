@@ -7,9 +7,10 @@ from vigiechiro import utilisateurs, taxons, donnees
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
 FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN', 'http://www.lvh.me:9000')
 PORT = int(environ.get('BACKEND_PORT', 8080))
-BACKEND_DOMAIN = environ.get('BACKEND_DOMAIN', 'http://api.lvh.me:{}'.format(PORT))
-ALLOWED_READ_ROLES=['Lecteur']
-ALLOWED_READ_ITEM_ROLES=['Lecteur']
+BACKEND_DOMAIN = environ.get(
+    'BACKEND_DOMAIN', 'http://api.lvh.me:{}'.format(PORT))
+ALLOWED_READ_ROLES = ['Lecteur']
+ALLOWED_READ_ITEM_ROLES = ['Lecteur']
 
 ### Redis ###
 REDIS_PORT = environ.get('REDIS_PORT', 6379)
@@ -23,9 +24,9 @@ MONGO_PASSWORD = environ.get('MONGO_PASSWORD', '')
 MONGO_DBNAME = 'vigiechiro'
 
 ### Eve ###
-X_DOMAINS=FRONTEND_DOMAIN
-X_HEADERS=['Accept', 'Content-type', 'Authorization']
-X_EXPOSE_HEADERS=X_HEADERS
+X_DOMAINS = FRONTEND_DOMAIN
+X_HEADERS = ['Accept', 'Content-type', 'Authorization']
+X_EXPOSE_HEADERS = X_HEADERS
 
 RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
 ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
