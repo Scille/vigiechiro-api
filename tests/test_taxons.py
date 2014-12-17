@@ -4,7 +4,6 @@ import pytest
 
 from common import db, administrateur, observateur
 
-
 @pytest.fixture
 def taxons_base(request):
     # Insert parent
@@ -32,7 +31,7 @@ plus précisément parmi les Ptéropodidés, appelées aussi Flying foxes en ang
 traduit par renards volants.
 C'est le cas notamment des espèces des genres Acerodon, Pteropus et Rousettus.
 """,
-        'parent': parent_id,
+        'parents': [parent_id],
         'liens': ['http://fr.wikipedia.org/wiki/Roussette_(chiropt%C3%A8re)'],
         'tags': ['chiro', 'vigiechiro', 'ultrason']
     })
@@ -44,11 +43,10 @@ Les mégadermatidés (Megadermatidae) sont une famille de chiroptères du sous-o
 des Yinpterochiroptera. C'est la famille des « faux-vampires ».
 Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de sang.
 """,
-        'parent': parent_id,
+        'parents': [parent_id],
         'liens': ['http://fr.wikipedia.org/wiki/Megadermatidae'],
         'tags': ['chiro', 'vigiechiro', 'ultrason']
     })
-
     def finalizer():
         for taxon_id in [parent_id, child1_id, child2_id]:
             db.taxons.remove({'_id': taxon_id})
@@ -63,12 +61,30 @@ def test_access(taxons_base, observateur):
 
 
 @pytest.mark.xfail
+def test_multi_parents(taxons_base, administrateur):
+    url = '/taxons/{}'.format(taxons_base[1]['_id'])
+    r = administrateur.get(url)
+    assert r.status_code == 200, r.text
+    pprint(r.json())
+    parents = [str(taxons_base[1]['_id'])] + r.json()['parents']
+    r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
+                             json={'parents': parents})
+    assert r.status_code == 200, r.text
+    # Try with 2 times the same
+    r = administrateur.get(url)
+    parents = [str(taxons_base[1]['_id']) for _ in range(2)]
+    r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
+                             json={'parents': parents})
+    assert r.status_code == 400, r.text
+
+
+@pytest.mark.xfail
 def test_circular_parent(taxons_base, administrateur):
     url = '/taxons/{}'.format(taxons_base[0]['_id'])
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
     r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
-                             json={"parent": str(taxons_base[1]['_id'])})
+                             json={'parents': [str(taxons_base[1]['_id'])]})
     assert r.status_code == 400, r.text
 
 
@@ -81,7 +97,7 @@ def test_dummy_parent(taxons_base, administrateur):
     for dummy in ['dummy', '5490237a1d41c81800d52c18',
                   str(taxons_base[1]['_id']), str(administrateur.user['_id'])]:
         r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
-                                 json={"parent": str(taxons_base[1]['_id'])})
+                                 json={'parents': [str(taxons_base[1]['_id'])]})
         assert r.status_code == 400, r.text
 
 

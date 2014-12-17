@@ -1,5 +1,5 @@
 DOMAIN = {
-    'item_title': 'taxon',
+    'item_title': 'protocole',
     'resource_methods': ['GET', 'POST'],
     'item_methods': ['GET', 'PATCH', 'PUT'],
     'allowed_read_roles': ['Observateur'],
@@ -7,23 +7,21 @@ DOMAIN = {
     'allowed_item_read_roles': ['Observateur'],
     'allowed_item_write_roles': ['Administrateur'],
     'schema': {
-        'libelle_long': {'type': 'string', 'required': True},
-        'libelle_court': {'type': 'string'},
+        'titre': {'type': 'string', 'required': True},
         'description': {'type': 'string'},
-        'parents': {
-            'type': 'list',
-            'schema': {'type': 'objectid'}
-        },
-        'liens': {
+        'parent': {'type': 'objectid'},
+        'macro_protocole': {'type': 'boolean'},
+        'tag': {
             'type': 'list',
             'schema': {'type': 'string'}
         },
-        'tags': {
+        # 'fichier': {'type': 'file'},
+        # 'type_site': {'type': 'string', 'required': True},
+        'taxon': {'type': 'objectid', 'required': True},
+        'configuration_participation': {
             'type': 'list',
             'schema': {'type': 'string'}
         },
-        # TODO : use more robust file type
-        'photos': {'type': 'list', 'schema': {'type': 'base64image'}},
-        'date_valide': {'type': 'datetime'},
+        'algo_tirage_site': {'type': 'string'} # CARRE | ROUTIER | POINT_FIXE
     }
 }
