@@ -1,3 +1,6 @@
+from flask import Blueprint
+import eve.auth
+
 SCHEMA = {
     'commentaire': {'type': 'string'},
     'localite': {'type': 'string', 'required': True},
@@ -65,4 +68,13 @@ DOMAIN = {
     'schema': SCHEMA
 }
 
-__all__ = ['DOMAIN']
+BLUEPRINT = Blueprint('donnees', __name__)
+
+@BLUEPRINT.route('/donees/<id>/action/archiver')
+@eve.auth.requires_auth('item')
+def donnees_archiver(id):
+    # TODO: Actualy do the archive
+    print('-> Archive donnees {}'.format(id))
+    return eve.render.send_response(None, [])
+
+__all__ = ['DOMAIN', 'BLUEPRINT']

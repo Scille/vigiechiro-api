@@ -37,6 +37,4 @@ def check_role(role, allowed_roles, rr):
         'Validateur': ['Lecteur', 'Observateur', 'Validateur'],
         'Administrateur': ['Lecteur', 'Observateur', 'Validateur', 'Administrateur']
     }
-    print('in {} user : {} should be in {} ? {}'.format(rr, role, allowed_roles,
-                                                        bool([r for r in role_rules[role] if r in allowed_roles])))
     return bool([r for r in role_rules[role] if r in allowed_roles])

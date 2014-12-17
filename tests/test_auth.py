@@ -88,7 +88,7 @@ def test_rights(users_base):
     assert r.status_code == 403
     # Same thing, cannot change my own rights
     payload = {'role': 'Administrateur'}
-    r = requests.get(settings.BACKEND_DOMAIN + '/utilisateurs/me',
+    r = requests.get(settings.BACKEND_DOMAIN + '/utilisateurs/moi',
                      headers={
                          'Authorization': auth, 'Content-type': 'application/json'},
                      data=json.dumps(payload))

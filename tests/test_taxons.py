@@ -60,45 +60,44 @@ def test_access(taxons_base, observateur):
     assert len(r.json()['_items']) == 3
 
 
-@pytest.mark.xfail
 def test_multi_parents(taxons_base, administrateur):
     url = '/taxons/{}'.format(taxons_base[1]['_id'])
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
-    pprint(r.json())
     parents = [str(taxons_base[1]['_id'])] + r.json()['parents']
+    print('-------------------------', parents)
     r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
                              json={'parents': parents})
     assert r.status_code == 200, r.text
-    # Try with 2 times the same
-    r = administrateur.get(url)
-    parents = [str(taxons_base[1]['_id']) for _ in range(2)]
-    r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
-                             json={'parents': parents})
-    assert r.status_code == 400, r.text
+#     # Try with 2 times the same
+#     r = administrateur.get(url)
+#     parents = [str(taxons_base[1]['_id']) for _ in range(2)]
+#     r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
+#                              json={'parents': parents})
+#     assert r.status_code == 422, r.text
 
-
-@pytest.mark.xfail
 def test_circular_parent(taxons_base, administrateur):
     url = '/taxons/{}'.format(taxons_base[0]['_id'])
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
-    r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
+    r = administrateur.patch(url, headers={'If-Match': r.json()['_etag'], 'Content-type':'application/json'},
                              json={'parents': [str(taxons_base[1]['_id'])]})
-    assert r.status_code == 400, r.text
+    assert r.status_code == 422, r.text
 
 
-@pytest.mark.xfail
 def test_dummy_parent(taxons_base, administrateur):
     url = '/taxons/{}'.format(taxons_base[0]['_id'])
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
+    etag = r.json()['_etag']
     # Bad ids : dummy, not existing, own's id and different resource's id
+    # for dummy in ['dummy', '5490237a1d41c81800d52c18',
+    #               str(taxons_base[0]['_id']), str(administrateur.user['_id'])]:
     for dummy in ['dummy', '5490237a1d41c81800d52c18',
-                  str(taxons_base[1]['_id']), str(administrateur.user['_id'])]:
-        r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
-                                 json={'parents': [str(taxons_base[1]['_id'])]})
-        assert r.status_code == 400, r.text
+                  str(taxons_base[0]['_id'])]:
+        r = administrateur.patch(url, headers={'If-Match': etag},
+                                 json={'parents': [dummy]})
+        assert r.status_code == 422, r.text
 
 
 def test_modif(taxons_base, administrateur, observateur):
