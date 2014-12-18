@@ -13,7 +13,7 @@ DOMAIN = {
     'allowed_item_write_roles': ['Administrateur'],
     'schema': {
         'libelle_long': {'type': 'string', 'required': True, 'unique': True},
-        'libelle_court': {'type': 'string'},
+        'libelle_court': {'type': 'string', 'unique': True},
         'description': {'type': 'string'},
         'parents': {
             'type': 'list',
@@ -43,9 +43,16 @@ DOMAIN = {
 
 TYPES = {}
 
-def check_taxons(resources, updates, original):
+
+def check_taxons_post(resources, items):
+    for item in items:
+        check_taxons(resources, item, None)
+
+
+def check_taxons(resources, updates, original=None):
+    # import pdb; pdb.set_trace()
     if 'parents' in updates:
-        children = [original['_id']]
+        children = [original['_id']] if original else []
         def check_recur(children, curr_id):
             if curr_id in children:
                 abort(422, "circular dependancy of parents"

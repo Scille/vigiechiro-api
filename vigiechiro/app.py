@@ -19,6 +19,8 @@ for blueprint in resources.BLUEPRINTS:
     app.register_blueprints(blueprint)
 
 app.on_update += resources.taxons.check_taxons
+app.on_insert += resources.taxons.check_taxons_post
+app.on_replace += resources.taxons.check_taxons
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

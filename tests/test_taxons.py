@@ -54,6 +54,20 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
     return db.taxons.find()
 
 
+@pytest.fixture
+def new_taxon_payload(request):
+    payload = {
+        'libelle_long': 'Batman',
+        'parents': [],
+        'liens': ['http://fr.wikipedia.org/wiki/batman'],
+        'tags': ['chiro', 'vigiechiro', 'comics']
+    }
+    def finalizer():
+        db.taxons.remove({'libelle_long': payload['libelle_long']})
+    request.addfinalizer(finalizer)
+    return payload
+
+
 def test_access(taxons_base, observateur):
     r = observateur.get('/taxons')
     assert r.status_code == 200, r.text
@@ -65,8 +79,15 @@ def test_multi_parents(taxons_base, administrateur):
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
     payload = r.json()
+    payload['parents'] = [str(taxons_base[2]['_id'])] + payload['parents']
     r = administrateur.patch(url, headers={'If-Match': payload['_etag']},
-                             json={'parents': [str(taxons_base[2]['_id'])] + payload['parents']})
+                             json={'parents': payload['parents']})
+    assert r.status_code == 200, r.text
+    etag = r.json()['_etag']
+    # Use put instead of patch
+    payload = {field: payload[field] for field in payload.keys() if not field.startswith('_')}
+    r = administrateur.put(url, headers={'If-Match': etag},
+                           json=payload)
     assert r.status_code == 200, r.text
     # Try with 2 times the same
     r = administrateur.get(url)
@@ -85,7 +106,7 @@ def test_circular_parent(taxons_base, administrateur):
     assert r.status_code == 422, r.text
 
 
-def test_dummy_parent(taxons_base, administrateur):
+def test_dummy_parent(taxons_base, new_taxon_payload, administrateur):
     url = '/taxons/{}'.format(taxons_base[0]['_id'])
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
@@ -95,6 +116,12 @@ def test_dummy_parent(taxons_base, administrateur):
                   str(taxons_base[0]['_id']), str(administrateur.user['_id'])]:
         r = administrateur.patch(url, headers={'If-Match': etag},
                                  json={'parents': [dummy]})
+        assert r.status_code == 422, r.text
+    # Check for POST too
+    for dummy in ['dummy', '5490237a1d41c81800d52c18',
+                  str(administrateur.user['_id'])]:
+        new_taxon_payload['parents'] = [dummy]
+        r = administrateur.post('/taxons', json=new_taxon_payload)
         assert r.status_code == 422, r.text
 
 
@@ -111,3 +138,10 @@ def test_modif(taxons_base, administrateur, observateur):
     r = observateur.patch(url, headers={'If-Match': r.json()['_etag']},
                           json={"tags": ['new_tag']})
     assert r.status_code == 401, r.text
+
+
+def test_unique_libelle(taxons_base, new_taxon_payload, administrateur):
+    for libelle in ['libelle_long', 'libelle_court']:
+        new_taxon_payload[libelle] = taxons_base[0][libelle]
+        r = administrateur.post('/taxons', json=new_taxon_payload)
+        assert r.status_code == 422, r.text
