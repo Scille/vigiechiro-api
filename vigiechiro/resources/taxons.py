@@ -2,6 +2,7 @@ from flask import current_app as app
 from flask import abort
 from eve.io.mongo.validation import Validator as EveValidator
 
+
 DOMAIN = {
     'item_title': 'taxon',
     'resource_methods': ['GET', 'POST'],
@@ -44,32 +45,20 @@ TYPES = {}
 
 def check_taxons(resources, updates, original):
     if 'parents' in updates:
-        parents = [str(original['_id'])]
-        to_check_parents = updates.get('parents', [])
-        print('direct parents : {}'.format(to_check_parents))
-        for curr_parent in to_check_parents:
-            if curr_parent in parents:
-                import pdb; pdb.set_trace()
-                abort(422, "parent id '{}' leads to a circular"
-                           " dependancy of parents.".format(curr_parent))
-                break
-            parents.append(curr_parent)
-            # Get back the parent taxon and process it own parents
-            parent_doc = app.data.find_one('taxons', None, _id=curr_parent)
-            if not parent_doc:
+        children = [original['_id']]
+        def check_recur(children, curr_id):
+            if curr_id in children:
+                abort(422, "circular dependancy of parents"
+                           " detected : {}".format(children))
+            curr_doc = app.data.find_one('taxons', None, _id=curr_id)
+            if not curr_doc:
                 abort(422, "parents ids leads to a broken parent"
                            " link '{}'".format(value, curr_parent))
-                break
-            to_check_parents += parent_doc.get('parents', [])
-
-# def _validate_data_relation(self, data_relation, field, value):
-#     EveValidator._validate_data_relation(self, data_relation, field, value)
-#     data_resource = data_relation['resource']
-#     for item in value:
-#             query = {data_relation['field']: item}
-#             if not app.data.find_one(data_resource, None, **query):
-#                 self._error(
-#                     field,
-#                     "value '%s' must exist in resource"
-#                     " '%s', field '%s'." %
-#                     (item, data_resource, data_relation['field']))
+            children.append(curr_id)
+            for parent in curr_doc.get('parents', []):
+                check_recur(children.copy(), parent)
+        parents = updates.get('parents', [])
+        if len(set(parents)) != len(parents):
+            abort(422, "Duplication in parents : {}".format(parents))
+        for curr_id in parents:
+            check_recur(children.copy(), curr_id)

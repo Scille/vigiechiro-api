@@ -93,8 +93,6 @@ class Validator(Validator):
         .. versionchanged:: 0.2
            Handle the case in which ID_FIELD is not of ObjectId type.
         """
-        import pdb; pdb.set_trace()
-        print('unique id : {}'.format(self._id))
         if unique:
             query = {field: value}
             if self._id:
