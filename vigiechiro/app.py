@@ -18,6 +18,7 @@ app.register_blueprint(auth_factory(['google', 'github']))
 for blueprint in resources.BLUEPRINTS:
     app.register_blueprints(blueprint)
 
+app.on_update += resources.taxons.check_taxons
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

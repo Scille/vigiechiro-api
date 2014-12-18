@@ -64,10 +64,16 @@ def test_multi_parents(taxons_base, administrateur):
     url = '/taxons/{}'.format(taxons_base[1]['_id'])
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
-    parents = [str(taxons_base[1]['_id'])] + r.json()['parents']
-    print('-------------------------', parents)
+    payload = r.json()
+    del payload['_id']
+    del payload['_etag']
+    del payload['_created']
+    del payload['_updated']
+    del payload['_links']
+    payload['parents'] = [str(taxons_base[2]['_id'])] + payload['parents']
+    print('+++++++++++++++', payload['parents'])
     r = administrateur.patch(url, headers={'If-Match': r.json()['_etag']},
-                             json={'parents': parents})
+                             json=payload)
     assert r.status_code == 200, r.text
 #     # Try with 2 times the same
 #     r = administrateur.get(url)
