@@ -6,7 +6,6 @@ import eve.endpoints
 import eve.render
 
 from .resource import Resource
-# from ..action import eve_custom_route
 
 from eve.utils import config, request_method, debug_error_message
 import eve.methods

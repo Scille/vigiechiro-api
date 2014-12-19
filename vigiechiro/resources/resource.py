@@ -23,7 +23,6 @@ class Resource:
         """
         for callback in self.callbacks:
             event = getattr(app, '{}_{}'.format(callback.__name__, self.RESOURCE_NAME))
-            # event = getattr(app, callback.__name__)
             event += callback
         if hasattr(self, 'blueprint'):
             app.register_blueprint(self.blueprint)
@@ -35,7 +34,7 @@ class Resource:
         self.callbacks.append(f)
         return f
 
-    def route(self, route_, **kwargs): # '/utilisateurs/moi', methods=['GET', 'PUT', 'PATCH'], allowed_roles=['Observateur'])
+    def route(self, route_, **kwargs):
         default_roles = kwargs.pop('allowed_roles', [])
         write_roles = kwargs.pop('allowed_write_roles', default_roles)
         read_roles = kwargs.pop('allowed_read_roles', default_roles)
