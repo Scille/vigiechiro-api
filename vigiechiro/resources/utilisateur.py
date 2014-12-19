@@ -1,16 +1,9 @@
-from flask import current_app
-from flask import app
-from flask import abort, url_for, Blueprint, redirect
+from flask import current_app, request, abort
 import eve.auth
-import eve.endpoints
 import eve.render
+import eve.methods
 
 from .resource import Resource
-
-from eve.utils import config, request_method, debug_error_message
-import eve.methods
-from flask import request, Response, g, abort
-from functools import wraps
 
 
 class Utilisateur(Resource):

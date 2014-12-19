@@ -4,7 +4,7 @@ from authomatic.providers import oauth2
 from vigiechiro import resources
 
 ## vigiechiro ##
-RESOURCES = [resources.Taxon, resources.Utilisateur]
+RESOURCES = [resources.Utilisateur, resources.Taxon, resources.Protocole]
 ROLE_RULES = {
     'Lecteur': ['Lecteur'],
     'Observateur': ['Lecteur', 'Observateur'],

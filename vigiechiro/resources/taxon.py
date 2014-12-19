@@ -1,7 +1,7 @@
-from flask import current_app as app
-from flask import abort
+from flask import current_app, abort
 
 from .resource import Resource
+
 
 class Taxon(Resource):
     RESOURCE_NAME = 'taxons'
@@ -44,7 +44,7 @@ class Taxon(Resource):
             if curr_id in children:
                 abort(422, "circular dependancy of parents"
                            " detected : {}".format(children))
-            curr_doc = app.data.find_one('taxons', None, _id=curr_id)
+            curr_doc = current_app.data.find_one('taxons', None, _id=curr_id)
             if not curr_doc:
                 abort(422, "parents ids leads to a broken parent"
                            " link '{}'".format(value, curr_parent))

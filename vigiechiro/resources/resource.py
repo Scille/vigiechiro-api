@@ -2,6 +2,7 @@ from flask import app, current_app
 from flask import abort, url_for, Blueprint, redirect
 from functools import wraps
 from flask import request, Response, g, abort
+from cerberus.errors import ERROR_BAD_TYPE
 
 class ResourceException(Exception): pass
 
@@ -10,6 +11,7 @@ class Resource:
     def __init__(self):
         self.callbacks = []
         self.routes = []
+        self.types = []
         missings = [mandatory for mandatory in ['DOMAIN', 'RESOURCE_NAME']
                     if mandatory not in dir(self)]
         if missings:
@@ -28,11 +30,32 @@ class Resource:
             app.register_blueprint(self.blueprint)
         for arg, kwargs in self.routes:
             self.blueprint
+        for type_function in self.types:
+            setattr(app.validator, type_function.__name__, type_function)
 
-    def callback(self, f):
-        """Register eve callback event base on function name"""
+    def callback(self, f, name=None):
+        """Decorator, register eve callback event based on function name"""
+        if name:
+            f.__name__ = name
         self.callbacks.append(f)
         return f
+
+    def type(self, f, name=None):
+        """Decorator, register cerberus type based on function name"""
+        if name:
+            f.__name__ = name
+        else:
+            f.__name__ = '_validate_' + f.__name__
+        self.types.append(f)
+        return f
+
+    def register_type_enum(self, name, enum):
+        """Create and register an enum validation function"""
+        def check_type(self, field, value):
+            if value not in enum:
+                self._error(field, ERROR_BAD_TYPE % name)
+        check_type.__name__ = '_validate_type_' + name
+        self.types.append(check_type)
 
     def route(self, route_, **kwargs):
         default_roles = kwargs.pop('allowed_roles', [])

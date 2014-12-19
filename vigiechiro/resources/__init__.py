@@ -2,7 +2,7 @@ from .resource import Resource
 # from .donnee import Donnee
 from .taxon import Taxon
 from .utilisateur import Utilisateur
-# from .protocole import Protocole
+from .protocole import Protocole
 # from .participation import Participation
 
 from eve.io.mongo.validation import Validator as EveValidator

@@ -4,7 +4,7 @@ import base64
 import json
 
 from common import db, observateur, administrateur, eve_post_internal
-from vigiechiro import settings, app
+from vigiechiro import settings
 
 
 def auth_header(token):

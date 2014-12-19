@@ -8,7 +8,7 @@ import redis
 from vigiechiro import settings
 from vigiechiro.resources import Validator
 from vigiechiro.auth import TokenAuth, auth_factory
-from vigiechiro import resources
+
 
 r = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 app = Eve(auth=TokenAuth, validator=Validator, redis=r,
@@ -16,5 +16,5 @@ app = Eve(auth=TokenAuth, validator=Validator, redis=r,
 app.register_blueprint(auth_factory(['google', 'github']))
 app.debug = True
 
-resources.Taxon().register(app)
-resources.Utilisateur().register(app)
+for ResourceCls in settings.RESOURCES:
+    ResourceCls().register(app)

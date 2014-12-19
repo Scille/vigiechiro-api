@@ -2,10 +2,8 @@ import requests
 from pymongo import MongoClient
 import pytest
 
-from eve.methods.post import post_internal
-from flask import app
-
 from common import db, administrateur, observateur, eve_post_internal
+
 
 @pytest.fixture
 def taxons_base(request):
