@@ -2,12 +2,15 @@ import requests
 from pymongo import MongoClient
 import pytest
 
-from common import db, administrateur, observateur
+from eve.methods.post import post_internal
+from flask import app
+
+from common import db, administrateur, observateur, eve_post_internal
 
 @pytest.fixture
 def taxons_base(request):
     # Insert parent
-    parent_id = db.taxons.insert({
+    parent_payload = {
         'libelle_long': 'Chiroptera',
         'libelle_court': 'Chiro',
         'description': """D'après wikipedia :
@@ -19,9 +22,11 @@ Ces animaux, comme les Cétacés, sont souvent capables d'écholocation.
 """,
         'liens': ['http://fr.wikipedia.org/wiki/Chiroptera'],
         'tags': ['chiro', 'vigiechiro', 'ultrason']
-    })
+    }
+    eve_post_internal('taxons', parent_payload)
+    parent_id = db.taxons.find_one({'libelle_long': parent_payload['libelle_long']})['_id']
     # Then children
-    child1_id = db.taxons.insert({
+    child1_payload = {
         'libelle_long': 'Pteropus conspicillatus)',
         'libelle_court': 'Roussette',
         'description': """D'après wikipedia :
@@ -34,8 +39,9 @@ C'est le cas notamment des espèces des genres Acerodon, Pteropus et Rousettus.
         'parents': [parent_id],
         'liens': ['http://fr.wikipedia.org/wiki/Roussette_(chiropt%C3%A8re)'],
         'tags': ['chiro', 'vigiechiro', 'ultrason']
-    })
-    child2_id = db.taxons.insert({
+    }
+    eve_post_internal('taxons', child1_payload)
+    child2_payload = {
         'libelle_long': 'Megadermatidae)',
         'libelle_court': 'faux-vampires',
         'description': """D'après wikipedia :
@@ -46,10 +52,11 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
         'parents': [parent_id],
         'liens': ['http://fr.wikipedia.org/wiki/Megadermatidae'],
         'tags': ['chiro', 'vigiechiro', 'ultrason']
-    })
+    }
+    eve_post_internal('taxons', child2_payload)
     def finalizer():
-        for taxon_id in [parent_id, child1_id, child2_id]:
-            db.taxons.remove({'_id': taxon_id})
+        for payload in [parent_payload, child1_payload, child2_payload]:
+            db.taxons.remove({'libelle_long': payload['libelle_long']})
     request.addfinalizer(finalizer)
     return db.taxons.find()
 

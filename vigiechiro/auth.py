@@ -7,13 +7,20 @@ import string
 import types
 
 from flask import Blueprint, redirect
-from flask import current_app as app, abort, request
+from flask import current_app, abort, request
 import eve.auth
 import eve.render
 from authomatic.extras.flask import FlaskAuthomatic
 
 from vigiechiro import settings
-from vigiechiro.resources.utilisateurs import check_role
+
+
+def check_role(role, allowed_roles, rr):
+    """
+    Role are handled using least priviledge, thus a higher priviledged role
+    also include it lower roles.
+    """
+    return bool([r for r in settings.ROLE_RULES[role] if r in allowed_roles])
 
 
 class TokenAuth(eve.auth.TokenAuth):
@@ -21,10 +28,12 @@ class TokenAuth(eve.auth.TokenAuth):
     """Custom token & roles authentification"""
 
     def check_auth(self, token, allowed_roles, resource, method):
-        accounts = app.data.driver.db['utilisateurs']
+        accounts = current_app.data.driver.db['utilisateurs']
         account = accounts.find_one({'tokens': token})
         if account and 'role' in account:
             self.set_request_auth_value(account['_id'])
+            # Keep request user account in local context, could be useful later
+            current_app.g.request_user = account
             return check_role(account['role'], allowed_roles, resource)
         return False
 
@@ -76,7 +85,7 @@ def login(authomatic, provider_name):
             # Register the user
             token = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for x in range(32))
-            users_db = app.data.driver.db['users']
+            users_db = current_app.data.driver.db['users']
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
             user_db = users_db.find_one({provider_id_name: user.id})

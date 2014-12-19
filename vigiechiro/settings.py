@@ -3,6 +3,15 @@ from authomatic.providers import oauth2
 
 from vigiechiro import resources
 
+## vigiechiro ##
+RESOURCES = [resources.Taxon, resources.Utilisateur]
+ROLE_RULES = {
+    'Lecteur': ['Lecteur'],
+    'Observateur': ['Lecteur', 'Observateur'],
+    'Validateur': ['Lecteur', 'Observateur', 'Validateur'],
+    'Administrateur': ['Lecteur', 'Observateur', 'Validateur', 'Administrateur']
+}
+
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
 FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN', 'http://www.lvh.me:9000')
@@ -31,7 +40,7 @@ X_EXPOSE_HEADERS = X_HEADERS
 RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
 ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
 
-DOMAIN = resources.DOMAIN
+DOMAIN = resources.generate_domain(RESOURCES)
 
 ### Authomatic ###
 AUTHOMATIC = {
