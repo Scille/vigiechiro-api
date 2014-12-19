@@ -24,6 +24,7 @@ class Utilisateur(Resource):
         'allowed_item_read_roles': ['Observateur'],
         'allowed_item_write_roles': ['Observateur'],
         'datasource': {
+            # Private data : tokens list
             'projection': {'tokens': 0}
         },
         'schema': {
@@ -48,7 +49,6 @@ class Utilisateur(Resource):
                 'type': 'list',
                 'schema': {'type': 'string'}
             },
-            # Private data : tokens list
             'tokens': {
                 'type': 'list',
                 'schema': {'type': 'string'}
@@ -91,7 +91,7 @@ class Utilisateur(Resource):
         # Non-admin can only modify it own account
         if lookup['_id'] != str(current_app.g.request_user['_id']):
             abort(403)
-        # Not all field can be altered
+        # Not all fields can be altered
         const_fields = set(request.json.keys()) & self.CONST_FIELDS
         if const_fields:
-            abort(403, 'not allow to change field(s) {}'.format(const_fields))
+            abort(403, 'not allowed to alter field(s) {}'.format(const_fields))
