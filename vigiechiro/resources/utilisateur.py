@@ -19,8 +19,6 @@ class Utilisateur(Resource):
         'item_title': 'utilisateur',
         'resource_methods': ['GET'],
         'item_methods': ['GET', 'PUT', 'PATCH'],
-        'allowed_read_roles': ['Observateur'],
-        'allowed_write_roles': ['Administrateur'],
         'allowed_item_read_roles': ['Observateur'],
         'allowed_item_write_roles': ['Observateur'],
         'datasource': {

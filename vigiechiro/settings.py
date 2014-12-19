@@ -42,6 +42,11 @@ ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
 
 DOMAIN = resources.generate_domain(RESOURCES)
 
+ALLOWED_READ_ROLES = ['Observateur']
+ALLOWED_WRITE_ROLES = ['Administrateur']
+ALLOWED_ITEM_READ_ROLES = ['Observateur']
+ALLOWED_ITEM_WRITE_ROLES = ['Administrateur']
+
 ### Authomatic ###
 AUTHOMATIC = {
     'github': {

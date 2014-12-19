@@ -9,10 +9,6 @@ class Taxon(Resource):
         'item_title': 'taxon',
         'resource_methods': ['GET', 'POST'],
         'item_methods': ['GET', 'PATCH', 'PUT'],
-        'allowed_read_roles': ['Observateur'],
-        'allowed_write_roles': ['Administrateur'],
-        'allowed_item_read_roles': ['Observateur'],
-        'allowed_item_write_roles': ['Administrateur'],
         'schema': {
             'libelle_long': {'type': 'string', 'required': True, 'unique': True},
             'libelle_court': {'type': 'string', 'unique': True},
