@@ -3,6 +3,7 @@ from .resource import Resource
 from .taxon import Taxon
 from .utilisateur import Utilisateur
 from .protocole import Protocole
+from .site import Site
 # from .participation import Participation
 
 from eve.io.mongo.validation import Validator as EveValidator
