@@ -12,12 +12,3 @@ from flask import current_app as app
 
 def generate_domain(resources):
     return {resource.RESOURCE_NAME: resource.DOMAIN for resource in resources}
-
-
-class Validator(EveValidator):
-
-    def _validate_type_base64image(self, field, value):
-        """Naive Base64 encoded png image type"""
-        # TODO : check image validy and size
-        if not value.startswith('data:image/png;base64,'):
-            self._error(field, ERROR_BAD_TYPE % 'data:image/png;base64')

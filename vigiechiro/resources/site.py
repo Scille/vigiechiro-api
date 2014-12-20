@@ -19,45 +19,50 @@ class Site(Resource):
         'resource_methods': ['GET', 'POST'],
         'item_methods': ['GET', 'PATCH', 'PUT'],
         'schema': {
-            'numero': {'type': 'integer', 'required': True},
+            'numero': {
+                'type': 'integer',
+                'unique': True,
+                'readonly': True
+            },
             'protocole': {
                 'type': 'objectid',
                 'data_relation': {
                     'resource': 'protocoles',
                     'field': '_id',
-                    'embeddable': False
+                    'embeddable': False,
                 },
-                'commentaire': {'type': 'string'},
-                'numero_grille_stoc': {'type': 'string'},
-                'verrouiller': {'type': 'boolean'},
-                'coordonnee': {'type': 'point'},
-                'url_cartographie': {'type': 'url'},
-                'largeur': {'type': 'number'},
-                'localite': {
-                    'type': 'list',
-                    'schema': {
-                        'coordonnee': {'type': 'point'},
-                        'representatif': {'type': 'boolean'},
-                        'habitat': {
-                            'type': 'dict',
-                            'schema': {
-                                'date': {'type': 'datetime'},
-                                'stoc_principal': {
-                                    'type': 'dict',
-                                    'schema': STOC_SCHEMA
-                                },
-                                'stoc_secondaire': {
-                                    'type': 'dict',
-                                    'schema': STOC_SCHEMA
-                                }
+                'required': True
+            },
+            'commentaire': {'type': 'string'},
+            'numero_grille_stoc': {'type': 'string'},
+            'verrouille': {'type': 'boolean'},
+            'coordonnee': {'type': 'point'},
+            'url_cartographie': {'type': 'url'},
+            'largeur': {'type': 'number'},
+            'localite': {
+                'type': 'list',
+                'schema': {
+                    'coordonnee': {'type': 'point'},
+                    'representatif': {'type': 'boolean'},
+                    'habitat': {
+                        'type': 'dict',
+                        'schema': {
+                            'date': {'type': 'datetime'},
+                            'stoc_principal': {
+                                'type': 'dict',
+                                'schema': STOC_SCHEMA
+                            },
+                            'stoc_secondaire': {
+                                'type': 'dict',
+                                'schema': STOC_SCHEMA
                             }
                         }
                     }
-                },
-                'type_site': {'type': 'string', 'regex': r'^(LINEAIRE|POLYGONE)$'},
-                'generee_aleatoirement': {'type': 'boolean'},
-                'justification_non_aleatoire': {'type': 'string'}
-            }
+                }
+            },
+            'type_site': {'type': 'string', 'regex': r'^(LINEAIRE|POLYGONE)$'},
+            'generee_aleatoirement': {'type': 'boolean'},
+            'justification_non_aleatoire': {'type': 'string'}
         }
     }
 
@@ -67,3 +72,9 @@ class Site(Resource):
         @self.route('/stoc', methods=['GET'])
         def display_stock():
             return jsonify(STOC_SCHEMA)
+
+        @self.callback
+        def on_insert(items):
+            for item in items:
+                # TODO use counter
+                item['numero'] = 1

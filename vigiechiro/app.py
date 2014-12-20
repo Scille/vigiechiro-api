@@ -6,7 +6,7 @@ import logging
 import redis
 
 from vigiechiro import settings
-from vigiechiro.resources import Validator
+from vigiechiro.validator import Validator
 from vigiechiro.auth import TokenAuth, auth_factory
 
 
