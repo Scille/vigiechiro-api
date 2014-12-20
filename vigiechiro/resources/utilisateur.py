@@ -52,7 +52,7 @@ class Utilisateur(Resource):
         super().__init__()
 
         @self.route(
-            '/utilisateurs/moi',
+            '/moi',
             methods=[
                 'GET',
                 'PUT',
