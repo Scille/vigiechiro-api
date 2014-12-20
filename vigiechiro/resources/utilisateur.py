@@ -50,18 +50,31 @@ class Utilisateur(Resource):
 
     def __init__(self):
         super().__init__()
-        @self.route('/utilisateurs/moi', methods=['GET', 'PUT', 'PATCH'], allowed_roles=['Observateur'])
+
+        @self.route(
+            '/utilisateurs/moi',
+            methods=[
+                'GET',
+                'PUT',
+                'PATCH'],
+            allowed_roles=['Observateur'])
         def route_moi():
             user_id = current_app.auth.get_request_auth_value()
             if user_id:
                 if request.method in ('GET', 'HEAD'):
-                    response = eve.methods.getitem(self.RESOURCE_NAME, _id=user_id)
+                    response = eve.methods.getitem(
+                        self.RESOURCE_NAME,
+                        _id=user_id)
                 elif request.method == 'PATCH':
-                    response = eve.methods.patch(self.RESOURCE_NAME, _id=user_id)
+                    response = eve.methods.patch(
+                        self.RESOURCE_NAME,
+                        _id=user_id)
                 elif request.method == 'PUT':
                     response = eve.methods.put(self.RESOURCE_NAME, _id=user_id)
                 elif request.method == 'DELETE':
-                    response = eve.methods.deleteitem(self.RESOURCE_NAME, _id=user_id)
+                    response = eve.methods.deleteitem(
+                        self.RESOURCE_NAME,
+                        _id=user_id)
                 elif request.method == 'OPTIONS':
                     send_response(self.RESOURCE_NAME, response)
                 else:
@@ -69,9 +82,11 @@ class Utilisateur(Resource):
                 return eve.render.send_response(self.RESOURCE_NAME, response)
             else:
                 abort(404)
+
         @self.callback
         def on_pre_PUT(request, lookup):
             self._check_rights(request, lookup)
+
         @self.callback
         def on_pre_PATCH(request, lookup):
             self._check_rights(request, lookup)

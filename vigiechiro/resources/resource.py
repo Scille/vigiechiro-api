@@ -4,7 +4,10 @@ from functools import wraps
 from flask import request, Response, g, abort
 from cerberus.errors import ERROR_BAD_TYPE
 
-class ResourceException(Exception): pass
+
+class ResourceException(Exception):
+    pass
+
 
 class Resource:
 
@@ -24,7 +27,11 @@ class Resource:
            the given eve app
         """
         for callback in self.callbacks:
-            event = getattr(app, '{}_{}'.format(callback.__name__, self.RESOURCE_NAME))
+            event = getattr(
+                app,
+                '{}_{}'.format(
+                    callback.__name__,
+                    self.RESOURCE_NAME))
             event += callback
         if hasattr(self, 'blueprint'):
             app.register_blueprint(self.blueprint)
@@ -51,6 +58,7 @@ class Resource:
 
     def register_type_enum(self, name, enum):
         """Create and register an enum validation function"""
+
         def check_type(self, field, value):
             if value not in enum:
                 self._error(field, ERROR_BAD_TYPE % name)
@@ -61,6 +69,7 @@ class Resource:
         default_roles = kwargs.pop('allowed_roles', [])
         write_roles = kwargs.pop('allowed_write_roles', default_roles)
         read_roles = kwargs.pop('allowed_read_roles', default_roles)
+
         def fdec(f):
             @wraps(f)
             def decorated(*args, **kwargs):
@@ -73,10 +82,19 @@ class Resource:
                 else:
                     abort(405)
                 if current_app.auth:
-                    if not current_app.auth.authorized(roles, None, request.method):
+                    if not current_app.auth.authorized(
+                            roles,
+                            None,
+                            request.method):
                         return current_app.auth.authenticate()
                 return f(*args, **kwargs)
-            self.blueprint.add_url_rule(route_, view_func=decorated,
-                methods=kwargs.pop('methods', []) + ['OPTIONS'], **kwargs)
+            self.blueprint.add_url_rule(
+                route_,
+                view_func=decorated,
+                methods=kwargs.pop(
+                    'methods',
+                    []) +
+                ['OPTIONS'],
+                **kwargs)
             return decorated
         return fdec

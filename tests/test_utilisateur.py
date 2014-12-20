@@ -38,6 +38,7 @@ def users_base(request):
              'tokens': ['IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE']}
     eve_post_internal('utilisateurs', user2)
     users = [user for user in db.utilisateurs.find()]
+
     def finalizer():
         for user in [user1, user2]:
             db.utilisateurs.remove({'pseudo': user['pseudo']})
@@ -70,11 +71,14 @@ def test_user_route(users_base):
 def test_rights(observateur, administrateur):
     # Change data for myself is allowed...
     payload = {'donnees_publiques': True}
-    r = observateur.patch(observateur.url,
-        headers={'If-Match': observateur.user['_etag']}, json=payload)
+    r = observateur.patch(
+        observateur.url,
+        headers={
+            'If-Match': observateur.user['_etag']},
+        json=payload)
     assert r.status_code == 200, r.text
     observateur.update_user()
-    assert observateur.user['donnees_publiques'] == True
+    assert observateur.user['donnees_publiques']
     # ...but I can't change for others !
     r = observateur.patch(administrateur.url,
                           headers={'If-Match': administrateur.user['_etag']},
@@ -93,6 +97,7 @@ def test_rights(observateur, administrateur):
     observateur.update_user()
     assert observateur.user['role'] == 'Validateur'
 
+
 def test_readonly_fields(observateur, administrateur):
     payloads = [{'role': 'Administrateur'},
                 {'email': 'new@mail.com'},
@@ -103,11 +108,14 @@ def test_readonly_fields(observateur, administrateur):
                               json=payload)
         assert r.status_code == 403, r.text
         # Admin can do everything !
-        r = administrateur.patch(administrateur.url,
-                              headers={'If-Match': administrateur.user['_etag']},
-                              json=payload)
+        r = administrateur.patch(
+            administrateur.url,
+            headers={
+                'If-Match': administrateur.user['_etag']},
+            json=payload)
         administrateur.update_user()
         assert r.status_code == 200, r.text
+
 
 def test_internal_resource(observateur):
     r = observateur.get(observateur.url)
@@ -115,6 +123,6 @@ def test_internal_resource(observateur):
     assert 'tokens' not in r.json()
     payload = {'tokens': ['7U5L5J8B7BEDH5MFOHZ8D2834AUNTPXI']}
     r = observateur.patch(observateur.url,
-                   headers={'If-Match': observateur.user['_etag']},
-                   json=payload)
+                          headers={'If-Match': observateur.user['_etag']},
+                          json=payload)
     assert r.status_code == 403, r.text

@@ -6,11 +6,10 @@ from vigiechiro import resources
 ## vigiechiro ##
 RESOURCES = [resources.Utilisateur, resources.Taxon, resources.Protocole]
 ROLE_RULES = {
-    'Lecteur': ['Lecteur'],
-    'Observateur': ['Lecteur', 'Observateur'],
-    'Validateur': ['Lecteur', 'Observateur', 'Validateur'],
-    'Administrateur': ['Lecteur', 'Observateur', 'Validateur', 'Administrateur']
-}
+    'Lecteur': ['Lecteur'], 'Observateur': [
+        'Lecteur', 'Observateur'], 'Validateur': [
+            'Lecteur', 'Observateur', 'Validateur'], 'Administrateur': [
+                'Lecteur', 'Observateur', 'Validateur', 'Administrateur']}
 
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
@@ -51,19 +50,30 @@ ALLOWED_ITEM_WRITE_ROLES = ['Administrateur']
 AUTHOMATIC = {
     'github': {
         'class_': oauth2.GitHub,
-        'consumer_key': environ.get('GITHUB_API_KEY', ''),
-        'consumer_secret': environ.get('GITHUB_API_SECRET', ''),
+        'consumer_key': environ.get(
+            'GITHUB_API_KEY',
+            ''),
+        'consumer_secret': environ.get(
+            'GITHUB_API_SECRET',
+            ''),
         'scope': oauth2.GitHub.user_info_scope,
-        'access_headers': {'User-Agent': 'Awesome-Octocat-App'},
+        'access_headers': {
+            'User-Agent': 'Awesome-Octocat-App'},
         '_apis': {
-            'Get your events': ('GET', 'https://api.github.com/users/{user.username}/events'),
-            'Get your watched repos': ('GET', 'https://api.github.com/user/subscriptions'),
+            'Get your events': (
+                'GET',
+                'https://api.github.com/users/{user.username}/events'),
+            'Get your watched repos': (
+                'GET',
+                'https://api.github.com/user/subscriptions'),
         },
     },
     'google': {
         'class_': oauth2.Google,
-        'consumer_key': environ.get('GOOGLE_API_KEY', ''),
-        'consumer_secret': environ.get('GOOGLE_API_SECRET', ''),
-        'scope': oauth2.Google.user_info_scope
-    }
-}
+        'consumer_key': environ.get(
+            'GOOGLE_API_KEY',
+            ''),
+        'consumer_secret': environ.get(
+            'GOOGLE_API_SECRET',
+            ''),
+        'scope': oauth2.Google.user_info_scope}}

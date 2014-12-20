@@ -83,8 +83,10 @@ def login(authomatic, provider_name):
         elif authomatic.result.user:
             authomatic.result.user.update()
             # Register the user
-            token = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                            for x in range(32))
+            token = ''.join(
+                random.choice(
+                    string.ascii_uppercase +
+                    string.digits) for x in range(32))
             users_db = current_app.data.driver.db['users']
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
@@ -99,10 +101,20 @@ def login(authomatic, provider_name):
                                               'email': user.email,
                                               'tokens': [token]})
                 logging.info('Create user {}'.format(user.email))
-            logging.info('Update user {} token: {}, Authorization: Basic {}'.format(
-                user.email, token, base64.encodebytes((token + ':').encode())))
-            return redirect('{}/#/?token={}&id={}&name={}&email={}'.format(
-                settings.FRONTEND_DOMAIN, token, user_db_id, user.name, user.email), code=302)
+            logging.info(
+                'Update user {} token: {}, Authorization: Basic {}'.format(
+                    user.email,
+                    token,
+                    base64.encodebytes(
+                        (token + ':').encode())))
+            return redirect(
+                '{}/#/?token={}&id={}&name={}&email={}'.format(
+                    settings.FRONTEND_DOMAIN,
+                    token,
+                    user_db_id,
+                    user.name,
+                    user.email),
+                code=302)
     else:
         return authomatic.response
 

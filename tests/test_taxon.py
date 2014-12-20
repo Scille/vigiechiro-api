@@ -22,7 +22,8 @@ Ces animaux, comme les Cétacés, sont souvent capables d'écholocation.
         'tags': ['chiro', 'vigiechiro', 'ultrason']
     }
     eve_post_internal('taxons', parent_payload)
-    parent_id = db.taxons.find_one({'libelle_long': parent_payload['libelle_long']})['_id']
+    parent_id = db.taxons.find_one(
+        {'libelle_long': parent_payload['libelle_long']})['_id']
     # Then children
     child1_payload = {
         'libelle_long': 'Pteropus conspicillatus)',
@@ -52,6 +53,7 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
         'tags': ['chiro', 'vigiechiro', 'ultrason']
     }
     eve_post_internal('taxons', child2_payload)
+
     def finalizer():
         for payload in [parent_payload, child1_payload, child2_payload]:
             db.taxons.remove({'libelle_long': payload['libelle_long']})
@@ -67,6 +69,7 @@ def new_taxon_payload(request):
         'liens': ['http://fr.wikipedia.org/wiki/batman'],
         'tags': ['chiro', 'vigiechiro', 'comics']
     }
+
     def finalizer():
         db.taxons.remove({'libelle_long': payload['libelle_long']})
     request.addfinalizer(finalizer)
@@ -90,7 +93,8 @@ def test_multi_parents(taxons_base, administrateur):
     assert r.status_code == 200, r.text
     etag = r.json()['_etag']
     # Use put instead of patch
-    payload = {field: payload[field] for field in payload.keys() if not field.startswith('_')}
+    payload = {field: payload[field]
+               for field in payload.keys() if not field.startswith('_')}
     r = administrateur.put(url, headers={'If-Match': etag},
                            json=payload)
     assert r.status_code == 200, r.text
@@ -106,7 +110,9 @@ def test_circular_parent(taxons_base, administrateur):
     url = '/taxons/{}'.format(taxons_base[0]['_id'])
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
-    r = administrateur.patch(url, headers={'If-Match': r.json()['_etag'], 'Content-type':'application/json'},
+    r = administrateur.patch(url,
+                             headers={'If-Match': r.json()['_etag'],
+                                      'Content-type': 'application/json'},
                              json={'parents': [str(taxons_base[1]['_id'])]})
     assert r.status_code == 422, r.text
 

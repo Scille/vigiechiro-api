@@ -40,6 +40,7 @@ class Taxon(Resource):
 
     def _check_parents(self, updates, original=None):
         children = [original['_id']] if original else []
+
         def check_recur(children, curr_id):
             if curr_id in children:
                 abort(422, "circular dependancy of parents"
@@ -59,13 +60,16 @@ class Taxon(Resource):
 
     def __init__(self):
         super().__init__()
+
         @self.callback
         def on_insert(items):
             for item in items:
                 self._check_parents(item)
+
         @self.callback
         def on_update(updates, original):
             self._check_parents(updates, original)
+
         @self.callback
         def on_replace(updates, original):
             self._check_parents(updates, original)

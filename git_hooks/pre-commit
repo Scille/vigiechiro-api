@@ -1,0 +1,22 @@
+#! /usr/bin/env python3
+
+import subprocess
+from os.path import dirname, abspath
+
+ROOT_DIR = dirname(abspath(__file__)) + '/../../'
+TEST_FORMAT = "autopep8 -a -a -d --ignore-local-config "
+WORKING_FOLDERS = ['vigiechiro', 'tests']
+
+staged = subprocess.check_output('git diff --cached --name-status'.split())
+tocheck = []
+for line in staged.decode().splitlines():
+    change, path = line.split()
+    if (change != 'D' and path.endswith('.py') and
+        (path.startswith('vigiechiro') or path.startswith('tests'))):
+        tocheck.append(path)
+print('Checking PEP8 for files : {}'.format(tocheck))
+pep8_valid = not bool(subprocess.check_output(TEST_FORMAT.split() +
+                                              [ROOT_DIR+f for f in tocheck]))
+if not pep8_valid:
+    raise SystemExit("/!\ Code is not PEP8 valid !\n\tFIX =>  {}".format(
+        TEST_FORMAT.replace('-d', '-i') + ' '.join(tocheck)))

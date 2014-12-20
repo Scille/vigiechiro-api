@@ -5,6 +5,7 @@ import pytest
 from common import db, administrateur, observateur, eve_post_internal
 from test_taxon import taxons_base
 
+
 @pytest.fixture
 def protocoles_base(request, taxons_base):
     # Insert parent
@@ -31,6 +32,7 @@ def protocoles_base(request, taxons_base):
         # 'configuration_participation': []
     }
     eve_post_internal('protocoles', payload_sub)
+
     def finalizer():
         for payload in [payload_macro, payload_sub]:
             db.protocoles.remove({'titre': payload['titre']})
@@ -45,6 +47,7 @@ def new_protocole_payload(request):
         'type_site': 'POLYGONE',
         'algo_tirage_site': 'ROUTIER',
     }
+
     def finalizer():
         db.protocoles.remove({'titre': payload['titre']})
     request.addfinalizer(finalizer)
@@ -70,13 +73,19 @@ def test_access(protocoles_base, new_protocole_payload, observateur):
     assert r.status_code == 401, r.text
 
 
-def test_macro_protocoles(protocoles_base, new_protocole_payload, administrateur):
+def test_macro_protocoles(
+        protocoles_base,
+        new_protocole_payload,
+        administrateur):
     new_protocole_payload['parent'] = str(protocoles_base[0]['_id'])
     r = administrateur.post('/protocoles', json=new_protocole_payload)
     assert r.status_code == 201, r.text
     url = '/protocoles/' + r.json()['_id']
     etag = r.json()['_etag']
-    for dummy_id in ['dummy', '5490237a1d41c81800d52c18', administrateur.user_id]:
+    for dummy_id in [
+            'dummy',
+            '5490237a1d41c81800d52c18',
+            administrateur.user_id]:
         r = administrateur.patch(url, headers={'If-Match': etag},
                                  json={'parent': dummy_id})
         assert r.status_code == 422, r.text
