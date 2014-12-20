@@ -24,7 +24,10 @@ class Protocole(Resource):
                 'schema': {'type': 'string'}
             },
             # 'fichier': {'type': 'file'},
-            'type_site': {'type': 'type_site_enum', 'required': True},
+            'type_site': {
+                'type': 'string',
+                'regex': r'^(LINEAIRE|POLYGONE)$',
+                'required': True},
             'taxon': {
                 'type': 'objectid',
                 'data_relation': {
@@ -37,11 +40,9 @@ class Protocole(Resource):
                 'type': 'list',
                 'schema': {'type': 'string'}
             },
-            'algo_tirage_site': {'type': 'algo_tirage_site_enum'}
+            'algo_tirage_site': {
+                'type': 'string',
+                'regex': r'^(CARRE|ROUTIER|POINT_FIXE)$'
+            }
         }
     }
-
-    def __init__(self):
-        super().__init__()
-        self.register_type_enum('type_site_enum', ('LINEAIRE', 'POLYGONE'))
-        self.register_type_enum('algo_tirage_site_enum', ('CARRE', 'ROUTIER', 'POINT_FIXE'))
