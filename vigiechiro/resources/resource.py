@@ -65,18 +65,25 @@ class Resource:
         check_type.__name__ = '_validate_type_' + name
         self.types.append(check_type)
 
-    def route(self, route_, **kwargs):
+    def route(self, route_postfix, route_prefix=None, **kwargs):
         default_roles = kwargs.pop('allowed_roles', [])
         write_roles = kwargs.pop('allowed_write_roles', default_roles)
         read_roles = kwargs.pop('allowed_read_roles', default_roles)
+        route_prefix = route_prefix or self.RESOURCE_NAME
+        full_route = '/' + '/'.join([n for n in route_prefix.split('/') +
+                                     route_postfix.split('/') if n])
 
         def fdec(f):
             @wraps(f)
             def decorated(*args, **kwargs):
+                resource = current_app.config['DOMAIN'][self.RESOURCE_NAME]
+                roles = default_roles
                 if request.method in ('GET', 'HEAD'):
-                    roles = read_roles
+                    roles += read_roles or (resource['allowed_read_roles'] +
+                                            resource['allowed_roles'])
                 elif request.method in ('PATCH', 'PUT', 'DELETE'):
-                    roles = write_roles
+                    roles += write_roles or (resource['allowed_write_roles'] +
+                                             resource['allowed_roles'])
                 elif request.method == 'OPTIONS':
                     send_response(resource, response)
                 else:
@@ -89,7 +96,7 @@ class Resource:
                         return current_app.auth.authenticate()
                 return f(*args, **kwargs)
             self.blueprint.add_url_rule(
-                route_,
+                full_route,
                 view_func=decorated,
                 methods=kwargs.pop(
                     'methods',
