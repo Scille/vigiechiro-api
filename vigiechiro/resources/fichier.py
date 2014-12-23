@@ -45,12 +45,12 @@ class Fichier(Resource):
             },
             'nom': {'type': 'string', 'required': True},
             'mime': {'type': 'string', 'required': True},
-            'link': {'type': 'string', 'required': True},
+            'lien': {'type': 'url', 'required': True},
             'upload_realise': {'type': 'boolean'},
             'prive': {'type': 'boolean'}
         }
     }
-    CONST_FIELDS = {'proprietaire', 'nom', 'mime', 'link'}
+    CONST_FIELDS = {'proprietaire', 'nom', 'mime', 'lien'}
 
     def __init__(self):
         super().__init__()
@@ -148,8 +148,7 @@ class Fichier(Resource):
         # Insert the file representation in the files resource
         payload['nom'] = object_name
         payload['proprietaire'] = current_app.g.request_user['_id']
-        payload['link'] = url
-        # import pdb; pdb.set_trace()
+        payload['lien'] = url
         response = post_internal('fichiers', payload)
         if response[-1] == 201:
             # signed_request is not stored in the database but transfered once
