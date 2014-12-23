@@ -2,10 +2,8 @@
 
 from eve import Eve
 from os.path import dirname, abspath
-import logging
 import redis
-
-from vigiechiro import settings
+from vigiechiro import settings, resources
 from vigiechiro.validator import Validator
 from vigiechiro.auth import TokenAuth, auth_factory
 
@@ -15,6 +13,4 @@ app = Eve(auth=TokenAuth, validator=Validator, redis=r,
           settings=dirname(abspath(__file__)) + '/settings.py')
 app.register_blueprint(auth_factory(['google', 'github']))
 app.debug = True
-
-for ResourceCls in settings.RESOURCES:
-    ResourceCls().register(app)
+resources.register_app(app)

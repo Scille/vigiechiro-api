@@ -4,8 +4,6 @@ from authomatic.providers import oauth2
 from vigiechiro import resources
 
 ## vigiechiro ##
-RESOURCES = [resources.Utilisateur, resources.Taxon,
-             resources.Protocole, resources.Site]
 ROLE_RULES = {
     'Lecteur': ['Lecteur'], 'Observateur': [
         'Lecteur', 'Observateur'], 'Validateur': [
@@ -40,7 +38,7 @@ X_EXPOSE_HEADERS = X_HEADERS
 RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
 ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
 
-DOMAIN = resources.generate_domain(RESOURCES)
+DOMAIN = resources.generate_domain()
 
 ALLOWED_READ_ROLES = ['Observateur']
 ALLOWED_WRITE_ROLES = ['Administrateur']
@@ -78,3 +76,8 @@ AUTHOMATIC = {
             'GOOGLE_API_SECRET',
             ''),
         'scope': oauth2.Google.user_info_scope}}
+
+### S3 ###
+AWS_KEY = environ.get('AWS_KEY', '')
+AWS_SECRET = environ.get('AWS_SECRET', '')
+S3_BUCKET = environ.get('S3_BUCKET', '')

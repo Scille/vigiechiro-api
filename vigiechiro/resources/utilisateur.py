@@ -2,6 +2,7 @@ from flask import current_app, request, abort
 import eve.auth
 import eve.render
 import eve.methods
+from bson import ObjectId
 
 from .resource import Resource
 
@@ -51,13 +52,8 @@ class Utilisateur(Resource):
     def __init__(self):
         super().__init__()
 
-        @self.route(
-            '/moi',
-            methods=[
-                'GET',
-                'PUT',
-                'PATCH'],
-            allowed_roles=['Observateur'])
+        @self.route('/moi', methods=['GET', 'PUT', 'PATCH'],
+                    allowed_roles=['Observateur'])
         def route_moi():
             user_id = current_app.auth.get_request_auth_value()
             if user_id:
@@ -95,7 +91,7 @@ class Utilisateur(Resource):
         if current_app.g.request_user['role'] == 'Administrateur':
             return
         # Non-admin can only modify it own account
-        if lookup['_id'] != str(current_app.g.request_user['_id']):
+        if ObjectId(lookup['_id']) != current_app.g.request_user['_id']:
             abort(403)
         # Not all fields can be altered
         const_fields = set(request.json.keys()) & self.CONST_FIELDS

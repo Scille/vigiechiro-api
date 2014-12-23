@@ -12,7 +12,7 @@ setup(
     long_description=open('README.md').read(),
     # Eve 0.5 is not yet available
     install_requires=[
-        "Eve==0.4",
+        # "Eve==0.4",
         "redis",
         # authomatic (not available for the moment for Python3)
         # authomatic's dependancies

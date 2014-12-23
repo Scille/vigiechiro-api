@@ -81,7 +81,7 @@ class Resource:
                 if request.method in ('GET', 'HEAD'):
                     roles += read_roles or (resource['allowed_read_roles'] +
                                             resource['allowed_roles'])
-                elif request.method in ('PATCH', 'PUT', 'DELETE'):
+                elif request.method in ('POST', 'PATCH', 'PUT', 'DELETE'):
                     roles += write_roles or (resource['allowed_write_roles'] +
                                              resource['allowed_roles'])
                 elif request.method == 'OPTIONS':

@@ -11,10 +11,6 @@ def auth_header(token):
     return b'Basic ' + base64.encodebytes(token.encode() + b':')
 
 
-def test_allowed():
-    assert requests.get(settings.BACKEND_DOMAIN).status_code == 401
-
-
 @pytest.fixture(scope="module")
 def users_base(request):
     user1 = {'nom': 'Doe',
@@ -46,6 +42,16 @@ def users_base(request):
     return users
 
 
+def test_allowed():
+    assert requests.get(settings.BACKEND_DOMAIN).status_code == 401
+
+
+def test_dummy_user(administrateur):
+    for dummy in ['549982ae13adf2435290074b', 'dummy', '01234', ' ', '/']:
+        r = administrateur.get('/utilisateurs/' + dummy)
+        assert r.status_code == 404, r.text
+
+
 def test_token_access(users_base):
     user = users_base[0]
     for token in user['tokens']:
@@ -58,14 +64,18 @@ def test_token_access(users_base):
     assert r.status_code == 401
 
 
-def test_user_route(users_base):
-    user = users_base[0]
-    r = requests.get(settings.BACKEND_DOMAIN + '/utilisateurs/moi',
-                     headers={'Authorization': auth_header(user['tokens'][0])})
-    assert r.status_code == 200
+def test_user_route(observateur):
+    r = observateur.get('/utilisateurs/moi')
+    assert r.status_code == 200, r.text
     content = r.json()
     for key in ['nom', 'email']:
-        assert user[key] == content[key]
+        assert observateur.user[key] == content[key]
+    r = observateur.patch('/utilisateurs/moi',
+                          headers={'If-Match': content['_etag']},
+                          json={'commentaire': 'New comment'})
+    assert r.status_code == 200, r.text
+    observateur.update_user()
+    assert observateur.user['commentaire'] == 'New comment'
 
 
 def test_rights(observateur, administrateur):
