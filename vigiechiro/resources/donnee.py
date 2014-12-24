@@ -66,10 +66,8 @@ class Donnee(Resource):
     def __init__(self):
         super().__init__()
 
-        @self.route(
-            '/donnees/<id>/action/archiver',
-            methods=['POST'],
-            allowed_roles=['Administrateur'])
+        @self.route('/<id>/action/archiver', methods=['POST'],
+                    allowed_roles=['Administrateur'])
         def donnees_archiver(id):
             # TODO : actualy do the archiving
             pass
