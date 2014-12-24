@@ -23,7 +23,7 @@ import eve.render
 import eve.methods
 from eve.methods.post import post_internal
 
-from .resource import Resource
+from .resource import Resource, relation
 
 
 class Fichier(Resource):
@@ -34,15 +34,7 @@ class Fichier(Resource):
         'allowed_item_read_roles': ['Observateur'],
         'allowed_item_write_roles': ['Observateur'],
         'schema': {
-            'proprietaire': {
-                'type': 'objectid',
-                'data_relation': {
-                    'resource': 'utilisateurs',
-                    'field': '_id',
-                    'embeddable': True,
-                },
-                'required': True
-            },
+            'proprietaire': relation('utilisateurs', required=True),
             'nom': {'type': 'string', 'required': True},
             'mime': {'type': 'string', 'required': True},
             'lien': {'type': 'url', 'required': True},

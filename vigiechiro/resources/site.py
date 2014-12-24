@@ -1,6 +1,6 @@
 from flask import current_app, abort, jsonify
 
-from .resource import Resource
+from .resource import Resource, relation, choice
 
 STOC_SCHEMA = {
     'subdivision1': {'type': 'string', 'regex': r'^()$'},
@@ -19,20 +19,8 @@ class Site(Resource):
         'resource_methods': ['GET', 'POST'],
         'item_methods': ['GET', 'PATCH', 'PUT'],
         'schema': {
-            'numero': {
-                'type': 'integer',
-                'unique': True,
-                'readonly': True
-            },
-            'protocole': {
-                'type': 'objectid',
-                'data_relation': {
-                    'resource': 'protocoles',
-                    'field': '_id',
-                    'embeddable': False,
-                },
-                'required': True
-            },
+            'numero': {'type': 'integer', 'unique': True, 'readonly': True},
+            'protocole': relation('protocoles', required=True),
             'commentaire': {'type': 'string'},
             'numero_grille_stoc': {'type': 'string'},
             'verrouille': {'type': 'boolean'},
@@ -60,7 +48,7 @@ class Site(Resource):
                     }
                 }
             },
-            'type_site': {'type': 'string', 'regex': r'^(LINEAIRE|POLYGONE)$'},
+            'type_site': choice(['LINEAIRE', 'POLYGONE']),
             'generee_aleatoirement': {'type': 'boolean'},
             'justification_non_aleatoire': {'type': 'string'}
         }

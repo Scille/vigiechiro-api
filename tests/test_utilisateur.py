@@ -136,3 +136,6 @@ def test_internal_resource(observateur):
                           headers={'If-Match': observateur.user['_etag']},
                           json=payload)
     assert r.status_code == 403, r.text
+
+# def test_join_protocole(observateur, administrateur):
+#   observateur.get()

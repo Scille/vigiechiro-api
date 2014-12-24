@@ -1,6 +1,6 @@
 from flask import current_app, abort
 
-from .resource import Resource
+from .resource import Resource, relation
 
 
 class Taxon(Resource):
@@ -15,14 +15,7 @@ class Taxon(Resource):
             'description': {'type': 'string'},
             'parents': {
                 'type': 'list',
-                'schema': {
-                    'type': 'objectid',
-                    'data_relation': {
-                        'resource': 'taxons',
-                        'field': '_id',
-                        'embeddable': False
-                    }
-                }
+                'schema': relation('taxons', embeddable=False),
             },
             'liens': {
                 'type': 'list',
@@ -33,7 +26,10 @@ class Taxon(Resource):
                 'schema': {'type': 'string'}
             },
             # TODO : use more robust file type
-            'photos': {'type': 'list', 'schema': {'type': 'base64image'}},
+            'photos': {
+                'type': 'list',
+                'schema': relation('fichiers', required=True)
+            },
             'date_valide': {'type': 'datetime'},
         }
     }

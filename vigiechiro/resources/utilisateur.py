@@ -4,7 +4,7 @@ import eve.render
 import eve.methods
 from bson import ObjectId
 
-from .resource import Resource
+from .resource import Resource, relation
 
 
 class Utilisateur(Resource):
@@ -44,6 +44,13 @@ class Utilisateur(Resource):
             'tokens': {
                 'type': 'list',
                 'schema': {'type': 'string'}
+            },
+            'protocoles': {
+                'type': 'list',
+                'schema': {
+                    'valide': {'type': 'boolean'},
+                    'protocole': relation('protocoles', required=True)
+                }
             }
         }
     }

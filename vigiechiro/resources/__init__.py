@@ -1,11 +1,11 @@
 from .resource import Resource
 from .fichier import Fichier
-# from .donnee import Donnee
+from .donnee import Donnee
 from .taxon import Taxon
 from .utilisateur import Utilisateur
 from .protocole import Protocole
 from .site import Site
-# from .participation import Participation
+from .participation import Participation
 
 
 RESOURCES = [Utilisateur, Fichier, Taxon, Protocole, Site]

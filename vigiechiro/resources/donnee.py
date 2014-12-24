@@ -1,5 +1,4 @@
-from flask import Blueprint
-import eve.auth
+from .resource import Resource, relation, choice
 
 
 class Donnee(Resource):
@@ -12,17 +11,8 @@ class Donnee(Resource):
         'schema': {
             'commentaire': {'type': 'string'},
             'localite': {'type': 'string', 'required': True},
-            'participation': {
-                'type': 'objectid',
-                'data_relation': {
-                    'resource': 'utilisateurs',
-                    'field': '_id',
-                    'embeddable': True
-                },
-                'required': True
-            },
-            # TODO : create file type
-            # 'fichier': {'type': 'File'},
+            'participation': relation('participations', required=True),
+            'fichier': relation('fichiers'),
             'date_fichier': {'type': 'date', 'required': True},
             'probleme': {'type': 'string'},
             'sous_probleme': {'type': 'string'},
@@ -31,87 +21,39 @@ class Donnee(Resource):
             'detection': {
                 'type': 'dict',
                 'schema': {
-                    # 'fichier': {'type': 'File', 'required': True},
+                    'fichier': relation('fichiers', required=True),
                     'version': {'type': 'string', 'required': True},
-                    'origine': {
-                        'type': 'string',
-                        'regex': r'^(OBSERVATEUR|SERVEUR)$',
-                        'required': True
-                    },
+                    'origine': choice(['OBSERVATEUR', 'SERVEUR'], required=True),
                 },
-                'observations': {
-                    'type': 'list',
-                    'schema': {
-                        'classification': {
-                            'type': 'list',
-                            'schema': {
-                                'temps_debut': {'type': 'integer', 'required': True},
-                                'temps_fin': {'type': 'integer', 'required': True},
-                                'frequence_mediane': {'type': 'integer', 'required': True},
-                                'tadarida_taxon': {
-                                    'type': 'objectid',
-                                    'data_relation': {
-                                        'resource': 'utilisateurs',
-                                        'field': '_id',
-                                        'embeddable': True
-                                    },
-                                    'required': True
-                                },
-                                'tadarida_probabilite': {'type': 'integer', 'required': True},
-                                'tadarida_taxon_autre': {
-                                    'type': 'list',
-                                    'schema': {
-                                        'taxon': {
-                                            'type': 'objectid',
-                                            'data_relation': {
-                                                'resource': 'utilisateurs',
-                                                'field': '_id',
-                                                'embeddable': True
-                                            },
-                                            'required': True
-                                        },
-                                        'probabilite': {'type': 'integer', 'required': True}
-                                    }
-                                },
-                                'observateur_taxon': {
-                                    'type': 'objectid',
-                                    'data_relation': {
-                                        'resource': 'utilisateurs',
-                                        'field': '_id',
-                                        'embeddable': True
-                                    }
-                                },
-                                'observateur_probabilite': {
-                                    'type': 'string',
-                                    'regex': r'^(SUR|PROBABLE|POSSIBLE)$',
-                                },
-                                'validateur_taxon': {
-                                    'type': 'objectid',
-                                    'data_relation': {
-                                            'resource': 'utilisateurs',
-                                            'field': '_id',
-                                            'embeddable': True
-                                    }
-                                },
-                                'validateur_probabilite': {
-                                    'type': 'string',
-                                    'regex': r'^(SUR|PROBABLE|POSSIBLE)$',
-                                },
-                                'commentaire': {
-                                    'type': 'list',
-                                    'schema': {
-                                        'texte': {'type': 'string', 'required': True},
-                                        'auteur': {
-                                            'type': 'objectid',
-                                            'data_relation': {
-                                                'resource': 'utilisateurs',
-                                                'field': '_id',
-                                                'embeddable': True
-                                            }
-                                            'required': True
-                                        },
-                                        'date': {'type': 'date', 'required': True}
-                                    }
+            },
+            'observations': {
+                'type': 'list',
+                'schema': {
+                    'classification': {
+                        'type': 'list',
+                        'schema': {
+                            'temps_debut': {'type': 'integer', 'required': True},
+                            'temps_fin': {'type': 'integer', 'required': True},
+                            'frequence_mediane': {'type': 'integer', 'required': True},
+                            'tadarida_taxon': relation('taxons', required=True),
+                            'tadarida_probabilite': {'type': 'integer', 'required': True},
+                            'tadarida_taxon_autre': {
+                                'type': 'list',
+                                'schema': {
+                                    'taxon': relation('taxons', required=True),
+                                    'probabilite': {'type': 'integer', 'required': True}
+                                }
+                            },
+                            'observateur_taxon': relation('taxons'),
+                            'observateur_probabilite': choice(['SUR', 'PROBABLE', 'POSSIBLE']),
+                            'validateur_taxon': relation('utilisateurs'),
+                            'validateur_probabilite': choice(['SUR', 'PROBABLE', 'POSSIBLE']),
+                            'commentaire': {
+                                'type': 'list',
+                                'schema': {
+                                    'texte': {'type': 'string', 'required': True},
+                                    'auteur': relation('utilisateurs', required=True),
+                                    'date': {'type': 'date', 'required': True}
                                 }
                             }
                         }

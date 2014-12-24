@@ -1,4 +1,4 @@
-from .resource import Resource
+from .resource import Resource, relation, choice
 
 
 class Protocole(Resource):
@@ -10,39 +10,22 @@ class Protocole(Resource):
         'schema': {
             'titre': {'type': 'string', 'required': True},
             'description': {'type': 'string'},
-            'parent': {
-                'type': 'objectid',
-                'data_relation': {
-                    'resource': 'protocoles',
-                    'field': '_id',
-                    'embeddable': False
-                }
-            },
+            'parent': relation('protocoles', embeddable=False),
             'macro_protocole': {'type': 'boolean'},
             'tag': {
                 'type': 'list',
                 'schema': {'type': 'string'}
             },
-            # 'fichier': {'type': 'file'},
-            'type_site': {
-                'type': 'string',
-                'regex': r'^(LINEAIRE|POLYGONE)$',
-                'required': True},
-            'taxon': {
-                'type': 'objectid',
-                'data_relation': {
-                    'resource': 'taxons',
-                    'field': '_id',
-                    'embeddable': True
-                }
+            'fichiers': {
+                'type': 'list',
+                'schema': relation('fichiers', required=True),
             },
+            'type_site': choice(['LINEAIRE', 'POLYGONE'], required=True),
+            'taxon': relation('taxons'),
             'configuration_participation': {
                 'type': 'list',
                 'schema': {'type': 'string'}
             },
-            'algo_tirage_site': {
-                'type': 'string',
-                'regex': r'^(CARRE|ROUTIER|POINT_FIXE)$'
-            }
+            'algo_tirage_site': choice(['CARRE', 'ROUTIER', 'POINT_FIXE'], required=True)
         }
     }
