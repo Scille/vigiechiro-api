@@ -1,6 +1,8 @@
 from flask import current_app, abort, jsonify
 
-from .resource import Resource, relation, choice
+from vigiechiro.xin import EveBlueprint
+from .resource import relation, choice
+
 
 STOC_SCHEMA = {
     'subdivision1': {'type': 'string', 'regex': r'^()$'},
@@ -12,57 +14,56 @@ STOC_SCHEMA = {
 }
 
 
-class Site(Resource):
-    RESOURCE_NAME = 'sites'
-    DOMAIN = {
-        'item_title': 'site',
-        'resource_methods': ['GET', 'POST'],
-        'item_methods': ['GET', 'PATCH', 'PUT'],
-        'schema': {
-            'numero': {'type': 'integer', 'unique': True, 'readonly': True},
-            'protocole': relation('protocoles', required=True),
-            'commentaire': {'type': 'string'},
-            'numero_grille_stoc': {'type': 'string'},
-            'verrouille': {'type': 'boolean'},
-            'coordonnee': {'type': 'point'},
-            'url_cartographie': {'type': 'url'},
-            'largeur': {'type': 'number'},
-            'localite': {
-                'type': 'list',
-                'schema': {
-                    'coordonnee': {'type': 'point'},
-                    'representatif': {'type': 'boolean'},
-                    'habitat': {
-                        'type': 'dict',
-                        'schema': {
-                            'date': {'type': 'datetime'},
-                            'stoc_principal': {
-                                'type': 'dict',
-                                'schema': STOC_SCHEMA
-                            },
-                            'stoc_secondaire': {
-                                'type': 'dict',
-                                'schema': STOC_SCHEMA
-                            }
+DOMAIN = {
+    'item_title': 'site',
+    'resource_methods': ['GET', 'POST'],
+    'item_methods': ['GET', 'PATCH', 'PUT'],
+    'schema': {
+        'numero': {'type': 'integer', 'unique': True, 'readonly': True},
+        'protocole': relation('protocoles', required=True),
+        'commentaire': {'type': 'string'},
+        'numero_grille_stoc': {'type': 'string'},
+        'verrouille': {'type': 'boolean'},
+        'coordonnee': {'type': 'point'},
+        'url_cartographie': {'type': 'url'},
+        'largeur': {'type': 'number'},
+        'localite': {
+            'type': 'list',
+            'schema': {
+                'coordonnee': {'type': 'point'},
+                'representatif': {'type': 'boolean'},
+                'habitat': {
+                    'type': 'dict',
+                    'schema': {
+                        'date': {'type': 'datetime'},
+                        'stoc_principal': {
+                            'type': 'dict',
+                            'schema': STOC_SCHEMA
+                        },
+                        'stoc_secondaire': {
+                            'type': 'dict',
+                            'schema': STOC_SCHEMA
                         }
                     }
                 }
-            },
-            'type_site': choice(['LINEAIRE', 'POLYGONE']),
-            'generee_aleatoirement': {'type': 'boolean'},
-            'justification_non_aleatoire': {'type': 'string'}
-        }
+            }
+        },
+        'type_site': choice(['LINEAIRE', 'POLYGONE']),
+        'generee_aleatoirement': {'type': 'boolean'},
+        'justification_non_aleatoire': {'type': 'string'}
     }
+}
+sites = EveBlueprint('sites', __name__, domain=DOMAIN,
+                     url_prefix='/sites')
 
-    def __init__(self):
-        super().__init__()
 
-        @self.route('/stoc', methods=['GET'])
-        def display_stock():
-            return jsonify(STOC_SCHEMA)
+@sites.route('/stoc', methods=['GET'])
+def display_stock():
+    return jsonify(STOC_SCHEMA)
 
-        @self.callback
-        def on_insert(items):
-            for item in items:
-                # TODO use counter
-                item['numero'] = 1
+
+@sites.event
+def on_insert_sites(items):
+    for item in items:
+        # TODO use counter
+        item['numero'] = 1

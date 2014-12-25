@@ -4,7 +4,7 @@ from eve import Eve
 from os.path import dirname, abspath
 import redis
 from vigiechiro import settings, resources
-from vigiechiro.resources import fichiers, utilisateurs, taxons
+from vigiechiro.resources import fichiers, utilisateurs, taxons, sites
 from flask import Config
 from .xin import Validator
 from .xin.auth import TokenAuth, auth_factory
@@ -17,6 +17,7 @@ def bootstrap():
     config['DOMAIN'][fichiers.name] = fichiers.domain
     config['DOMAIN'][utilisateurs.name] = utilisateurs.domain
     config['DOMAIN'][taxons.name] = taxons.domain
+    config['DOMAIN'][sites.name] = sites.domain
 
     r = redis.StrictRedis(
         host=settings.REDIS_HOST,
@@ -28,6 +29,7 @@ def bootstrap():
     app.register_blueprint(fichiers)
     app.register_blueprint(utilisateurs)
     app.register_blueprint(taxons)
+    app.register_blueprint(sites)
     app.debug = True
     resources.register_app(app)
     return app

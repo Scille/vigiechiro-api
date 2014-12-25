@@ -4,11 +4,11 @@ from .donnee import Donnee
 from .taxon import taxons
 from .utilisateur import utilisateurs
 from .protocole import Protocole
-from .site import Site
+from .site import sites
 from .participation import Participation
 
 
-RESOURCES = [Protocole, Site]
+RESOURCES = [Protocole]
 
 
 def generate_domain():
