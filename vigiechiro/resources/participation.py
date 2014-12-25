@@ -63,3 +63,7 @@ DOMAIN = {
 
 participations = EveBlueprint('participations', __name__, domain=DOMAIN,
                               auto_prefix=True)
+
+
+def get_configuration_fields():
+    return DOMAIN['schema']['configuration']['schema'].keys()

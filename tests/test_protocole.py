@@ -28,8 +28,7 @@ def protocoles_base(request, taxons_base):
         'type_site': 'LINEAIRE',
         'algo_tirage_site': 'CARRE',
         'parent': id_macro,
-        # TODO : use this field
-        # 'configuration_participation': []
+        'configuration_participation': ['micro0_hauteur', 'micro0_position']
     }
     eve_post_internal('protocoles', payload_sub)
 
@@ -89,3 +88,25 @@ def test_macro_protocoles(
         r = administrateur.patch(url, headers={'If-Match': etag},
                                  json={'parent': dummy_id})
         assert r.status_code == 422, r.text
+
+
+def test_participation_configuration(
+        protocoles_base,
+        new_protocole_payload,
+        administrateur):
+    # Try to set dummy configuration
+    new_protocole_payload['configuration_participation'] = ['dummy']
+    r = administrateur.post('/protocoles', json=new_protocole_payload)
+    assert r.status_code == 422, r.text
+    # Same thing but with put/patch
+    url = '/protocoles/' + str(protocoles_base[0]['_id'])
+    etag = protocoles_base[0]['_etag']
+    r = administrateur.put(
+        url,
+        headers={
+            'If-Match': etag},
+        json=new_protocole_payload)
+    assert r.status_code == 422, r.text
+    payload = {'configuration_participation': ['dummy']}
+    r = administrateur.patch(url, headers={'If-Match': etag}, json=payload)
+    assert r.status_code == 422, r.text
