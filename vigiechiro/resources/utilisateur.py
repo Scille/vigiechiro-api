@@ -6,7 +6,7 @@ from bson import ObjectId
 
 from vigiechiro.xin import EveBlueprint
 from vigiechiro.xin.auth import requires_auth
-from .resource import Resource, relation
+from .resource import relation
 
 
 DOMAIN = {
