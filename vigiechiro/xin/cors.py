@@ -3,17 +3,16 @@ CORS support from http://flask.pocoo.org/snippets/56/
 """
 
 from datetime import timedelta
-from flask import make_response, request, current_app
+from flask import make_response, request, app, current_app
 from functools import update_wrapper
 
 from vigiechiro import settings
 
-# @crossdomain(origin=settings.X_DOMAINS, methods='GET', headers=settings.X_HEADERS)
 
-
-def crossdomain(origin=settings.X_DOMAINS, methods=None,
-                headers=settings.X_HEADERS, max_age=21600,
+def crossdomain(origin=None, methods=None, headers=None, max_age=21600,
                 attach_to_all=True, automatic_options=True):
+    origin = origin or app.config['X_DOMAINS']
+    headers = headers or app.config['X_HEADERS']
     if methods is not None:
         methods = ', '.join(sorted(x.upper() for x in methods))
     if headers is not None and not isinstance(headers, str):

@@ -1,7 +1,7 @@
 from os import environ
 from authomatic.providers import oauth2
+from enum import Enum
 
-from vigiechiro import resources
 
 ## vigiechiro ##
 ROLE_RULES = {
@@ -9,6 +9,15 @@ ROLE_RULES = {
         'Lecteur', 'Observateur'], 'Validateur': [
             'Lecteur', 'Observateur', 'Validateur'], 'Administrateur': [
                 'Lecteur', 'Observateur', 'Validateur', 'Administrateur']}
+# TODO : replace role by this enum system
+
+
+class Roles(Enum):
+    Lecteur = 0
+    Observateur = 1
+    Validateur = 2
+    Administrateur = 3
+
 
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
@@ -37,8 +46,6 @@ X_EXPOSE_HEADERS = X_HEADERS
 
 RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
 ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
-
-DOMAIN = resources.generate_domain()
 
 ALLOWED_READ_ROLES = ['Observateur']
 ALLOWED_WRITE_ROLES = ['Administrateur']

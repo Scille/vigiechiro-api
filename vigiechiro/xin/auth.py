@@ -5,9 +5,10 @@ import base64
 import logging
 import string
 import types
+from functools import wraps
 
 from flask import Blueprint, redirect
-from flask import current_app, abort, request
+from flask import app, current_app, abort, request
 import eve.auth
 import eve.render
 from authomatic.extras.flask import FlaskAuthomatic
@@ -15,12 +16,37 @@ from authomatic.extras.flask import FlaskAuthomatic
 from vigiechiro import settings
 
 
-def check_role(role, allowed_roles, rr):
-    """
-    Role are handled using least priviledge, thus a higher priviledged role
-    also include it lower roles.
-    """
-    return bool([r for r in settings.ROLE_RULES[role] if r in allowed_roles])
+def check_auth(token, allowed_roles):
+    accounts = current_app.data.driver.db['utilisateurs']
+    account = accounts.find_one({'tokens': token})
+    if account and 'role' in account:
+        # Keep request user account in local context, could be useful later
+        current_app.g.request_user = account
+        if allowed_roles:
+            # Role are handled using least priviledge, thus a higher
+            # priviledged role also include it lower roles.
+            role = account['role']
+            return next((True for r in current_app.config['ROLE_RULES'][role]
+                         if r in allowed_roles), False)
+        else:
+            return True
+    return False
+
+
+def requires_auth(roles=None):
+    """Decorator to set authentification and roles filtering"""
+    roles = [roles] if isinstance(roles, str) else roles
+
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            auth = request.authorization
+            if not auth or not check_auth(auth.username, roles):
+                return current_app.auth.authenticate()
+                # return eve.auth.TokenAuth.authenticate(None)
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
 
 
 class TokenAuth(eve.auth.TokenAuth):
@@ -28,14 +54,12 @@ class TokenAuth(eve.auth.TokenAuth):
     """Custom token & roles authentification"""
 
     def check_auth(self, token, allowed_roles, resource, method):
-        accounts = current_app.data.driver.db['utilisateurs']
-        account = accounts.find_one({'tokens': token})
-        if account and 'role' in account:
-            self.set_request_auth_value(account['_id'])
-            # Keep request user account in local context, could be useful later
-            current_app.g.request_user = account
-            return check_role(account['role'], allowed_roles, resource)
-        return False
+        if check_auth(token, allowed_roles):
+            current_app.set_request_auth_value(
+                current_app.g.request_user['_id'])
+            return True
+        else:
+            return False
 
 
 def auth_factory(services):
@@ -109,7 +133,7 @@ def login(authomatic, provider_name):
                         (token + ':').encode())))
             return redirect(
                 '{}/#/?token={}&id={}&name={}&email={}'.format(
-                    settings.FRONTEND_DOMAIN,
+                    current_app.config['FRONTEND_DOMAIN'],
                     token,
                     user_db_id,
                     user.name,

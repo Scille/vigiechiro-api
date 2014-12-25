@@ -3,6 +3,7 @@ from pymongo import MongoClient
 import pytest
 
 from common import db, administrateur, validateur, observateur, eve_post_internal
+from vigiechiro import settings
 
 
 def test_upload(observateur):
@@ -49,3 +50,13 @@ def test_access_rights(observateur, validateur, administrateur):
     assert r.status_code == 200, r.text
     r = administrateur.get(url_s3_access, allow_redirects=False)
     assert r.status_code == 302, r.text
+
+
+def test_not_loggedin(observateur):
+    r = observateur.post('/fichiers/s3', json={'mime': 'image/png'})
+    assert r.status_code == 201, r.text
+    response = r.json()
+    url_s3_access = '{}/fichiers/{}/action/acces'.format(
+        settings.BACKEND_DOMAIN, response['_id'])
+    r = requests.get(url_s3_access)
+    assert r.status_code == 401, r.text
