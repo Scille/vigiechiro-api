@@ -28,5 +28,7 @@ DOMAIN = {
         'algo_tirage_site': choice(['CARRE', 'ROUTIER', 'POINT_FIXE'], required=True)
     }
 }
+
+
 protocoles = EveBlueprint('protocoles', __name__, domain=DOMAIN,
-                          url_prefix='/protocoles')
+                          auto_prefix=True)

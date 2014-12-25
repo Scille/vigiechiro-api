@@ -60,3 +60,15 @@ def test_not_loggedin(observateur):
         settings.BACKEND_DOMAIN, response['_id'])
     r = requests.get(url_s3_access)
     assert r.status_code == 401, r.text
+
+
+def test_no_post(administrateur):
+    # POST is not allowed
+    payload = {
+        'proprietaire': administrateur.user_id,
+        'nom': 'bad_file',
+        'mime': 'image/png',
+        'lien': 'http://dummy.com/shouldnotexist',
+    }
+    r = administrateur.post('/fichiers', json=payload)
+    assert r.status_code == 405, r.text

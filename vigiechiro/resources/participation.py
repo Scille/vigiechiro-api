@@ -59,5 +59,7 @@ DOMAIN = {
         'site': relation('sites', required=True)
     }
 }
+
+
 participations = EveBlueprint('participations', __name__, domain=DOMAIN,
-                              url_prefix='/participations')
+                              auto_prefix=True)

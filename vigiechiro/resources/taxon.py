@@ -24,7 +24,6 @@ DOMAIN = {
             'type': 'list',
             'schema': {'type': 'string'}
         },
-        # TODO : use more robust file type
         'photos': {
             'type': 'list',
             'schema': relation('fichiers', required=True)
@@ -34,7 +33,7 @@ DOMAIN = {
 }
 CONST_FIELDS = {'proprietaire', 'nom', 'mime', 'lien'}
 taxons = EveBlueprint('taxons', __name__, domain=DOMAIN,
-                      url_prefix='/taxons')
+                      auto_prefix=True)
 
 
 def check_parents(updates, original=None):
@@ -59,16 +58,16 @@ def check_parents(updates, original=None):
 
 
 @taxons.event
-def on_insert_taxons(items):
+def on_insert(items):
     for item in items:
         check_parents(item)
 
 
 @taxons.event
-def on_update_taxons(updates, original):
+def on_update(updates, original):
     check_parents(updates, original)
 
 
 @taxons.event
-def on_replace_taxons(updates, original):
+def on_replace(updates, original):
     check_parents(updates, original)

@@ -54,7 +54,7 @@ DOMAIN = {
     }
 }
 sites = EveBlueprint('sites', __name__, domain=DOMAIN,
-                     url_prefix='/sites')
+                     auto_prefix=True)
 
 
 @sites.route('/stoc', methods=['GET'])
@@ -63,7 +63,7 @@ def display_stock():
 
 
 @sites.event
-def on_insert_sites(items):
+def on_insert(items):
     for item in items:
         # TODO use counter
         item['numero'] = 1

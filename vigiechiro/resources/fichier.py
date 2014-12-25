@@ -31,6 +31,7 @@ from vigiechiro.xin.auth import requires_auth
 DOMAIN = {
     'item_title': 'fichier',
     'item_methods': ['GET', 'PATCH', 'PUT'],
+    'resource_methods': ['GET'],
     'allowed_item_read_roles': ['Observateur'],
     'allowed_item_write_roles': ['Observateur'],
     'schema': {
@@ -44,21 +45,21 @@ DOMAIN = {
 }
 CONST_FIELDS = {'proprietaire', 'nom', 'mime', 'lien'}
 fichiers = EveBlueprint('fichiers', __name__, domain=DOMAIN,
-                        url_prefix='/fichiers')
+                        auto_prefix=True)
 
 
 @fichiers.event
-def on_replace_fichiers(item, original):
+def on_replace(item, original):
     check_rights(original, item)
 
 
 @fichiers.event
-def on_fetched_item_fichiers(response):
+def on_fetched_item(response):
     check_rights(response)
 
 
 @fichiers.event
-def on_update_fichiers(updates, original):
+def on_update(updates, original):
     check_rights(original, updates)
 
 

@@ -56,7 +56,7 @@ DOMAIN = {
 }
 CONST_FIELDS = {'pseudo', 'email', 'role', 'tokens'}
 utilisateurs = EveBlueprint('utilisateurs', __name__, domain=DOMAIN,
-                            url_prefix='/utilisateurs')
+                            auto_prefix=True)
 
 
 @utilisateurs.route('/moi', methods=['GET', 'PUT', 'PATCH'])
@@ -94,10 +94,10 @@ def check_rights(request, lookup):
 
 
 @utilisateurs.event
-def on_pre_PUT_utilisateurs(request, lookup):
+def on_pre_PUT(request, lookup):
     check_rights(request, lookup)
 
 
 @utilisateurs.event
-def on_pre_PATCH_utilisateurs(request, lookup):
+def on_pre_PATCH(request, lookup):
     check_rights(request, lookup)

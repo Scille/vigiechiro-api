@@ -10,8 +10,14 @@ class EveBlueprint(Blueprint):
 
     """Extend the flask blueprint to provide eve's event and type support"""
 
-    def __init__(self, *args, domain=None, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, name, *args, auto_prefix=False, domain=None, **kwargs):
+        if auto_prefix:
+            if 'url_prefix' not in kwargs:
+                kwargs['url_prefix'] = '/' + name
+            self.event_prefix = '_' + name
+        else:
+            self.event_prefix = None
+        super().__init__(name, *args, **kwargs)
         self.domain = domain
         self.events = []
         self.types = []
@@ -20,6 +26,8 @@ class EveBlueprint(Blueprint):
         """Decorator, register eve event based on function name"""
         if name:
             f.__name__ = name
+        elif self.event_prefix:
+            f.__name__ = f.__name__ + self.event_prefix
         self.events.append(f)
         return f
 
