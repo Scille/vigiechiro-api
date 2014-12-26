@@ -8,19 +8,24 @@ from .cors import crossdomain
 
 class EveBlueprint(Blueprint):
 
-    """Extend the flask blueprint to provide eve's event and type support"""
+    """
+    Extend the flask blueprint to provide eve's event and type support
+    :param auto_prefix: automatically add prefix base on blueprint name to url and callbacks
+    :param domain: Eve domain dict for the given resource
+    """
 
     def __init__(self, name, *args, auto_prefix=False, domain=None, **kwargs):
         if auto_prefix:
             if 'url_prefix' not in kwargs:
                 kwargs['url_prefix'] = '/' + name
             self.event_prefix = '_' + name
+            self.validate_prefix = '_validate_'
         else:
             self.event_prefix = None
         super().__init__(name, *args, **kwargs)
         self.domain = domain
         self.events = []
-        self.types = []
+        self.validates = []
 
     def event(self, f, name=None):
         """Decorator, register eve event based on function name"""
@@ -31,11 +36,13 @@ class EveBlueprint(Blueprint):
         self.events.append(f)
         return f
 
-    def type(self, f, name=None):
-        """Decorator, register cerberus type based on function name"""
+    def validate(self, f, name=None):
+        """Decorator, register cerberus validate based on function name"""
         if name:
             f.__name__ = name
-        self.events.append(f)
+        elif self.validate_prefix:
+            f.__name__ = self.validate_prefix + f.__name__
+        self.validates.append(f)
         return f
 
 
@@ -54,9 +61,9 @@ def register_blueprint(self, blueprint, *args, **kwargs):
         for event in blueprint.events:
             slot = getattr(self, event.__name__)
             slot += event
-    if hasattr(blueprint, 'types'):
-        for type_function in blueprint.types:
-            setattr(self.validator, type_function.__name__, type_function)
+    if hasattr(blueprint, 'validates'):
+        for validate in blueprint.validates:
+            setattr(self.validator, validate.__name__, validate)
     return wrapped(self, blueprint, *args, **kwargs)
 
 Eve.register_blueprint = register_blueprint

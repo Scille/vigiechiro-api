@@ -6,7 +6,15 @@ from common import db, administrateur, validateur, observateur, eve_post_interna
 from vigiechiro import settings
 
 
-def test_upload(observateur):
+@pytest.fixture
+def clean_fichiers(request):
+    def finalizer():
+        db.fichiers.remove()
+    request.addfinalizer(finalizer)
+    return None
+
+
+def test_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url
     r = observateur.post('/fichiers/s3', json={'mime': 'image/png'})
     assert r.status_code == 201, r.text
@@ -20,7 +28,11 @@ def test_upload(observateur):
     assert r.status_code == 200, r.text
 
 
-def test_access_rights(observateur, validateur, administrateur):
+def test_access_rights(
+        clean_fichiers,
+        observateur,
+        validateur,
+        administrateur):
     r = observateur.post('/fichiers/s3', json={'mime': 'image/png'})
     assert r.status_code == 201, r.text
     response = r.json()
@@ -52,7 +64,7 @@ def test_access_rights(observateur, validateur, administrateur):
     assert r.status_code == 302, r.text
 
 
-def test_not_loggedin(observateur):
+def test_not_loggedin(clean_fichiers, observateur):
     r = observateur.post('/fichiers/s3', json={'mime': 'image/png'})
     assert r.status_code == 201, r.text
     response = r.json()

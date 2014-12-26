@@ -5,6 +5,8 @@ import json
 
 from common import db, observateur, administrateur, eve_post_internal
 from vigiechiro import settings
+from test_protocole import protocoles_base
+from test_taxon import taxons_base
 
 
 def auth_header(token):
@@ -36,8 +38,7 @@ def users_base(request):
     users = [user for user in db.utilisateurs.find()]
 
     def finalizer():
-        for user in [user1, user2]:
-            db.utilisateurs.remove({'pseudo': user['pseudo']})
+        db.utilisateurs.remove()
     request.addfinalizer(finalizer)
     return users
 
@@ -98,7 +99,7 @@ def test_rights(observateur, administrateur):
     r = observateur.patch(observateur.url,
                           headers={'If-Match': observateur.user['_etag']},
                           json={'role': 'Administrateur'})
-    assert r.status_code == 403, r.text
+    assert r.status_code == 422, r.text
     # Of courses, admin can
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': observateur.user['_etag']},
@@ -116,7 +117,7 @@ def test_readonly_fields(observateur, administrateur):
         r = observateur.patch(observateur.url,
                               headers={'If-Match': observateur.user['_etag']},
                               json=payload)
-        assert r.status_code == 403, r.text
+        assert r.status_code == 422, r.text
         # Admin can do everything !
         r = administrateur.patch(
             administrateur.url,
@@ -135,7 +136,43 @@ def test_internal_resource(observateur):
     r = observateur.patch(observateur.url,
                           headers={'If-Match': observateur.user['_etag']},
                           json=payload)
-    assert r.status_code == 403, r.text
+    assert r.status_code == 422, r.text
 
-# def test_join_protocole(observateur, administrateur):
-#   observateur.get()
+
+def test_join_protocole(observateur, administrateur, protocoles_base):
+    macro_protocole = protocoles_base[0]
+    protocole = protocoles_base[1]
+    # Join a protocole
+    etag = observateur.user['_etag']
+    r = observateur.patch(observateur.url, headers={'If-Match': etag},
+                          json={'protocoles': {str(protocole['_id']): {}}})
+    assert r.status_code == 200, r.text
+    observateur.update_user()
+    etag = observateur.user['_etag']
+    # Try to join dummy protocoles
+    for protocole_id in [
+            'dummy',
+            observateur.user_id,
+            "549b444b13adf218427fb681"]:
+        r = observateur.patch(observateur.url, headers={'If-Match': etag},
+                              json={'protocoles': {protocole_id: {}}})
+        assert r.status_code == 422, protocole_id
+    # Try to validate myself
+    r = observateur.patch(observateur.url,
+                          headers={'If-Match': etag},
+                          json={'protocoles': {str(protocole['_id']): {'valide': True}}})
+    assert r.status_code == 422, r.text
+    # Admin validates me
+    r = administrateur.patch(observateur.url,
+                             headers={'If-Match': etag},
+                             json={'protocoles': {str(protocole['_id']): {'valide': True}}})
+    assert r.status_code == 200, r.text
+    observateur.update_user()
+    assert observateur.user['protocoles'] == {
+        str(protocole['_id']): {'valide': True}}
+    # Macro-protocoles are not subscriptable
+    etag = observateur.user['_etag']
+    r = observateur.patch(observateur.url,
+                          headers={'If-Match': etag},
+                          json={'protocoles': {str(macro_protocole['_id']): {}}})
+    assert r.status_code == 422, r.text

@@ -234,8 +234,11 @@ def resolve_nested_documents(updates, original):
     .. versionadded:: 0.5
     """
     r = {}
+    # import pdb;pdb.set_trace()
     for field, value in updates.items():
         if isinstance(value, dict):
+            if field not in original:
+              original[field] = {}
             original[field].update(resolve_nested_documents(value,
                                                             original[field]))
             r[field] = original[field]

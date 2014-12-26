@@ -94,6 +94,8 @@ class Validator(Validator):
            Handle the case in which ID_FIELD is not of ObjectId type.
         """
         if unique:
+            # if field not in ['email', 'pseudo', 'libelle_long', 'libelle_court']:
+            #     import pdb; pdb.set_trace()
             query = {field: value}
             if self._id:
                 try:

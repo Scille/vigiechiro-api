@@ -44,7 +44,6 @@ def collections_endpoint(**lookup):
     .. versionchanged:: 0.0.2
         Support for DELETE resource method.
     """
-
     resource = _resource()
     response = None
     method = request_method()

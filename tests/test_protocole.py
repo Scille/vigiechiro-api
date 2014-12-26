@@ -31,24 +31,33 @@ def protocoles_base(request, taxons_base):
         'configuration_participation': ['micro0_hauteur', 'micro0_position']
     }
     eve_post_internal('protocoles', payload_sub)
+    payload_sub = {
+        'titre': 'Vigieortho',
+        'description': 'Procole vigieortho',
+        'tag': ['orthoptères'],
+        'taxon': taxons_base[0]['_id'],
+        'type_site': 'LINEAIRE',
+        'algo_tirage_site': 'CARRE',
+    }
+    eve_post_internal('protocoles', payload_sub)
 
     def finalizer():
-        for payload in [payload_macro, payload_sub]:
-            db.protocoles.remove({'titre': payload['titre']})
+        db.protocoles.remove()
     request.addfinalizer(finalizer)
     return db.protocoles.find()
 
 
 @pytest.fixture
-def new_protocole_payload(request):
+def new_protocole_payload(request, taxons_base):
     payload = {
         'titre': 'Vigiechiro-Z',
         'type_site': 'POLYGONE',
         'algo_tirage_site': 'ROUTIER',
+        'taxon': str(taxons_base[0]['_id'])
     }
 
     def finalizer():
-        db.protocoles.remove({'titre': payload['titre']})
+        db.protocoles.remove()
     request.addfinalizer(finalizer)
     return payload
 
@@ -56,7 +65,7 @@ def new_protocole_payload(request):
 def test_access(protocoles_base, new_protocole_payload, observateur):
     r = observateur.get('/protocoles')
     assert r.status_code == 200, r.text
-    assert len(r.json()['_items']) == 2
+    assert len(r.json()['_items']) == 3
     # User cannot modify or create protocoles
     r = observateur.post('/protocoles', json=new_protocole_payload)
     assert r.status_code == 401, r.text
@@ -70,6 +79,12 @@ def test_access(protocoles_base, new_protocole_payload, observateur):
     assert r.status_code == 401, r.text
     r = observateur.delete(url, headers={'If-Match': etag})
     assert r.status_code == 401, r.text
+
+
+def test_required_taxon(new_protocole_payload, administrateur):
+    del new_protocole_payload['taxon']
+    r = administrateur.post('/protocoles', json=new_protocole_payload)
+    assert r.status_code == 422, r.text
 
 
 def test_macro_protocoles(

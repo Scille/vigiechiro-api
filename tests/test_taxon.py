@@ -55,8 +55,7 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
     eve_post_internal('taxons', child2_payload)
 
     def finalizer():
-        for payload in [parent_payload, child1_payload, child2_payload]:
-            db.taxons.remove({'libelle_long': payload['libelle_long']})
+        db.taxons.remove()
     request.addfinalizer(finalizer)
     return db.taxons.find()
 
@@ -71,7 +70,7 @@ def new_taxon_payload(request):
     }
 
     def finalizer():
-        db.taxons.remove({'libelle_long': payload['libelle_long']})
+        db.taxons.remove()
     request.addfinalizer(finalizer)
     return payload
 

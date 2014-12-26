@@ -4,7 +4,7 @@ from eve import Eve
 from os.path import dirname, abspath
 import redis
 from vigiechiro import settings, resources
-from vigiechiro.resources import utilisateurs, fichiers, taxons, sites, protocoles
+from vigiechiro.resources import utilisateurs, fichiers, taxons, sites, protocoles, participations
 from flask import Config
 from .xin import Validator
 from .xin.auth import TokenAuth, auth_factory
@@ -13,9 +13,14 @@ from .xin.auth import TokenAuth, auth_factory
 def bootstrap():
     config = Config(dirname(abspath(__file__)))
     config.from_pyfile('settings.py')
-    resources = [utilisateurs, fichiers, taxons, sites, protocoles]
-    config['DOMAIN'] = {
-        resource.name: resource.domain for resource in resources}
+    resources = [
+        utilisateurs,
+        fichiers,
+        taxons,
+        sites,
+        protocoles,
+        participations]
+    config['DOMAIN'] = {r.name: r.domain for r in resources}
 
     r = redis.StrictRedis(
         host=settings.REDIS_HOST,

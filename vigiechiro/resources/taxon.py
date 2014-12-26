@@ -18,7 +18,7 @@ DOMAIN = {
         },
         'liens': {
             'type': 'list',
-            'schema': {'type': 'string'}
+            'schema': {'type': 'url'}
         },
         'tags': {
             'type': 'list',

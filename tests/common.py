@@ -7,16 +7,26 @@ import pytest
 from pymongo import MongoClient
 from bson import ObjectId
 from eve.methods.post import post_internal
+from flask import current_app
 
 from vigiechiro import settings, app
 
+from wsgiref.handlers import format_date_time
+from time import mktime
+
+
+def format_datetime(dt):
+    stamp = mktime(dt.timetuple())
+    return format_date_time(stamp)
 
 db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
     settings.MONGO_DBNAME]
 
 
 def eve_post_internal(resource, payload):
-    with app.test_request_context():
+    with app.test_request_context() as c:
+        # Some inserts check the user's role
+        current_app.g.request_user = {'role': 'Administrateur'}
         result = post_internal(resource, payload)
         assert result[-1] == 201, result
 

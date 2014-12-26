@@ -18,12 +18,16 @@ DOMAIN = {
     'item_title': 'site',
     'resource_methods': ['GET', 'POST'],
     'item_methods': ['GET', 'PATCH', 'PUT'],
+    'allowed_read_roles': ['Observateur'],
+    'allowed_item_read_roles': ['Observateur'],
+    'allowed_item_write_roles': ['Observateur'],
     'schema': {
-        'numero': {'type': 'integer', 'unique': True, 'readonly': True},
-        'protocole': relation('protocoles', required=True),
+        # 'numero': {'type': 'integer', 'unique': True, 'readonly': True},
+        'protocole': relation('protocoles', required=True, writerights='Administrateur'),
+        'observateur': relation('utilisateurs', writerights='Administrateur'),
         'commentaire': {'type': 'string'},
         'numero_grille_stoc': {'type': 'string'},
-        'verrouille': {'type': 'boolean'},
+        'verrouille': {'type': 'boolean', 'writerights': 'Administrateur'},
         'coordonnee': {'type': 'point'},
         'url_cartographie': {'type': 'url'},
         'largeur': {'type': 'number'},
@@ -64,6 +68,25 @@ def display_stock():
 
 @sites.event
 def on_insert(items):
-    for item in items:
-        # TODO use counter
-        item['numero'] = 1
+    # TODO use counter
+    pass
+    # for item in items:
+    #     item['numero'] = 1
+
+
+def check_rights(original):
+    if current_app.g.request_user['role'] == 'Administrateur':
+        return
+    # Non-admin can only modify if the site is not already verrouille
+    if original['verrouille']:
+        abort(422, 'cannot modify the site once verrouille is set')
+
+
+@sites.event
+def on_update(updates, original):
+    check_rights(original)
+
+
+@sites.event
+def on_replace(item, original):
+    check_rights(original)

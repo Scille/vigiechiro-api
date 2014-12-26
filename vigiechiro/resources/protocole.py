@@ -1,7 +1,9 @@
 from flask import abort
 from vigiechiro.xin import EveBlueprint
-from .resource import relation, choice
+from vigiechiro.xin.auth import requires_auth
+from .resource import relation, choice, get_resource
 from . import participation
+from . import utilisateur
 
 
 DOMAIN = {
@@ -22,7 +24,7 @@ DOMAIN = {
             'schema': relation('fichiers', required=True),
         },
         'type_site': choice(['LINEAIRE', 'POLYGONE'], required=True),
-        'taxon': relation('taxons'),
+        'taxon': relation('taxons', required=True),
         'configuration_participation': {
             'type': 'list',
             'schema': {'type': 'string'}
@@ -30,6 +32,8 @@ DOMAIN = {
         'algo_tirage_site': choice(['CARRE', 'ROUTIER', 'POINT_FIXE'], required=True)
     }
 }
+
+
 protocoles = EveBlueprint('protocoles', __name__, domain=DOMAIN,
                           auto_prefix=True)
 

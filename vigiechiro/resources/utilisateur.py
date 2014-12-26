@@ -3,6 +3,7 @@ import eve.auth
 import eve.render
 import eve.methods
 from bson import ObjectId
+from bson.errors import InvalidId
 
 from vigiechiro.xin import EveBlueprint
 from vigiechiro.xin.auth import requires_auth
@@ -20,8 +21,11 @@ DOMAIN = {
         'projection': {'tokens': 0}
     },
     'schema': {
-        'pseudo': {'type': 'string', 'required': True, 'unique': True},
-        'email': {'type': 'string', 'required': True, 'unique': True},
+        'pseudo': {
+            'type': 'string', 'postonly': True,
+            'unique': True, 'required': True
+        },
+        'email': {'type': 'string', 'postonly': True, 'required': True, 'unique': True},
         'nom': {'type': 'string'},
         'prenom': {'type': 'string'},
         'telephone': {'type': 'string'},
@@ -34,29 +38,50 @@ DOMAIN = {
         },
         'professionnel': {'type': 'boolean'},
         'donnees_publiques': {'type': 'boolean'},
-        'role': {
-            'type': 'string',
-        },
+        'role': {'type': 'string', 'writerights': 'Administrateur'},
         'tags': {
             'type': 'list',
             'schema': {'type': 'string'}
         },
         'tokens': {
             'type': 'list',
-            'schema': {'type': 'string'}
+            'schema': {'type': 'string', 'writerights': 'Administrateur'}
         },
         'protocoles': {
-            'type': 'list',
-            'schema': {
-                'valide': {'type': 'boolean'},
-                'protocole': relation('protocoles', required=True)
+            'type': 'dict',
+            'utilisateur_validate_protocoles': True,
+            'keyschema': {
+                'type': 'dict',
+                'schema': {'valide': {'type': 'boolean', 'writerights': 'Administrateur'}}
             }
         }
     }
 }
-CONST_FIELDS = {'pseudo', 'email', 'role', 'tokens'}
 utilisateurs = EveBlueprint('utilisateurs', __name__, domain=DOMAIN,
                             auto_prefix=True)
+
+
+@utilisateurs.validate
+def utilisateur_validate_protocoles(self, validate, field, value):
+    """Make sure each key in the `protocoles` dict is a valid relation"""
+    if validate:
+        protocoles_db = current_app.data.driver.db['protocoles']
+        error_msg = "value '{}' cannot be converted to a ObjectId"
+        for protocole_id in value.keys():
+            try:
+                protocole_id = ObjectId(protocole_id)
+                protocole = protocoles_db.find_one({'_id': protocole_id})
+                if protocole:
+                    if protocole.get('macro_protocole', False):
+                        self._error(
+                            field,
+                            'cannot subscribe to a macro-protocole')
+                else:
+                    self._error(
+                        field,
+                        'no protocoles with id {}'.format(protocole_id))
+            except InvalidId:
+                self._error(field, error_msg.format(protocole_id))
 
 
 @utilisateurs.route('/moi', methods=['GET', 'PUT', 'PATCH'])
@@ -87,10 +112,6 @@ def check_rights(request, lookup):
     # Non-admin can only modify it own account
     if ObjectId(lookup['_id']) != current_app.g.request_user['_id']:
         abort(403)
-    # Not all fields can be altered
-    const_fields = set(request.json.keys()) & CONST_FIELDS
-    if const_fields:
-        abort(403, 'not allowed to alter field(s) {}'.format(const_fields))
 
 
 @utilisateurs.event
