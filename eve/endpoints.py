@@ -44,6 +44,7 @@ def collections_endpoint(**lookup):
     .. versionchanged:: 0.0.2
         Support for DELETE resource method.
     """
+
     resource = _resource()
     response = None
     method = request_method()
@@ -125,7 +126,7 @@ def home_endpoint():
             internal = config.DOMAIN[resource]['internal_resource']
             if not resource.endswith(config.VERSIONS):
                 if not bool(internal):
-                    links.append({'href': '/%s' % config.URLS[resource],
+                    links.append({'href': '%s' % config.URLS[resource],
                                   'title': '%s' %
                                   config.DOMAIN[resource]['resource_title']})
 

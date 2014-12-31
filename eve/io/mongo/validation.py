@@ -16,7 +16,6 @@ import copy
 from collections import Mapping
 from eve.utils import config, str_type
 from bson import ObjectId
-from bson.errors import InvalidId
 from flask import current_app as app
 from cerberus import Validator
 from werkzeug.datastructures import FileStorage
@@ -94,8 +93,6 @@ class Validator(Validator):
            Handle the case in which ID_FIELD is not of ObjectId type.
         """
         if unique:
-            # if field not in ['email', 'pseudo', 'libelle_long', 'libelle_court']:
-            #     import pdb; pdb.set_trace()
             query = {field: value}
             if self._id:
                 try:
@@ -196,11 +193,8 @@ class Validator(Validator):
            regex check replaced with proper type check.
         """
         if not isinstance(value, ObjectId):
-            try:
-                _ = ObjectId(value)
-            except InvalidId:
-                self._error(field, "value '%s' cannot be converted to a ObjectId"
-                            % value)
+            self._error(field, "value '%s' cannot be converted to a ObjectId"
+                        % value)
 
     def _validate_readonly(self, read_only, field, value):
         """
