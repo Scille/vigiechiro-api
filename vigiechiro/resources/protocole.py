@@ -1,7 +1,14 @@
+"""
+    Donnee protocole
+    ~~~~~~~~~~~~~~~~
+
+    see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893673
+"""
+
 from flask import abort
 from vigiechiro.xin import EveBlueprint
 from vigiechiro.xin.auth import requires_auth
-from .resource import relation, choice, get_resource
+from vigiechiro.xin.domain import relation, choice, get_resource
 from . import participation
 from . import utilisateur
 
@@ -55,6 +62,10 @@ def on_update(updates, original):
 
 
 def check_configuration_participation(payload):
+    """
+        Make sure the configuration provided is compatible with the data model
+        of the participation
+    """
     if 'configuration_participation' not in payload:
         return
     participation_configuration_fields = participation.get_configuration_fields()

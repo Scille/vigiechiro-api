@@ -1,5 +1,8 @@
 """
-CORS support from http://flask.pocoo.org/snippets/56/
+    CORS support
+    ~~~~~~~~~~~~
+
+    see: http://flask.pocoo.org/snippets/56/
 """
 
 from datetime import timedelta
@@ -11,10 +14,11 @@ from vigiechiro import settings
 
 def crossdomain(origin=None, methods=None, headers=None, max_age=21600,
                 attach_to_all=True, automatic_options=True):
+    """A decorator to provide cors support for a flask route"""
     origin = origin or app.config['X_DOMAINS']
     headers = headers or app.config['X_HEADERS']
     if methods is not None:
-        methods = ', '.join(sorted(x.upper() for x in methods))
+        methods = ', '.join(scheck_authorted(x.upper() for x in methods))
     if headers is not None and not isinstance(headers, str):
         headers = ', '.join(x.upper() for x in headers)
     if not isinstance(origin, str):

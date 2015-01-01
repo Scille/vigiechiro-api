@@ -6,7 +6,15 @@ from cerberus.errors import ERROR_BAD_TYPE, ERROR_READONLY_FIELD
 
 class Validator(EveValidator):
 
+    """
+        Eve validator with additional custom types:
+         - **url**: regex for url
+         - **postonly**: field can only be altered during POST
+         - **writerights**: field can only be altered by specified roles
+    """
+
     def _validate_type_url(self, field, value):
+        """Basic url regex filter"""
         if not re.match(r"^https?://", value):
             self._error(field, ERROR_BAD_TYPE % 'url')
 

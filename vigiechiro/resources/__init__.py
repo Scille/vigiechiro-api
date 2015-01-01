@@ -1,3 +1,7 @@
+"""
+	This module contains the definitions of the functional resources
+"""
+
 from .utilisateur import utilisateurs
 from .fichier import fichiers
 from .taxon import taxons

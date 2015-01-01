@@ -9,12 +9,33 @@ from .cors import crossdomain
 class EveBlueprint(Blueprint):
 
     """
-    Extend the flask blueprint to provide eve's event and type support
-    :param auto_prefix: automatically add prefix base on blueprint name to url and callbacks
-    :param domain: Eve domain dict for the given resource
+        Extend the flask blueprint to provide eve's event and type support
+
+        :param auto_prefix: automatically add prefix base on blueprint
+            name to url and callbacks
+
+            >>> from vigiechiro.xin import EveBlueprint
+            >>> bp = EveBlueprint('myresource', 'vigiechiro.xin', auto_prefix=True)
+            >>> @bp.event
+            ... def on_POST(): pass
+            ...
+            >>> @bp.validate
+            ... def type_custom(): pass
+            ...
+            >>> [f.__name__ for f in bp.events + bp.validates]
+            ['on_POST_myresource', '_validate_type_custom']
+
+        :param domain: Eve domain dict for the given resource :ref: eve.Eve
     """
 
-    def __init__(self, name, *args, auto_prefix=False, domain=None, **kwargs):
+    def __init__(
+            self,
+            name,
+            import_name,
+            *args,
+            auto_prefix=False,
+            domain=None,
+            **kwargs):
         if auto_prefix:
             if 'url_prefix' not in kwargs:
                 kwargs['url_prefix'] = '/' + name
@@ -22,7 +43,7 @@ class EveBlueprint(Blueprint):
             self.validate_prefix = '_validate_'
         else:
             self.event_prefix = None
-        super().__init__(name, *args, **kwargs)
+        super().__init__(name, import_name, *args, **kwargs)
         self.domain = domain
         self.events = []
         self.validates = []
@@ -67,3 +88,5 @@ def register_blueprint(self, blueprint, *args, **kwargs):
     return wrapped(self, blueprint, *args, **kwargs)
 
 Eve.register_blueprint = register_blueprint
+
+__all__ = ['EveBlueprint', 'register_blueprint']

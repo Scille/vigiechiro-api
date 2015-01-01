@@ -35,3 +35,5 @@ def bootstrap():
     return app
 
 app = bootstrap()
+
+__all__ = ['app']

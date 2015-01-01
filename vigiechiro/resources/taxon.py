@@ -1,7 +1,14 @@
+"""
+    Donnee site
+    ~~~~~~~~~~~
+
+    see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893670
+"""
+
 from flask import current_app, abort
 
 from vigiechiro.xin import EveBlueprint
-from .resource import relation
+from vigiechiro.xin.domain import relation
 
 
 DOMAIN = {
@@ -36,7 +43,7 @@ taxons = EveBlueprint('taxons', __name__, domain=DOMAIN,
                       auto_prefix=True)
 
 
-def check_parents(updates, original=None):
+def _check_parents(updates, original=None):
     children = [original['_id']] if original else []
 
     def check_recur(children, curr_id):
@@ -60,14 +67,14 @@ def check_parents(updates, original=None):
 @taxons.event
 def on_insert(items):
     for item in items:
-        check_parents(item)
+        _check_parents(item)
 
 
 @taxons.event
 def on_update(updates, original):
-    check_parents(updates, original)
+    _check_parents(updates, original)
 
 
 @taxons.event
 def on_replace(updates, original):
-    check_parents(updates, original)
+    _check_parents(updates, original)

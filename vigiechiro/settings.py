@@ -1,3 +1,10 @@
+"""
+    Settings
+    ~~~~~~~~
+
+    Global configuration of the project.
+"""
+
 from os import environ
 from authomatic.providers import oauth2
 from enum import Enum

@@ -1,8 +1,15 @@
-from .resource import relation, choice, get_resource
-from vigiechiro.xin import EveBlueprint
-from vigiechiro.xin.auth import requires_auth
+"""
+    Donnee participation
+    ~~~~~~~~~~~~~~~~~~~~
+
+    see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893657
+"""
 
 from flask import abort, current_app
+
+from vigiechiro.xin import EveBlueprint
+from vigiechiro.xin.auth import requires_auth
+from vigiechiro.xin.domain import relation, choice, get_resource
 
 
 DOMAIN = {
@@ -69,7 +76,7 @@ participations = EveBlueprint('participations', __name__, domain=DOMAIN,
                               auto_prefix=True)
 
 
-def verify_participation_relations(payload):
+def _verify_participation_relations(payload):
     if (current_app.g.request_user['role'] != 'Administrateur' and
             current_app.g.request_user['_id'] != payload['observateur']):
         abort(422, 'only Administrateur can post for someone else')
@@ -100,17 +107,31 @@ def verify_participation_relations(payload):
 
 @participations.event
 def on_insert(items):
+    """
+        New participation should only be issued by observateur registered
+        and accepted for the given protocole.
+    """
     for item in items:
-        verify_participation_relations(item)
+        _verify_participation_relations(item)
 
 
 @participations.event
 def on_replace(item, original):
-    verify_participation_relations(item)
+    """
+        Check authorisations before replace:
+         - Administrateur can modify all participations
+         - Observateur can only modify it own participations
+    """
+    _verify_participation_relations(item)
 
 
 @participations.event
 def on_update(updates, original):
+    """
+        Check authorisations before update:
+         - Administrateur can modify all participations
+         - Observateur can only modify it own participations
+    """
     # Only run the verification if update involves observateur/protocole/site
     verify_needed = False
     updates = updates.copy()
@@ -120,23 +141,12 @@ def on_update(updates, original):
         else:
             updates[field] = original[field]
     if verify_needed:
-        verify_participation_relations(updates)
+        _verify_participation_relations(updates)
 
 
 def get_configuration_fields():
     return DOMAIN['schema']['configuration']['schema'].keys()
 
-
-def check_configuration_participation(payload):
-    if 'configuration_participation' not in payload:
-        return
-    participation_configuration_fields = participation.get_configuration_fields()
-    bad_keys = [key for key in payload['configuration_participation']
-                if key not in participation_configuration_fields]
-    if bad_keys:
-        abort(
-            422,
-            "configuration_participation fields {} are not valid".format(bad_keys))
 
 # @participations.route('/<participation_id>/action/commenter', methods=['GET'])
 # @requires_auth(roles='Observateur')

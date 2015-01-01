@@ -1,3 +1,10 @@
+"""
+    Donnee utilisateur
+    ~~~~~~~~~~~~~~~~~~
+
+    see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893760
+"""
+
 from flask import current_app, request, abort
 import eve.auth
 import eve.render
@@ -7,7 +14,7 @@ from bson.errors import InvalidId
 
 from vigiechiro.xin import EveBlueprint
 from vigiechiro.xin.auth import requires_auth
-from .resource import relation
+from vigiechiro.xin.domain import relation
 
 
 DOMAIN = {

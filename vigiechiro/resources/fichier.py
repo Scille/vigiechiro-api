@@ -1,14 +1,15 @@
 """
-File upload module
+    File upload
+    ~~~~~~~~~~~
 
-see: https://devcenter.heroku.com/articles/s3-upload-python
+    see: https://devcenter.heroku.com/articles/s3-upload-python
 
-The database only store some metadata about the file, which is uploaded&stored
-in S3.
-To upload a file, the user must first POST not the file but a manifest
-containing basic informations about the file in order to get a signed url
-to be allowed to upload the file to S3. Once done, a PATCH is requested to
-notify that the file is complete.
+    The database only store some metadata about the file, which is uploaded&stored
+    in S3.
+    To upload a file, the user must first POST not the file but a manifest
+    containing basic informations about the file in order to get a signed url
+    to be allowed to upload the file to S3. Once done, a PATCH is requested to
+    notify that the file is complete.
 """
 
 import base64
@@ -23,9 +24,9 @@ import eve.render
 from flask import request, abort, redirect, current_app
 from eve.methods.post import post_internal
 
-from .resource import relation
 from vigiechiro.xin import EveBlueprint
 from vigiechiro.xin.auth import requires_auth
+from vigiechiro.xin.domain import relation
 
 
 DOMAIN = {
@@ -50,20 +51,20 @@ fichiers = EveBlueprint('fichiers', __name__, domain=DOMAIN,
 
 @fichiers.event
 def on_replace(item, original):
-    check_rights(original, item)
+    _check_rights(original, item)
 
 
 @fichiers.event
 def on_fetched_item(response):
-    check_rights(response)
+    _check_rights(response)
 
 
 @fichiers.event
 def on_update(updates, original):
-    check_rights(original, updates)
+    _check_rights(original, updates)
 
 
-def check_rights(file_, updates=None):
+def _check_rights(file_, updates=None):
     """Admin can do everything, owner can read/write, other users
        can only read if the data is not private
     """
@@ -92,7 +93,7 @@ def access_s3(file_id):
     file_ = files_db.find_one({'_id': file_id})
     if not file_:
         abort(404)
-    check_rights(file_)
+    _check_rights(file_)
     object_name = file_['nom']
     expires = int(time.time() + 10)
     get_request = "GET\n\n\n{}\n/{}/{}".format(

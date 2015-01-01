@@ -1,10 +1,7 @@
-#! /usr/bin/env python3
-
 """
-Backend du projet vigiechiro
+Backend of the vigiechiro project
 """
 
 __version__ = "0.1"
 
 from vigiechiro.app import app
-# from vigiechiro import settings

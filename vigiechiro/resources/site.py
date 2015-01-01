@@ -1,7 +1,14 @@
+"""
+    Donnee site
+    ~~~~~~~~~~~
+
+    see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893712
+"""
+
 from flask import current_app, abort, jsonify
 
 from vigiechiro.xin import EveBlueprint
-from .resource import relation, choice
+from vigiechiro.xin.domain import relation, choice
 
 
 STOC_SCHEMA = {
@@ -74,7 +81,7 @@ def on_insert(items):
     #     item['numero'] = 1
 
 
-def check_rights(original):
+def _check_rights(original):
     if current_app.g.request_user['role'] == 'Administrateur':
         return
     # Non-admin can only modify if the site is not already verrouille
@@ -84,9 +91,9 @@ def check_rights(original):
 
 @sites.event
 def on_update(updates, original):
-    check_rights(original)
+    _check_rights(original)
 
 
 @sites.event
 def on_replace(item, original):
-    check_rights(original)
+    _check_rights(original)

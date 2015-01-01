@@ -1,6 +1,13 @@
+"""
+    Donnee resource
+    ~~~~~~~~~~~~~~~
+
+    see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893732
+"""
+
 from vigiechiro.xin import EveBlueprint
-from .resource import relation, choice
 from vigiechiro.xin.auth import requires_auth
+from vigiechiro.xin.domain import relation, choice
 
 
 DOMAIN = {
@@ -72,5 +79,11 @@ donnees = EveBlueprint('donnees', __name__, domain=DOMAIN,
 @donnees.route('/<id>/action/archiver', methods=['POST'])
 @requires_auth(roles='Administrateur')
 def donnees_archiver(id):
+    """
+        Action route used to archivate a donnee.
+
+        Prior to call this function, the actual data file should be copied
+        to it final storage given it will be deleted from S3.
+    """
     # TODO : actualy do the archiving
     pass

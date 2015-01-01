@@ -17,6 +17,19 @@ from vigiechiro import settings
 
 
 def check_auth(token, allowed_roles):
+    """
+        Token-based authentification with role filtering
+        Once user profile has been retrieved from the given token,
+        it is stored in application context as **current_app.g.request_user**::
+
+            from flask import app, request, jsonify
+            @app.route('/my_profile')
+            def my_profile():
+                # Token-based auth is provided as username and empty password
+                check_auth(request.authorization.username, ['admin'])
+                # Return the user profile
+                return jsonify(current_app.g.request_user)
+    """
     accounts = current_app.data.driver.db['utilisateurs']
     account = accounts.find_one({'tokens': token})
     if account and 'role' in account:
@@ -34,7 +47,10 @@ def check_auth(token, allowed_roles):
 
 
 def requires_auth(roles=None):
-    """Decorator to set authentification and roles filtering"""
+    """
+        A decorator to check if the current user (identified by the
+        given token) has the correct role to access the decorated function
+    """
     roles = [roles] if isinstance(roles, str) else roles
 
     def decorator(f):
@@ -43,7 +59,6 @@ def requires_auth(roles=None):
             auth = request.authorization
             if not auth or not check_auth(auth.username, roles):
                 return current_app.auth.authenticate()
-                # return eve.auth.TokenAuth.authenticate(None)
             return f(*args, **kwargs)
         return decorated
     return decorator
@@ -51,7 +66,7 @@ def requires_auth(roles=None):
 
 class TokenAuth(eve.auth.TokenAuth):
 
-    """Custom token & roles authentification"""
+    """Custom token & roles authentification for Eve"""
 
     def check_auth(self, token, allowed_roles, resource, method):
         if check_auth(token, allowed_roles):
@@ -67,6 +82,7 @@ def auth_factory(services):
        :params services: list of services to generate endpoints
 
        >>> from flask import Flask
+       >>> from vigiechiro.xin.auth import auth_factory
        >>> f = Flask('test')
        >>> blueprint = auth_factory(['github', 'google'])
        >>> f.register_blueprint(blueprint)

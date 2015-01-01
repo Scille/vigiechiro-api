@@ -1,3 +1,10 @@
+"""
+	Domain module
+	~~~~~~~~~~~~~
+
+	Macro&tools for defining Eve domain
+"""
+
 from flask import abort, current_app
 import bson
 
