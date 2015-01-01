@@ -12,7 +12,7 @@ DOMAIN = {
     'schema': {
         'commentaire': {'type': 'string'},
         'localite': {'type': 'string', 'required': True},
-        'participation': relation('participations', required=True),
+        'participation': relation('utilisateurs', required=True),
         'fichier': relation('fichiers'),
         'date_fichier': {'type': 'date', 'required': True},
         'probleme': {'type': 'string'},
