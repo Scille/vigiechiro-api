@@ -69,7 +69,7 @@ AUTHOMATIC = {
         'consumer_secret': environ.get(
             'GITHUB_API_SECRET',
             ''),
-        'scope': oauth2.GitHub.user_info_scope,
+        'scope': ['user:email'],
         'access_headers': {
             'User-Agent': 'Awesome-Octocat-App'},
         '_apis': {

@@ -28,6 +28,8 @@ DOMAIN = {
         'projection': {'tokens': 0}
     },
     'schema': {
+        'github_id': {'type': 'string'},
+        'google_id': {'type': 'string'},
         'pseudo': {
             'type': 'string', 'postonly': True,
             'unique': True, 'required': True

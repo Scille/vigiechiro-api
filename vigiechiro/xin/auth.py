@@ -11,6 +11,7 @@ from flask import Blueprint, redirect
 from flask import app, current_app, abort, request
 import eve.auth
 import eve.render
+from eve.methods.post import post_internal
 from authomatic.extras.flask import FlaskAuthomatic
 
 from vigiechiro import settings
@@ -47,7 +48,7 @@ def check_auth(token, allowed_roles):
     return False
 
 
-def requires_auth(roles=None):
+def requires_auth(roles=[]):
     """
         A decorator to check if the current user (identified by the
         given token) has the correct role to access the decorated function
@@ -102,11 +103,11 @@ def auth_factory(services):
                                     login_factory(service))
 
     @auth_blueprint.route('/logout', methods=['OPTIONS', 'POST'])
-    @eve.auth.requires_auth('ressource')
+    @requires_auth()
     def logout():
         if request.authorization:
             token = request.authorization['username']
-            users = auth_blueprint.data.driver.db['utilisateurs']
+            users = current_app.data.driver.db['utilisateurs']
             if users.find_one({'tokens': token}):
                 logging.info('Destroying token {}'.format(token))
                 users.update({'tokens': token}, {'$pull': {'tokens': token}})
@@ -137,11 +138,26 @@ def login(authomatic, provider_name):
                 users_db.update({provider_id_name: user.id},
                                 {"$push": {'tokens': token}})
             else:
-                user_db_id = users_db.insert({provider_id_name: user.id,
-                                              'pseudo': user.name,
-                                              'email': user.email,
-                                              'tokens': [token],
-                                              'role': 'Observateur'})
+                # We must switch to admin mode to insert a new user
+                current_app.g.request_user = {'role': 'Administrateur'}
+                user_payload = {
+                    provider_id_name: user.id,
+                    'pseudo': user.name,
+                    # TODO fix github email
+                    'email': user.email or 'fixme@github.com',
+                    'tokens': [token],
+                    'role': 'Observateur'
+                }
+                result = post_internal('utilisateurs', user_payload)
+                # Drop admin right for security
+                del current_app.g.request_user
+                if result[-1] != 201:
+                    logging.error(
+                        'Cannot insert user {} : {}'.format(
+                            user_payload,
+                            result))
+                    abort(500)
+                user_db_id = result[0]['_id']
                 logging.info('Create user {}'.format(user.email))
             logging.info(
                 'Update user {} token: {}, Authorization: Basic {}'.format(
