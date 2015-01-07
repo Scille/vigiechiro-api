@@ -31,6 +31,7 @@ def check_auth(token, allowed_roles):
                 return jsonify(current_app.g.request_user)
     """
     accounts = current_app.data.driver.db['utilisateurs']
+    print(token)
     account = accounts.find_one({'tokens': token})
     if account and 'role' in account:
         # Keep request user account in local context, could be useful later
@@ -127,7 +128,7 @@ def login(authomatic, provider_name):
                 random.choice(
                     string.ascii_uppercase +
                     string.digits) for x in range(32))
-            users_db = current_app.data.driver.db['users']
+            users_db = current_app.data.driver.db['utilisateurs']
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
             user_db = users_db.find_one({provider_id_name: user.id})
@@ -137,9 +138,10 @@ def login(authomatic, provider_name):
                                 {"$push": {'tokens': token}})
             else:
                 user_db_id = users_db.insert({provider_id_name: user.id,
-                                              'name': user.name,
+                                              'pseudo': user.name,
                                               'email': user.email,
-                                              'tokens': [token]})
+                                              'tokens': [token],
+                                              'role': 'Observateur'})
                 logging.info('Create user {}'.format(user.email))
             logging.info(
                 'Update user {} token: {}, Authorization: Basic {}'.format(
@@ -148,7 +150,7 @@ def login(authomatic, provider_name):
                     base64.encodebytes(
                         (token + ':').encode())))
             return redirect(
-                '{}/#/?token={}&id={}&name={}&email={}'.format(
+                '{}/#/?token={}&id={}&pseudo={}&email={}'.format(
                     current_app.config['FRONTEND_DOMAIN'],
                     token,
                     user_db_id,
