@@ -111,7 +111,6 @@ def test_rights(observateur, administrateur):
 
 def test_readonly_fields(observateur, administrateur):
     payloads = [{'role': 'Administrateur'},
-                {'email': 'new@mail.com'},
                 {'pseudo': 'new_me!'}]
     for payload in payloads:
         r = observateur.patch(observateur.url,
@@ -132,11 +131,15 @@ def test_internal_resource(observateur):
     r = observateur.get(observateur.url)
     assert r.status_code == 200
     assert 'tokens' not in r.json()
-    payload = {'tokens': ['7U5L5J8B7BEDH5MFOHZ8D2834AUNTPXI']}
-    r = observateur.patch(observateur.url,
-                          headers={'If-Match': observateur.user['_etag']},
-                          json=payload)
-    assert r.status_code == 422, r.text
+    payloads = [{'tokens': ['7U5L5J8B7BEDH5MFOHZ8D2834AUNTPXI']},
+                {'github_id': '1872655'},
+                {'google_id': '1872655'}]
+    for payload in payloads:
+        r = observateur.patch(observateur.url,
+                              headers={'If-Match': observateur.user['_etag']},
+                              json=payload)
+        print(r.text)
+        assert r.status_code == 422, r.text
 
 
 def test_join_protocole(observateur, administrateur, protocoles_base):

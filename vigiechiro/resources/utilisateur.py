@@ -24,17 +24,17 @@ DOMAIN = {
     'allowed_item_read_roles': ['Observateur'],
     'allowed_item_write_roles': ['Observateur'],
     'datasource': {
-        # Private data : tokens list
-        'projection': {'tokens': 0}
+        # Private data : tokens list and login services' user id
+        'projection': {'tokens': 0, 'github_id': 0, 'google_id': 0}
     },
     'schema': {
-        'github_id': {'type': 'string'},
-        'google_id': {'type': 'string'},
+        'github_id': {'type': 'string', 'writerights': 'Administrateur'},
+        'google_id': {'type': 'string', 'writerights': 'Administrateur'},
         'pseudo': {
             'type': 'string', 'postonly': True,
             'unique': True, 'required': True
         },
-        'email': {'type': 'string', 'postonly': True, 'required': True, 'unique': True},
+        'email': {'type': 'string', 'required': True},
         'nom': {'type': 'string'},
         'prenom': {'type': 'string'},
         'telephone': {'type': 'string'},

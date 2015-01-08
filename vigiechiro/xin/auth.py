@@ -32,7 +32,6 @@ def check_auth(token, allowed_roles):
                 return jsonify(current_app.g.request_user)
     """
     accounts = current_app.data.driver.db['utilisateurs']
-    print(token)
     account = accounts.find_one({'tokens': token})
     if account and 'role' in account:
         # Keep request user account in local context, could be useful later
