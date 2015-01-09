@@ -48,7 +48,7 @@ MONGO_DBNAME = 'vigiechiro'
 
 ### Eve ###
 X_DOMAINS = FRONTEND_DOMAIN
-X_HEADERS = ['Accept', 'Content-type', 'Authorization']
+X_HEADERS = ['Accept', 'Content-type', 'Authorization', 'If-Match']
 X_EXPOSE_HEADERS = X_HEADERS
 
 RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
