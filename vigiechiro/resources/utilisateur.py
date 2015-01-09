@@ -21,6 +21,7 @@ DOMAIN = {
     'item_title': 'utilisateur',
     'resource_methods': ['GET'],
     'item_methods': ['GET', 'PUT', 'PATCH'],
+    'allowed_read_roles': ['Validateur'],
     'allowed_item_read_roles': ['Observateur'],
     'allowed_item_write_roles': ['Observateur'],
     'datasource': {
@@ -118,7 +119,7 @@ def route_moi():
 def check_rights(request, lookup):
     if current_app.g.request_user['role'] == 'Administrateur':
         return
-    # Non-admin can only modify it own account
+    # Non-admin can modify it own account
     if ObjectId(lookup['_id']) != current_app.g.request_user['_id']:
         abort(403)
 
@@ -131,3 +132,12 @@ def on_pre_PUT(request, lookup):
 @utilisateurs.event
 def on_pre_PATCH(request, lookup):
     check_rights(request, lookup)
+
+
+@utilisateurs.event
+def on_pre_GET(request, lookup):
+    if '_id' in lookup:
+        # Validateur and above can see other user's account
+        if (ObjectId(lookup['_id']) != current_app.g.request_user[
+                '_id'] and current_app.g.request_user['role'] not in ['Administrateur', 'Validateur']):
+            abort(403)

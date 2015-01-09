@@ -3,7 +3,7 @@ import pytest
 import base64
 import json
 
-from common import db, observateur, administrateur, eve_post_internal
+from common import db, observateur, validateur, administrateur, eve_post_internal
 from vigiechiro import settings
 from test_protocole import protocoles_base
 from test_taxon import taxons_base
@@ -79,7 +79,7 @@ def test_user_route(observateur):
     assert observateur.user['commentaire'] == 'New comment'
 
 
-def test_rights(observateur, administrateur):
+def test_rights_write(observateur, administrateur):
     # Change data for myself is allowed...
     payload = {'donnees_publiques': True}
     r = observateur.patch(
@@ -107,6 +107,19 @@ def test_rights(observateur, administrateur):
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['role'] == 'Validateur'
+
+
+def test_rigths_read(observateur, validateur):
+    # Observateur cannot list or see others user's profile
+    r = observateur.get('/utilisateurs')
+    assert r.status_code == 401, r.text
+    r = observateur.get(validateur.url)
+    assert r.status_code == 403, r.text
+    # Validateur and upper roles can see all users
+    r = validateur.get('/utilisateurs')
+    assert r.status_code == 200, r.text
+    r = validateur.get(observateur.url)
+    assert r.status_code == 200, r.text
 
 
 def test_readonly_fields(observateur, administrateur):
