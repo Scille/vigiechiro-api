@@ -26,7 +26,7 @@ Ces animaux, comme les Cétacés, sont souvent capables d'écholocation.
         {'libelle_long': parent_payload['libelle_long']})['_id']
     # Then children
     child1_payload = {
-        'libelle_long': 'Pteropus conspicillatus)',
+        'libelle_long': 'Pteropus conspicillatus',
         'libelle_court': 'Roussette',
         'description': """D'après wikipedia :
 Roussette est un nom vernaculaire ambigu en français,
@@ -41,7 +41,7 @@ C'est le cas notamment des espèces des genres Acerodon, Pteropus et Rousettus.
     }
     eve_post_internal('taxons', child1_payload)
     child2_payload = {
-        'libelle_long': 'Megadermatidae)',
+        'libelle_long': 'Megadermatidae',
         'libelle_court': 'faux-vampires',
         'description': """D'après wikipedia :
 Les mégadermatidés (Megadermatidae) sont une famille de chiroptères du sous-ordre
