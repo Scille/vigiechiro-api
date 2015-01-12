@@ -147,7 +147,7 @@ def test_modif(taxons_base, administrateur, observateur):
     # Observateur cannot modify taxons
     r = observateur.patch(url, headers={'If-Match': r.json()['_etag']},
                           json={"tags": ['new_tag']})
-    assert r.status_code == 401, r.text
+    assert r.status_code == 403, r.text
 
 
 def test_unique_libelle(taxons_base, new_taxon_payload, administrateur):

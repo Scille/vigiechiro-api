@@ -112,7 +112,7 @@ def test_rights_write(observateur, administrateur):
 def test_rigths_read(observateur, validateur):
     # Observateur cannot list or see others user's profile
     r = observateur.get('/utilisateurs')
-    assert r.status_code == 401, r.text
+    assert r.status_code == 403, r.text
     r = observateur.get(validateur.url)
     assert r.status_code == 403, r.text
     # Validateur and upper roles can see all users

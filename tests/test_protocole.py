@@ -68,17 +68,17 @@ def test_access(protocoles_base, new_protocole_payload, observateur):
     assert len(r.json()['_items']) == 3
     # User cannot modify or create protocoles
     r = observateur.post('/protocoles', json=new_protocole_payload)
-    assert r.status_code == 401, r.text
+    assert r.status_code == 403, r.text
     url = '/protocoles/' + str(protocoles_base[0]['_id'])
     etag = protocoles_base[0]['_etag']
     r = observateur.patch(url, headers={'If-Match': etag},
                           json={'tag': ['new_tag']})
-    assert r.status_code == 401, r.text
+    assert r.status_code == 403, r.text
     r = observateur.put(url, headers={'If-Match': etag},
                         json=new_protocole_payload)
-    assert r.status_code == 401, r.text
+    assert r.status_code == 403, r.text
     r = observateur.delete(url, headers={'If-Match': etag})
-    assert r.status_code == 401, r.text
+    assert r.status_code == 403, r.text
 
 
 def test_required_taxon(new_protocole_payload, administrateur):

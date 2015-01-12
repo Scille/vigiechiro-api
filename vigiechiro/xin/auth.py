@@ -40,10 +40,10 @@ def check_auth(token, allowed_roles):
             # Role are handled using least priviledge, thus a higher
             # priviledged role also include it lower roles.
             role = account['role']
-            return next((True for r in current_app.config['ROLE_RULES'][role]
-                         if r in allowed_roles), False)
-        else:
-            return True
+            if not next((True for r in current_app.config['ROLE_RULES'][role]
+                         if r in allowed_roles), False):
+                abort(403)
+        return True
     return False
 
 

@@ -6,19 +6,20 @@
 """
 
 from datetime import timedelta
-from flask import make_response, request, app, current_app
+from flask import make_response, request, current_app
 from functools import update_wrapper
 
-from vigiechiro import settings
+from .. import settings
 
 
 def crossdomain(origin=None, methods=None, headers=None, max_age=21600,
                 attach_to_all=True, automatic_options=True):
     """A decorator to provide cors support for a flask route"""
-    origin = origin or app.config['X_DOMAINS']
-    headers = headers or app.config['X_HEADERS']
+    # import pdb; pdb.set_trace()
+    origin = origin or settings.X_DOMAINS
+    headers = headers or settings.X_HEADERS
     if methods is not None:
-        methods = ', '.join(scheck_authorted(x.upper() for x in methods))
+        methods = ', '.join(sorted(x.upper() for x in methods))
     if headers is not None and not isinstance(headers, str):
         headers = ', '.join(x.upper() for x in headers)
     if not isinstance(origin, str):

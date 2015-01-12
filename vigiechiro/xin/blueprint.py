@@ -66,6 +66,21 @@ class EveBlueprint(Blueprint):
         self.validates.append(f)
         return f
 
+    def route(self, *args, **kwargs):
+        """Decorator, register flask route with cors support"""
+        cors_kwargs = {}
+        if 'methods' in kwargs:
+            cors_kwargs['methods'] = kwargs['methods']
+        for field in ['origin', 'headers', 'max_age',
+                      'attach_to_all', 'authomatics_options']:
+            if field in kwargs:
+                cors_kwargs[field] = kwargs.pop(field)
+        cors_decorator = crossdomain(**cors_kwargs)
+        route_decorator = Blueprint.route(self, *args, **kwargs)
+
+        def decorator(f):
+            return route_decorator(cors_decorator(f))
+        return decorator
 
 # It's monkey patching time !
 wrapped = Eve.register_blueprint
