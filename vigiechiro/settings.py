@@ -45,6 +45,7 @@ MONGO_PORT = int(environ.get('MONGO_PORT', 27017))
 MONGO_USERNAME = environ.get('MONGO_USERNAME', '')
 MONGO_PASSWORD = environ.get('MONGO_PASSWORD', '')
 MONGO_DBNAME = environ.get('MONGO_DBNAME', 'vigiechiro')
+print(' MONGO ENV => ', MONGO_HOST, MONGO_PORT, MONGO_USERNAME, MONGO_PASSWORD[:3] + '...', MONGO_DBNAME)
 
 ### Eve ###
 X_DOMAINS = FRONTEND_DOMAIN
