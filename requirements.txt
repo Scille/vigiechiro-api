@@ -16,3 +16,6 @@ redis
 #authomatic
 # authomatic's dependancies
 six
+
+# Application server
+gunicorn
