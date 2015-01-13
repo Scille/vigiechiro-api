@@ -14,6 +14,8 @@ for line in staged.decode().splitlines():
     if (change != 'D' and path.endswith('.py') and
         (path.startswith('vigiechiro') or path.startswith('tests'))):
         tocheck.append(path)
+if not tocheck:
+    raise SystemExit(0)
 print('Checking PEP8 for files : {}'.format(tocheck))
 pep8_valid = not bool(subprocess.check_output(TEST_FORMAT.split() +
                                               [ROOT_DIR+f for f in tocheck]))
