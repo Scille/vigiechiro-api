@@ -53,6 +53,17 @@ def test_dummy_user(administrateur):
         assert r.status_code == 404, r.text
 
 
+def test_dummy_role(administrateur):
+    for dummy_role in ['Administrateur ', ' ', 'observateur']:
+        r = administrateur.patch(
+            '/utilisateurs/moi',
+            headers={
+                'If-Match': administrateur.user['_etag']},
+            json={
+                'role': dummy_role})
+        assert r.status_code == 422, r.text
+
+
 def test_token_access(users_base):
     user = users_base[0]
     for token in user['tokens']:

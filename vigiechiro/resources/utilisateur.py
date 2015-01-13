@@ -14,7 +14,7 @@ from bson.errors import InvalidId
 
 from vigiechiro.xin import EveBlueprint
 from vigiechiro.xin.auth import requires_auth
-from vigiechiro.xin.domain import relation
+from vigiechiro.xin.domain import relation, choice
 
 
 DOMAIN = {
@@ -48,7 +48,8 @@ DOMAIN = {
         },
         'professionnel': {'type': 'boolean'},
         'donnees_publiques': {'type': 'boolean'},
-        'role': {'type': 'string', 'writerights': 'Administrateur'},
+        'role': choice(['Administrateur', 'Validateur', 'Observateur'],
+                       writerights='Administrateur'),
         'tags': {
             'type': 'list',
             'schema': {'type': 'string'}
