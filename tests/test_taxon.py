@@ -63,7 +63,8 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
 @pytest.fixture
 def new_taxon_payload(request):
     payload = {
-        'libelle_long': 'Batman',
+        'libelle_long': 'The caped crusader',
+        'libelle_court': 'Batman',
         'parents': [],
         'liens': ['http://fr.wikipedia.org/wiki/batman'],
         'tags': ['chiro', 'vigiechiro', 'comics']
@@ -79,6 +80,17 @@ def test_access(taxons_base, observateur):
     r = observateur.get('/taxons')
     assert r.status_code == 200, r.text
     assert len(r.json()['_items']) == 3
+
+
+def test_mandatory_fields(new_taxon_payload, administrateur):
+    no_libelle_long = new_taxon_payload.copy()
+    del no_libelle_long['libelle_long']
+    r = administrateur.post('/taxons', json=no_libelle_long)
+    assert r.status_code == 422, r.text
+    no_libelle_court = new_taxon_payload.copy()
+    del no_libelle_court['libelle_court']
+    r = administrateur.post('/taxons', json=no_libelle_court)
+    assert r.status_code == 422, r.text
 
 
 def test_multi_parents(taxons_base, administrateur):

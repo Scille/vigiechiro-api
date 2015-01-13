@@ -17,7 +17,7 @@ DOMAIN = {
     'item_methods': ['GET', 'PATCH', 'PUT'],
     'schema': {
         'libelle_long': {'type': 'string', 'required': True, 'unique': True},
-        'libelle_court': {'type': 'string', 'unique': True},
+        'libelle_court': {'type': 'string', 'required': True, 'unique': True},
         'description': {'type': 'string'},
         'parents': {
             'type': 'list',
