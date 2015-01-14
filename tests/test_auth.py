@@ -38,8 +38,9 @@ def test_single_login():
                      allow_redirects=False)
     assert r.status_code == 302
     assert 'Location' in r.headers
-    location = r.headers['Location']
-    qs = parse_qs(urlparse(r.headers['Location']).query)
+    # Replace '#' in the location to let urllib parse correctly
+    location = r.headers['Location'].replace('#', '!')
+    qs = parse_qs(urlparse(location).query)
     assert 'token' in qs
     token = qs['token'][0]
     r = requests.get(settings.BACKEND_DOMAIN, auth=(token, None))

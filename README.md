@@ -24,3 +24,12 @@ pip install -e .
 ```
 py.test tests
 ```
+
+## Authentification
+
+Pour configurer l'authentification via Oauth, les variables d'environnement suivante doivent être configurées
+ - `GOOGLE_API_KEY` & `GOOGLE_API_SECRET` pour Google
+ - `GITHUB_API_KEY` & `GITHUB_API_SECRET` pour Github
+ - `FACEBOOK_API_KEY` & `FACEBOOK_API_SECRET` pour Facebook
+
+Pour émuler l'authentification, `DEV_FAKE_AUTH` peut être mis à `true`

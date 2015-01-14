@@ -183,7 +183,7 @@ def login(authomatic, provider_name):
                                   user_payload, result))
                     abort(500)
                 logging.info('Create new user : {}'.format(user.email))
-            return redirect('{}/!/?token={}'.format(
+            return redirect('{}/#/?token={}'.format(
                 current_app.config['FRONTEND_DOMAIN'], new_token), code=302)
     else:
         return authomatic.response
