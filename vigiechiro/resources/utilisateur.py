@@ -26,7 +26,8 @@ DOMAIN = {
     'allowed_item_write_roles': ['Observateur'],
     'datasource': {
         # Private data : tokens list and login services' user id
-        'projection': {'tokens': 0, 'github_id': 0, 'google_id': 0}
+        'projection': {'tokens': 0, 'github_id': 0,
+                       'google_id': 0, 'facebook_id': 0}
     },
     'schema': {
         'github_id': {'type': 'string', 'writerights': 'Administrateur',

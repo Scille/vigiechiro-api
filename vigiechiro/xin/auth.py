@@ -155,15 +155,12 @@ def login(authomatic, provider_name):
                 # Drop admin right for security
                 del current_app.g.request_user
                 if result[-1] != 201:
-                    logging.error(
-                        'Cannot insert user {} : {}'.format(
-                            user_payload,
-                            result))
+                    logging.error('Cannot create user {} : {}'.format(
+                                  user_payload, result))
                     abort(500)
                 user_db_id = result[0]['_id']
-                logging.info('Create user {}'.format(user.email))
-            logging.info(
-                'Update user {} token: {}, Authorization: Basic {}'.format(
+                logging.info('Create new user : {}'.format(user.email))
+            logging.info('Update user {} token: {}, Authorization: Basic {}'.format(
                     user.email,
                     token,
                     base64.encodebytes(

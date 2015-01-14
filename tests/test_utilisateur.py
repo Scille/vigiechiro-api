@@ -2,6 +2,7 @@ import requests
 import pytest
 import base64
 import json
+from bson import ObjectId
 
 from common import db, observateur, validateur, administrateur, eve_post_internal
 from vigiechiro import settings
@@ -156,9 +157,7 @@ def test_readonly_fields(observateur, administrateur):
 
 
 def test_internal_resource(observateur):
-    r = observateur.get(observateur.url)
-    assert r.status_code == 200
-    assert 'tokens' not in r.json()
+    # Try to post internal resources
     payloads = [{'tokens': ['7U5L5J8B7BEDH5MFOHZ8D2834AUNTPXI']},
                 {'github_id': '1872655'},
                 {'facebook_id': '1872655'},
@@ -167,8 +166,16 @@ def test_internal_resource(observateur):
         r = observateur.patch(observateur.url,
                               headers={'If-Match': observateur.user['_etag']},
                               json=payload)
-        print(r.text)
         assert r.status_code == 422, r.text
+    # Also make sure we can't access internal resources
+    internal_data = {'github_id': '1872655', 'facebook_id': '1872656',
+                     'google_id': '1872657'}
+    db.utilisateurs.update({'_id': ObjectId(observateur.user_id)},
+                           {'$set': internal_data})
+    r = observateur.get(observateur.url)
+    assert r.status_code == 200, r.text
+    for key in internal_data.keys():
+        assert key not in r.json()
 
 
 def test_join_protocole(observateur, administrateur, protocoles_base):
