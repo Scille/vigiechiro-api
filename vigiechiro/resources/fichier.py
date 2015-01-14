@@ -24,9 +24,9 @@ import eve.render
 from flask import request, abort, redirect, current_app
 from eve.methods.post import post_internal
 
-from vigiechiro.xin import EveBlueprint
-from vigiechiro.xin.auth import requires_auth
-from vigiechiro.xin.domain import relation
+from ..xin import EveBlueprint
+from ..xin.auth import requires_auth
+from ..xin.domain import relation
 
 
 DOMAIN = {

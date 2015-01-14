@@ -5,9 +5,9 @@
     see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893732
 """
 
-from vigiechiro.xin import EveBlueprint
-from vigiechiro.xin.auth import requires_auth
-from vigiechiro.xin.domain import relation, choice
+from ..xin import EveBlueprint
+from ..xin.auth import requires_auth
+from ..xin.domain import relation, choice
 
 
 DOMAIN = {

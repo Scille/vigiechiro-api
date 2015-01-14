@@ -14,7 +14,7 @@ import eve.render
 from eve.methods.post import post_internal
 from authomatic.extras.flask import FlaskAuthomatic
 
-from vigiechiro import settings
+from .. import settings
 
 
 def check_auth(token, allowed_roles):
@@ -131,11 +131,13 @@ def login(authomatic, provider_name):
             users_db = current_app.data.driver.db['utilisateurs']
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
-            user_db = users_db.find_one({provider_id_name: user.id})
+            user_db = users_db.find_one({'email': user.email})
             if user_db:
                 user_db_id = user_db['_id']
-                users_db.update({provider_id_name: user.id},
-                                {"$push": {'tokens': token}})
+                users_db.update({'email': user.email},
+                                {"$push": {'tokens': token},
+                                 "$set": {provider_id_name: user.id}
+                                })
             else:
                 # We must switch to admin mode to insert a new user
                 current_app.g.request_user = {'role': 'Administrateur'}
@@ -143,7 +145,9 @@ def login(authomatic, provider_name):
                     provider_id_name: user.id,
                     'pseudo': user.name,
                     # TODO fix github email
-                    'email': user.email or 'fixme@github.com',
+                    'email': (user.email or
+                        ''.join(random.choice(string.ascii_uppercase + string.digits)
+                                for x in range(10)) + '@fixmegithub.com'),
                     'tokens': [token],
                     'role': 'Observateur'
                 }

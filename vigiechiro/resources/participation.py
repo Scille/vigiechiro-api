@@ -7,9 +7,8 @@
 
 from flask import abort, current_app
 
-from vigiechiro.xin import EveBlueprint
-from vigiechiro.xin.auth import requires_auth
-from vigiechiro.xin.domain import relation, choice, get_resource
+from ..xin import EveBlueprint
+from ..xin.domain import relation, choice, get_resource
 
 
 DOMAIN = {

@@ -55,12 +55,9 @@ def test_dummy_user(administrateur):
 
 def test_dummy_role(administrateur):
     for dummy_role in ['Administrateur ', ' ', 'observateur']:
-        r = administrateur.patch(
-            '/utilisateurs/moi',
-            headers={
-                'If-Match': administrateur.user['_etag']},
-            json={
-                'role': dummy_role})
+        r = administrateur.patch('/utilisateurs/moi',
+                                 headers={'If-Match': administrateur.user['_etag']},
+                                 json={'role': dummy_role})
         assert r.status_code == 422, r.text
 
 
@@ -93,11 +90,9 @@ def test_user_route(observateur):
 def test_rights_write(observateur, administrateur):
     # Change data for myself is allowed...
     payload = {'donnees_publiques': True}
-    r = observateur.patch(
-        observateur.url,
-        headers={
-            'If-Match': observateur.user['_etag']},
-        json=payload)
+    r = observateur.patch(observateur.url,
+                          headers={'If-Match': observateur.user['_etag']},
+                          json=payload)
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['donnees_publiques']
@@ -118,6 +113,16 @@ def test_rights_write(observateur, administrateur):
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['role'] == 'Validateur'
+    # Finally, try to change various allowed stuffs
+    etag = observateur.user['_etag']
+    for payload in [{'pseudo': 'my new pseudo !'},
+                    {'email': 'new@email.com'},
+                    {'nom': 'newLastName', 'prenom': 'newFirstName'}]:
+        r = observateur.patch(observateur.url,
+                              headers={'If-Match': etag},
+                              json=payload)
+        assert r.status_code == 200, r.text
+        etag = r.json()['_etag']
 
 
 def test_rigths_read(observateur, validateur):
@@ -134,8 +139,7 @@ def test_rigths_read(observateur, validateur):
 
 
 def test_readonly_fields(observateur, administrateur):
-    payloads = [{'role': 'Administrateur'},
-                {'pseudo': 'new_me!'}]
+    payloads = [{'role': 'Administrateur'}]
     for payload in payloads:
         r = observateur.patch(observateur.url,
                               headers={'If-Match': observateur.user['_etag']},
@@ -157,6 +161,7 @@ def test_internal_resource(observateur):
     assert 'tokens' not in r.json()
     payloads = [{'tokens': ['7U5L5J8B7BEDH5MFOHZ8D2834AUNTPXI']},
                 {'github_id': '1872655'},
+                {'facebook_id': '1872655'},
                 {'google_id': '1872655'}]
     for payload in payloads:
         r = observateur.patch(observateur.url,

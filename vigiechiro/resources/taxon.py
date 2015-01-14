@@ -7,8 +7,8 @@
 
 from flask import current_app, abort
 
-from vigiechiro.xin import EveBlueprint
-from vigiechiro.xin.domain import relation
+from ..xin import EveBlueprint
+from ..xin.domain import relation
 
 
 DOMAIN = {

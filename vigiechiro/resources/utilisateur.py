@@ -12,9 +12,9 @@ import eve.methods
 from bson import ObjectId
 from bson.errors import InvalidId
 
-from vigiechiro.xin import EveBlueprint
-from vigiechiro.xin.auth import requires_auth
-from vigiechiro.xin.domain import relation, choice
+from ..xin import EveBlueprint
+from ..xin.auth import requires_auth
+from ..xin.domain import relation, choice
 
 
 DOMAIN = {
@@ -29,13 +29,14 @@ DOMAIN = {
         'projection': {'tokens': 0, 'github_id': 0, 'google_id': 0}
     },
     'schema': {
-        'github_id': {'type': 'string', 'writerights': 'Administrateur'},
-        'google_id': {'type': 'string', 'writerights': 'Administrateur'},
-        'pseudo': {
-            'type': 'string', 'postonly': True,
-            'unique': True, 'required': True
-        },
-        'email': {'type': 'string', 'required': True},
+        'github_id': {'type': 'string', 'writerights': 'Administrateur',
+                      'unique': True},
+        'google_id': {'type': 'string', 'writerights': 'Administrateur',
+                      'unique': True},
+        'facebook_id': {'type': 'string', 'writerights': 'Administrateur',
+                      'unique': True},
+        'pseudo': {'type': 'string', 'required': True},
+        'email': {'type': 'string', 'required': True, 'unique': True},
         'nom': {'type': 'string'},
         'prenom': {'type': 'string'},
         'telephone': {'type': 'string'},

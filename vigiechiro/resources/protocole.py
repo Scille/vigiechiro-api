@@ -6,11 +6,10 @@
 """
 
 from flask import abort
-from vigiechiro.xin import EveBlueprint
-from vigiechiro.xin.auth import requires_auth
-from vigiechiro.xin.domain import relation, choice, get_resource
+
+from ..xin import EveBlueprint
+from ..xin.domain import relation, choice
 from . import participation
-from . import utilisateur
 
 
 DOMAIN = {

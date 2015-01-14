@@ -63,15 +63,10 @@ ALLOWED_ITEM_WRITE_ROLES = ['Administrateur']
 AUTHOMATIC = {
     'github': {
         'class_': oauth2.GitHub,
-        'consumer_key': environ.get(
-            'GITHUB_API_KEY',
-            ''),
-        'consumer_secret': environ.get(
-            'GITHUB_API_SECRET',
-            ''),
+        'consumer_key': environ.get('GITHUB_API_KEY', ''),
+        'consumer_secret': environ.get('GITHUB_API_SECRET', ''),
         'scope': ['user:email'],
-        'access_headers': {
-            'User-Agent': 'Awesome-Octocat-App'},
+        'access_headers': {'User-Agent': 'Awesome-Octocat-App'},
         '_apis': {
             'Get your events': (
                 'GET',
@@ -83,13 +78,17 @@ AUTHOMATIC = {
     },
     'google': {
         'class_': oauth2.Google,
-        'consumer_key': environ.get(
-            'GOOGLE_API_KEY',
-            ''),
-        'consumer_secret': environ.get(
-            'GOOGLE_API_SECRET',
-            ''),
-        'scope': oauth2.Google.user_info_scope}}
+        'consumer_key': environ.get('GOOGLE_API_KEY', ''),
+        'consumer_secret': environ.get('GOOGLE_API_SECRET', ''),
+        'scope': oauth2.Google.user_info_scope
+    },
+    'facebook': {
+        'class_': oauth2.Facebook,
+        'consumer_key': environ.get('FACEBOOK_API_KEY', ''),
+        'consumer_secret': environ.get('FACEBOOK_API_SECRET', ''),
+        'scope': oauth2.Facebook.user_info_scope
+    }
+}
 
 ### S3 ###
 AWS_KEY = environ.get('AWS_KEY', '')

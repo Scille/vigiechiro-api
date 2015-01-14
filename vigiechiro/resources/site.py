@@ -7,8 +7,8 @@
 
 from flask import current_app, abort, jsonify
 
-from vigiechiro.xin import EveBlueprint
-from vigiechiro.xin.domain import relation, choice
+from ..xin import EveBlueprint
+from ..xin.domain import relation, choice
 
 
 STOC_SCHEMA = {
