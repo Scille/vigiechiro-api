@@ -3,6 +3,7 @@ import pytest
 import base64
 import json
 from bson import ObjectId
+from datetime import datetime, timedelta
 
 from common import db, observateur, validateur, administrateur, eve_post_internal
 from vigiechiro import settings
@@ -10,12 +11,9 @@ from test_protocole import protocoles_base
 from test_taxon import taxons_base
 
 
-def auth_header(token):
-    return b'Basic ' + base64.encodebytes(token.encode() + b':')
-
-
 @pytest.fixture(scope="module")
 def users_base(request):
+    token_expire = datetime.utcnow() + timedelta(days=1)
     user1 = {'nom': 'Doe',
              'prenom': 'John',
              'pseudo': 'n00b',
@@ -23,8 +21,8 @@ def users_base(request):
              'donnees_publiques': False,
              'email': 'john.doe@gmail.com',
              'role': 'Observateur',
-             'tokens': ['WPKQHC7LLNSI5KJAFEYXTD89W61RSDBO',
-                        '6Z2GN5MJ8P1B234SP5RVJJTO2A2NOLF0']}
+             'tokens': {'WPKQHC7LLNSI5KJAFEYXTD89W61RSDBO': token_expire,
+                        '6Z2GN5MJ8P1B234SP5RVJJTO2A2NOLF0': token_expire}}
     eve_post_internal('utilisateurs', user1)
     user2 = {'nom': 'van rossum',
              'prenom': 'guido',
@@ -34,7 +32,7 @@ def users_base(request):
              'tags': ['Python', 'BDFL'],
              'organisation': 'Python fundation',
              'role': 'Administrateur',
-             'tokens': ['IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE']}
+             'tokens': {'IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE': token_expire}}
     eve_post_internal('utilisateurs', user2)
     users = [user for user in db.utilisateurs.find()]
 
@@ -42,10 +40,6 @@ def users_base(request):
         db.utilisateurs.remove()
     request.addfinalizer(finalizer)
     return users
-
-
-def test_allowed():
-    assert requests.get(settings.BACKEND_DOMAIN).status_code == 401
 
 
 def test_dummy_user(administrateur):
@@ -60,18 +54,6 @@ def test_dummy_role(administrateur):
                                  headers={'If-Match': administrateur.user['_etag']},
                                  json={'role': dummy_role})
         assert r.status_code == 422, r.text
-
-
-def test_token_access(users_base):
-    user = users_base[0]
-    for token in user['tokens']:
-        r = requests.get(settings.BACKEND_DOMAIN,
-                         auth=(token, None))
-        assert r.status_code == 200
-    dummy_token = 'J9QV87RDUW9UFE8D6WSKXYYZ6CGBG17G'
-    r = requests.get(settings.BACKEND_DOMAIN,
-                     headers={'Authorization': auth_header(dummy_token)})
-    assert r.status_code == 401
 
 
 def test_user_route(observateur):

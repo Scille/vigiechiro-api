@@ -1,0 +1,64 @@
+import requests
+import pytest
+from bson import ObjectId
+from datetime import datetime, timedelta
+from urllib.parse import urlparse, parse_qs
+
+from common import db, observateur
+from vigiechiro import settings
+from test_utilisateur import users_base
+
+
+def test_allowed():
+    assert requests.get(settings.BACKEND_DOMAIN).status_code == 401
+
+
+def test_token_access(users_base):
+    user = users_base[0]
+    for token in user['tokens']:
+        r = requests.get(settings.BACKEND_DOMAIN, auth=(token, None))
+        assert r.status_code == 200
+    dummy_token = 'J9QV87RDUW9UFE8D6WSKXYYZ6CGBG17G'
+    r = requests.get(settings.BACKEND_DOMAIN, auth=(dummy_token, None))
+    assert r.status_code == 401
+
+
+def test_expiration_token(observateur):
+    # Set the token to expiration
+    token_expire = token_expire = datetime.utcnow() - timedelta(seconds=1)
+    db.utilisateurs.update({'_id': ObjectId(observateur.user_id)},
+                           {'$set': {'tokens.'+observateur.token: token_expire}})
+    r = observateur.get('/utilisateurs/moi')
+    assert r.status_code == 401, r.text
+    content = r.json()
+
+
+def test_single_login():
+    r = requests.get(settings.BACKEND_DOMAIN + '/login/google',
+                     allow_redirects=False)
+    assert r.status_code == 302
+    assert 'Location' in r.headers
+    location = r.headers['Location']
+    qs = parse_qs(urlparse(r.headers['Location']).query)
+    assert 'token' in qs
+    token = qs['token'][0]
+    r = requests.get(settings.BACKEND_DOMAIN, auth=(token, None))
+    assert r.status_code == 200, r.text
+    return token
+
+
+def test_multi_login():
+    first_token = test_single_login()
+    # Test multi-login as well, both should work at the same time
+    second_token = test_single_login()
+    for token in [first_token, second_token]:
+        r = requests.get(settings.BACKEND_DOMAIN, auth=(token, None))
+        assert r.status_code == 200, r.text
+
+
+def test_logout(observateur):
+    r = observateur.post('/logout')
+    assert r.status_code == 200
+    r = observateur.get('/')
+    assert r.status_code == 401
+

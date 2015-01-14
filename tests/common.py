@@ -8,6 +8,7 @@ from pymongo import MongoClient
 from bson import ObjectId
 from eve.methods.post import post_internal
 from flask import current_app
+from datetime import datetime, timedelta
 
 from vigiechiro import settings, app
 
@@ -18,6 +19,7 @@ from time import mktime
 def format_datetime(dt):
     stamp = mktime(dt.timetuple())
     return format_date_time(stamp)
+
 
 db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
     settings.MONGO_DBNAME]
@@ -57,22 +59,21 @@ class AuthRequests:
 
     def __init__(self, role='Observateur', fields=[]):
         # Create a new user for the requests
-        self.token = ''.join(
-            random.choice(
-                string.ascii_uppercase +
-                string.digits) for x in range(32))
+        token_expire = datetime.utcnow() + timedelta(days=1)
+        self.token = ''.join(random.choice(
+                string.ascii_uppercase + string.digits) for x in range(32))
         self._user_id = AuthRequests.COUNT = AuthRequests.COUNT + 1
         payload = {
-            'nom': 'nom_{}'.format(
-                self._user_id), 'prenom': 'prenom_{}'.format(
-                self._user_id), 'pseudo': 'pseudo_{}'.format(
-                self._user_id), 'donnees_publiques': False, 'email': 'user_{}@email.com'.format(
-                    self._user_id), 'role': role, 'tokens': [
-                        self.token]}
+            'nom': 'nom_{}'.format(self._user_id),
+            'prenom': 'prenom_{}'.format(self._user_id),
+            'pseudo': 'pseudo_{}'.format(self._user_id),
+            'donnees_publiques': False,
+            'email': 'user_{}@email.com'.format(self._user_id),
+            'role': role,
+            'tokens': {self.token: token_expire}
+        }
         for key, value in fields:
             self.user[key] = value
-        self.authorization = b'Basic ' + \
-            base64.encodebytes(self.token.encode() + b':')
         eve_post_internal('utilisateurs', payload)
         self.user_id = str(
             db.utilisateurs.find_one({'pseudo': payload['pseudo']})['_id'])

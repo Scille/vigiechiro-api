@@ -11,13 +11,16 @@ from enum import Enum
 
 
 ## vigiechiro ##
+DEV_FAKE_AUTH = environ.get('DEV_FAKE_AUTH', 'False').lower() == 'true'
+TOKEN_EXPIRE_TIME = 24 * 3600
 ROLE_RULES = {
-    'Lecteur': ['Lecteur'], 'Observateur': [
-        'Lecteur', 'Observateur'], 'Validateur': [
-            'Lecteur', 'Observateur', 'Validateur'], 'Administrateur': [
-                'Lecteur', 'Observateur', 'Validateur', 'Administrateur']}
-# TODO : replace role by this enum system
+    'Lecteur': ['Lecteur'],
+    'Observateur': ['Lecteur', 'Observateur'],
+    'Validateur': ['Lecteur', 'Observateur', 'Validateur'],
+    'Administrateur': ['Lecteur', 'Observateur', 'Validateur',
+                       'Administrateur']}
 
+# TODO : replace role by this enum system
 
 class Roles(Enum):
     Lecteur = 0

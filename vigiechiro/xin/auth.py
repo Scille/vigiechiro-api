@@ -6,6 +6,8 @@ import logging
 import string
 import types
 from functools import wraps
+from datetime import datetime, timedelta
+import bson
 
 from flask import Blueprint, redirect
 from flask import app, current_app, abort, request
@@ -32,10 +34,11 @@ def check_auth(token, allowed_roles):
                 return jsonify(current_app.g.request_user)
     """
     accounts = current_app.data.driver.db['utilisateurs']
-    account = accounts.find_one({'tokens': token})
-    if account and 'role' in account:
-        # Keep request user account in local context, could be useful later
-        current_app.g.request_user = account
+    account = accounts.find_one({'tokens.{}'.format(token): {'$exists': True}})
+    if account:
+        if account['tokens'][token] < datetime.now(bson.utc):
+            # Out of date token
+            return False
         if allowed_roles:
             # Role are handled using least priviledge, thus a higher
             # priviledged role also include it lower roles.
@@ -43,6 +46,8 @@ def check_auth(token, allowed_roles):
             if not next((True for r in current_app.config['ROLE_RULES'][role]
                          if r in allowed_roles), False):
                 abort(403)
+        # Keep request user account in local context, could be useful later
+        current_app.g.request_user = account
         return True
     return False
 
@@ -78,9 +83,10 @@ class TokenAuth(eve.auth.TokenAuth):
             return False
 
 
-def auth_factory(services):
+def auth_factory(services, mock_provider=False):
     """Generate flask blueprint of login endpoints
        :params services: list of services to generate endpoints
+       :params mock_provider: simulate auth provider (NO ACTUAL AUTH IS DONE !)
 
        >>> from flask import Flask
        >>> from vigiechiro.xin.auth import auth_factory
@@ -91,12 +97,25 @@ def auth_factory(services):
        ['/login/github', '/login/google', '/logout', '/static/<path:filename>']
     """
     authomatic = FlaskAuthomatic(config=settings.AUTHOMATIC,
-                                 secret=settings.SECRET_KEY,
-                                 debug=True)
+                                 secret=settings.SECRET_KEY)
     auth_blueprint = Blueprint('auth', __name__)
 
-    def login_factory(service):
-        return authomatic.login(service)(lambda: login(authomatic, service))
+    if mock_provider:
+        class MockClass: pass
+        def login_factory(service):
+            user = MockClass()
+            user.__dict__ = {'id': '123456789',
+                             'email': 'mock_user@{}.com'.format(service),
+                             'name': 'John Doe'}
+            user.__dict__['update'] = lambda: None
+            result = MockClass()
+            result.__dict__ = {'user': user, 'error': {}}
+            mock_authomatic = MockClass()
+            mock_authomatic.__dict__ = {'result': result}
+            return lambda: login(mock_authomatic, service)
+    else:
+        def login_factory(service):
+            return authomatic.login(service)(lambda: login(authomatic, service))
     for service in services:
         auth_blueprint.add_url_rule('/login/' + service, 'login_' + service,
                                     login_factory(service))
@@ -107,11 +126,12 @@ def auth_factory(services):
         if request.authorization:
             token = request.authorization['username']
             users = current_app.data.driver.db['utilisateurs']
-            if users.find_one({'tokens': token}):
-                logging.info('Destroying token {}'.format(token))
-                users.update({'tokens': token}, {'$pull': {'tokens': token}})
-            else:
+            token_field = 'tokens.{}'.format(token)
+            lookup = {token_field: {'$exists': True}}
+            result = users.update(lookup, {'$unset': {token_field: ""}})
+            if not result['n']:
                 abort(404)
+            logging.info('Destroying token {}'.format(token))
         return eve.render.send_response(None, [])
     return auth_blueprint
 
@@ -124,20 +144,24 @@ def login(authomatic, provider_name):
         elif authomatic.result.user:
             authomatic.result.user.update()
             # Register the user
-            token = ''.join(
-                random.choice(
-                    string.ascii_uppercase +
-                    string.digits) for x in range(32))
+            new_token = ''.join(random.choice(string.ascii_uppercase +
+                                              string.digits) for x in range(32))
+            new_token_expire = (datetime.utcnow() +
+                timedelta(seconds=current_app.config['TOKEN_EXPIRE_TIME']))
             users_db = current_app.data.driver.db['utilisateurs']
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
             user_db = users_db.find_one({'email': user.email})
             if user_db:
-                user_db_id = user_db['_id']
+                # Add the new token and check expire date for existing ones
+                tokens = {new_token: new_token_expire}
+                now = datetime.now(bson.utc)
+                for token, token_expire in user_db['tokens'].items():
+                    if now < token_expire:
+                        tokens[token] = token_expire
                 users_db.update({'email': user.email},
-                                {"$push": {'tokens': token},
-                                 "$set": {provider_id_name: user.id}
-                                })
+                                {"$set": {provider_id_name: user.id,
+                                          'tokens': tokens}})
             else:
                 # We must switch to admin mode to insert a new user
                 current_app.g.request_user = {'role': 'Administrateur'}
@@ -148,7 +172,7 @@ def login(authomatic, provider_name):
                     'email': (user.email or
                         ''.join(random.choice(string.ascii_uppercase + string.digits)
                                 for x in range(10)) + '@fixmegithub.com'),
-                    'tokens': [token],
+                    'tokens': {new_token: new_token_expire},
                     'role': 'Observateur'
                 }
                 result = post_internal('utilisateurs', user_payload)
@@ -158,21 +182,9 @@ def login(authomatic, provider_name):
                     logging.error('Cannot create user {} : {}'.format(
                                   user_payload, result))
                     abort(500)
-                user_db_id = result[0]['_id']
                 logging.info('Create new user : {}'.format(user.email))
-            logging.info('Update user {} token: {}, Authorization: Basic {}'.format(
-                    user.email,
-                    token,
-                    base64.encodebytes(
-                        (token + ':').encode())))
-            return redirect(
-                '{}/#/?token={}&id={}&pseudo={}&email={}'.format(
-                    current_app.config['FRONTEND_DOMAIN'],
-                    token,
-                    user_db_id,
-                    user.name,
-                    user.email),
-                code=302)
+            return redirect('{}/!/?token={}'.format(
+                current_app.config['FRONTEND_DOMAIN'], new_token), code=302)
     else:
         return authomatic.response
 

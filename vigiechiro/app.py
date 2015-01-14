@@ -23,16 +23,14 @@ def bootstrap():
         participations]
     config['DOMAIN'] = {r.name: r.domain for r in resources}
 
-    r = redis.StrictRedis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        db=0)
+    r = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT,
+                          db=0)
 
     app = Eve(auth=TokenAuth, validator=Validator, redis=r, settings=config)
-    app.register_blueprint(auth_factory(settings.AUTHOMATIC.keys()))
+    app.register_blueprint(auth_factory(settings.AUTHOMATIC.keys(),
+                                        mock_provider=settings.DEV_FAKE_AUTH))
     for resource in resources:
         app.register_blueprint(resource)
-    app.debug = True
     return app
 
 app = bootstrap()

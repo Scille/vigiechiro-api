@@ -57,15 +57,18 @@ DOMAIN = {
             'schema': {'type': 'string'}
         },
         'tokens': {
-            'type': 'list',
-            'schema': {'type': 'string', 'writerights': 'Administrateur'}
+            'type': 'dict',
+            'writerights': 'Administrateur',
+            'keyschema': {'type': 'datetime', 'writerights': 'Administrateur'}
         },
         'protocoles': {
             'type': 'dict',
             'utilisateur_validate_protocoles': True,
             'keyschema': {
                 'type': 'dict',
-                'schema': {'valide': {'type': 'boolean', 'writerights': 'Administrateur'}}
+                'schema': {
+                    'valide': {'type': 'boolean', 'writerights': 'Administrateur'}
+                }
             }
         }
     }

@@ -54,7 +54,7 @@ def test_non_valide_observateur(
     assert r.status_code == 200, r.text
     # Cannot post any participation
     r = observateur.post('/participations',
-                         json={'date_debut': format_datetime(datetime.now()),
+                         json={'date_debut': format_datetime(datetime.utcnow()),
                                'observateur': observateur.user_id,
                                'protocole': protocole_id,
                                'site': str(site['_id'])})
@@ -72,7 +72,7 @@ def test_non_valide_observateur(
     assert r.status_code == 200, r.text
     # Post participation is now ok
     r = observateur.post('/participations',
-                         json={'date_debut': format_datetime(datetime.now()),
+                         json={'date_debut': format_datetime(datetime.utcnow()),
                                'observateur': observateur.user_id,
                                'protocole': protocole_id,
                                'site': str(site['_id'])})
@@ -85,7 +85,7 @@ def test_wrong_protocole(participation_ready, protocoles_base):
     observateur, protocole, site = participation_ready
     bad_protocole_id = str(protocoles_base[2]['_id'])
     r = observateur.post('/participations',
-                         json={'date_debut': format_datetime(datetime.now()),
+                         json={'date_debut': format_datetime(datetime.utcnow()),
                                'observateur': observateur.user_id,
                                'protocole': bad_protocole_id,
                                'site': str(site['_id'])})
@@ -97,7 +97,7 @@ def test_wrong_site(participation_ready, sites_base):
     observateur, protocole, site = participation_ready
     bad_site_id = str(sites_base[1]['_id'])
     r = observateur.post('/participations',
-                         json={'date_debut': format_datetime(datetime.now()),
+                         json={'date_debut': format_datetime(datetime.utcnow()),
                                'observateur': observateur.user_id,
                                'protocole': str(protocole['_id']),
                                'site': bad_site_id})
@@ -114,8 +114,7 @@ def test_wrong_observateur(
     r = real_observateur.post(
         '/participations',
         json={
-            'date_debut': format_datetime(
-                datetime.now()),
+            'date_debut': format_datetime(datetime.utcnow()),
             'observateur': validateur.user_id,
             'protocole': str(
                 protocole['_id']),
@@ -126,8 +125,7 @@ def test_wrong_observateur(
     r = administrateur.post(
         '/participations',
         json={
-            'date_debut': format_datetime(
-                datetime.now()),
+            'date_debut': format_datetime(datetime.utcnow()),
             'observateur': real_observateur.user_id,
             'protocole': str(
                 protocole['_id']),
