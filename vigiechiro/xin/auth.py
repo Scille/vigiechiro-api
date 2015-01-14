@@ -140,7 +140,9 @@ def login(authomatic, provider_name):
     """Login/user register endpoint using authomatic for the heavy lifting"""
     if authomatic.result:
         if authomatic.result.error:
-            abort(401, authomatic.result.error.message)
+            # It is most likely the client cancel it login request,
+            # just reroute him to the website
+            return redirect(current_app.config['FRONTEND_DOMAIN'], code=302)
         elif authomatic.result.user:
             authomatic.result.user.update()
             # Register the user
