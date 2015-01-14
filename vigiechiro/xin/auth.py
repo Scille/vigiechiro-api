@@ -140,7 +140,7 @@ def login(authomatic, provider_name):
     """Login/user register endpoint using authomatic for the heavy lifting"""
     if authomatic.result:
         if authomatic.result.error:
-            return authomatic.result.error.message
+            abort(401, authomatic.result.error.message)
         elif authomatic.result.user:
             authomatic.result.user.update()
             # Register the user
