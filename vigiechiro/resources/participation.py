@@ -81,10 +81,9 @@ def _verify_participation_relations(payload):
         abort(422, 'only Administrateur can post for someone else')
     observateur = get_resource('utilisateurs', payload['observateur'])
     protocole = get_resource('protocoles', payload['protocole'])
-    protocole_id = str(payload['protocole'])
-    # Make sure the user has subscribed the protocole and is validated
-    protocole_subscribe = next((value for key, value in observateur.get('protocoles', {}).items()
-                                if key == protocole_id), None)
+    # Make sure the observateur has subscribed the protocole and is validated
+    protocole_subscribe = next((p for p in observateur.get('protocoles', [])
+                                if p['protocole'] == payload['protocole']), None)
     if not protocole_subscribe:
         abort(422, "user hasn't subscribed to protocole {}".format(
             protocole['titre']))
@@ -93,7 +92,7 @@ def _verify_participation_relations(payload):
                    " validated".format(protocole['titre']))
     # Now check site is linked to the requested protocole
     site = get_resource('sites', payload['site'])
-    if str(site['protocole']) != protocole_id:
+    if site['protocole'] != payload['protocole']:
         abort(422, "the site is not linked to protocole {}".format(
             protocole['titre']))
     if site['observateur'] != payload['observateur']:

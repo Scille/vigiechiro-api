@@ -62,11 +62,12 @@ DOMAIN = {
             'keyschema': {'type': 'datetime', 'writerights': 'Administrateur'}
         },
         'protocoles': {
-            'type': 'dict',
-            'utilisateur_validate_protocoles': True,
-            'keyschema': {
+            'type': 'list',
+            'schema': {
                 'type': 'dict',
                 'schema': {
+                    'protocole': relation('protocoles', embeddable=True,
+                                          utilisateur_validate_non_macro_protocole=True),
                     'valide': {'type': 'boolean', 'writerights': 'Administrateur'}
                 }
             }
@@ -78,26 +79,23 @@ utilisateurs = EveBlueprint('utilisateurs', __name__, domain=DOMAIN,
 
 
 @utilisateurs.validate
-def utilisateur_validate_protocoles(self, validate, field, value):
-    """Make sure each key in the `protocoles` dict is a valid relation"""
-    if validate:
-        protocoles_db = current_app.data.driver.db['protocoles']
-        error_msg = "value '{}' cannot be converted to a ObjectId"
-        for protocole_id in value.keys():
-            try:
-                protocole_id = ObjectId(protocole_id)
-                protocole = protocoles_db.find_one({'_id': protocole_id})
-                if protocole:
-                    if protocole.get('macro_protocole', False):
-                        self._error(
-                            field,
-                            'cannot subscribe to a macro-protocole')
-                else:
-                    self._error(
-                        field,
-                        'no protocoles with id {}'.format(protocole_id))
-            except InvalidId:
-                self._error(field, error_msg.format(protocole_id))
+def utilisateur_validate_non_macro_protocole(self, validate, field, value):
+    """Make sure the given value is a non macro protocole"""
+    print(field, 'touill---->')
+    if not validate:
+        return
+    try:
+        protocole_id = ObjectId(value)
+    except InvalidId:
+        self._error(field, "value '{}' cannot be converted to a"
+                           " ObjectId".format(protocole_id))
+    protocoles_db = current_app.data.driver.db['protocoles']
+    protocole = protocoles_db.find_one({'_id': protocole_id})
+    if protocole:
+        if protocole.get('macro_protocole', False):
+            self._error(field, "cannot subscribe to a macro-protocole")
+    else:
+        self._error(field, "no protocoles with id {}".format(protocole_id))
 
 
 @utilisateurs.route('/moi', methods=['GET', 'PUT', 'PATCH'])
@@ -144,6 +142,6 @@ def on_pre_PATCH(request, lookup):
 def on_pre_GET(request, lookup):
     if '_id' in lookup:
         # Validateur and above can see other user's account
-        if (ObjectId(lookup['_id']) != current_app.g.request_user[
-                '_id'] and current_app.g.request_user['role'] not in ['Administrateur', 'Validateur']):
+        if (ObjectId(lookup['_id']) != current_app.g.request_user['_id'] and
+            current_app.g.request_user['role'] not in ['Administrateur', 'Validateur']):
             abort(403)

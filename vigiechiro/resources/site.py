@@ -90,7 +90,8 @@ def on_insert(items):
             abort(422, 'Observateur cannot specify site owner')
         # Make sure the observateur is part of the site's protocole
         observateur = get_resource('utilisateurs', item['observateur'])
-        if str(item['protocole']) not in observateur.get('protocoles', {}):
+        if not next((p for p in observateur.get('protocoles', [])
+                     if p['protocole'] == item['protocole']), None):
             abort(422, 'Cannot create site without subscribing to protocole')
 
     # TODO use counter

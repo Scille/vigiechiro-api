@@ -15,9 +15,8 @@ def obs_sites_base(request, protocoles_base, observateur, administrateur):
     etag = observateur.user['_etag']
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': etag},
-                             json={'protocoles': {
-                               protocole_id: {'valide': True}
-                             }})
+                             json={'protocoles': [{'protocole': protocole_id,
+                                                   'valide': True}]})
     observateur.update_user()
     assert r.status_code == 200, r.text
     # Create sites for the observateur
@@ -80,9 +79,7 @@ def test_create_site_non_valide(observateur, protocoles_base):
     etag = observateur.user['_etag']
     r = observateur.patch(observateur.url,
                           headers={'If-Match': etag},
-                          json={'protocoles': {
-                            protocole_id: {}
-                          }})
+                          json={'protocoles': [{'protocole': protocole_id}]})
     # Observateur is allowed to create multiple sites
     site_payload = {
         'protocole': protocole_id,
@@ -99,9 +96,8 @@ def test_create_site(administrateur, observateur, protocoles_base):
     etag = observateur.user['_etag']
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': etag},
-                             json={'protocoles': {
-                               protocole_id: {'valide': True}
-                             }})
+                             json={'protocoles': [{'protocole': protocole_id,
+                                                   'valide': True}]})
     assert r.status_code == 200, r.text
     # Create site for the observateur
     site_payload = {
@@ -122,9 +118,8 @@ def test_create_site_explicit_obs(administrateur, observateur, protocoles_base):
     etag = observateur.user['_etag']
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': etag},
-                             json={'protocoles': {
-                               protocole_id: {'valide': True}
-                             }})
+                             json={'protocoles': [{'protocole': protocole_id,
+                                                   'valide': True}]})
     assert r.status_code == 200, r.text
     # Create a site, but specify another observateur than the poster !
     site_payload = {
