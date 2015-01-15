@@ -8,7 +8,7 @@
 from flask import current_app, abort, jsonify
 
 from ..xin import EveBlueprint
-from ..xin.domain import relation, choice
+from ..xin.domain import relation, choice, get_resource
 
 
 STOC_SCHEMA = {
@@ -26,34 +26,38 @@ DOMAIN = {
     'resource_methods': ['GET', 'POST'],
     'item_methods': ['GET', 'PATCH', 'PUT'],
     'allowed_read_roles': ['Observateur'],
+    'allowed_write_roles': ['Observateur'],
     'allowed_item_read_roles': ['Observateur'],
     'allowed_item_write_roles': ['Observateur'],
     'schema': {
         # 'numero': {'type': 'integer', 'unique': True, 'readonly': True},
-        'protocole': relation('protocoles', required=True, writerights='Administrateur'),
-        'observateur': relation('utilisateurs', writerights='Administrateur'),
+        'protocole': relation('protocoles', required=True, postonly=True),
+        'observateur': relation('utilisateurs', postonly=True),
         'commentaire': {'type': 'string'},
         'numero_grille_stoc': {'type': 'string'},
         'verrouille': {'type': 'boolean', 'writerights': 'Administrateur'},
         'coordonnee': {'type': 'point'},
         'url_cartographie': {'type': 'url'},
         'largeur': {'type': 'number'},
-        'localite': {
+        'localites': {
             'type': 'list',
             'schema': {
                 'coordonnee': {'type': 'point'},
                 'representatif': {'type': 'boolean'},
-                'habitat': {
-                    'type': 'dict',
+                'habitats': {
+                    'type': 'list',
                     'schema': {
-                        'date': {'type': 'datetime'},
-                        'stoc_principal': {
-                            'type': 'dict',
-                            'schema': STOC_SCHEMA
-                        },
-                        'stoc_secondaire': {
-                            'type': 'dict',
-                            'schema': STOC_SCHEMA
+                        'type': 'dict',
+                        'schema': {
+                            'date': {'type': 'datetime'},
+                            'stoc_principal': {
+                                'type': 'dict',
+                                'schema': STOC_SCHEMA
+                            },
+                            'stoc_secondaire': {
+                                'type': 'dict',
+                                'schema': STOC_SCHEMA
+                            }
                         }
                     }
                 }
@@ -75,8 +79,21 @@ def display_stock():
 
 @sites.event
 def on_insert(items):
+    for item in items:
+        # observateur field can be explicitely set by admin,
+        # otherwise it is set to the request user
+        request_user = current_app.g.request_user
+        if 'observateur' not in item:
+            item['observateur'] = request_user['_id']
+        if (request_user['role'] != 'Administrateur' and
+            item['observateur'] != request_user['_id']):
+            abort(422, 'Observateur cannot specify site owner')
+        # Make sure the observateur is part of the site's protocole
+        observateur = get_resource('utilisateurs', item['observateur'])
+        if str(item['protocole']) not in observateur.get('protocoles', {}):
+            abort(422, 'Cannot create site without subscribing to protocole')
+
     # TODO use counter
-    pass
     # for item in items:
     #     item['numero'] = 1
 

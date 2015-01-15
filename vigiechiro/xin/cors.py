@@ -15,7 +15,6 @@ from .. import settings
 def crossdomain(origin=None, methods=None, headers=None, max_age=21600,
                 attach_to_all=True, automatic_options=True):
     """A decorator to provide cors support for a flask route"""
-    # import pdb; pdb.set_trace()
     origin = origin or settings.X_DOMAINS
     headers = headers or settings.X_HEADERS
     if methods is not None:

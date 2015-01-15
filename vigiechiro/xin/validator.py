@@ -19,7 +19,7 @@ class Validator(EveValidator):
             self._error(field, ERROR_BAD_TYPE % 'url')
 
     def _validate_postonly(self, read_only, field, value):
-        """Field can be altered during POST only"""
+        """Field can be altered by non-admin during POST only"""
         if current_app.g.request_user['role'] == 'Administrateur':
             return
         if read_only and request.method != 'POST':

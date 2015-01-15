@@ -41,6 +41,7 @@ def test_single_login():
     # Replace '#' in the location to let urllib parse correctly
     location = r.headers['Location'].replace('#', '!')
     qs = parse_qs(urlparse(location).query)
+    print(qs)
     assert 'token' in qs
     token = qs['token'][0]
     r = requests.get(settings.BACKEND_DOMAIN, auth=(token, None))

@@ -83,25 +83,22 @@ def _verify_participation_relations(payload):
     protocole = get_resource('protocoles', payload['protocole'])
     protocole_id = str(payload['protocole'])
     # Make sure the user has subscribed the protocole and is validated
-    protocole_subscribe = next(
-        (value for key,
-         value in observateur.get(
-             'protocoles',
-             {}).items() if str(key) == protocole_id),
-        None)
+    protocole_subscribe = next((value for key, value in observateur.get('protocoles', {}).items()
+                                if key == protocole_id), None)
     if not protocole_subscribe:
         abort(422, "user hasn't subscribed to protocole {}".format(
             protocole['titre']))
     if not protocole_subscribe.get('valide', False):
-        abort(
-            422,
-            "user cannot post to protocole {} until beeing validated".format(
-                protocole['titre']))
+        abort(422, "user cannot post to protocole {} until beeing"
+                   " validated".format(protocole['titre']))
     # Now check site is linked to the requested protocole
     site = get_resource('sites', payload['site'])
     if str(site['protocole']) != protocole_id:
         abort(422, "the site is not linked to protocole {}".format(
             protocole['titre']))
+    if site['observateur'] != payload['observateur']:
+        abort(422, "cannot create a participation in a site the observateur"
+                   " is not owner")
 
 
 @participations.event
