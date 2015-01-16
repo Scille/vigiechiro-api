@@ -162,35 +162,59 @@ def test_internal_resource(observateur):
 
 def test_join_protocole(observateur, administrateur, protocoles_base):
     macro_protocole = protocoles_base[0]
+    macro_protocole_id = str(macro_protocole['_id'])
     protocole = protocoles_base[1]
-    # Join a protocole
+    protocole_id = str(protocole['_id'])
+    protocole_url = '/protocoles/{}/action/join'
+    # Try to join dummy protocoles
+    for bad_protocole_id in ['dummy', observateur.user_id,
+                             '549b444b13adf218427fb681']:
+        r = observateur.post(protocole_url.format(bad_protocole_id))
+        assert r.status_code == 422, protocole_id
+    # Try to manualy add a protocole to myself
     etag = observateur.user['_etag']
     r = observateur.patch(observateur.url, headers={'If-Match': etag},
-                          json={'protocoles': [{'protocole': str(protocole['_id'])}]})
+                          json={'protocoles': [{'protocole': protocole_id}]})
+    # Join a protocole
+    r = observateur.post(protocole_url.format(protocole_id))
     assert r.status_code == 200, r.text
     observateur.update_user()
-    etag = observateur.user['_etag']
-    # Try to join dummy protocoles
-    for protocole_id in ['dummy', observateur.user_id,
-                         '549b444b13adf218427fb681']:
-        r = observateur.patch(observateur.url, headers={'If-Match': etag},
-                              json={'protocoles': [{'protocole': protocole_id}]})
-        assert r.status_code == 422, protocole_id
+    assert observateur.user['protocoles'] == [{'protocole': protocole_id}]
     # Try to validate myself
+    etag = observateur.user['_etag']
     r = observateur.patch(observateur.url, headers={'If-Match': etag},
-                          json={'protocoles': [{'protocole': str(protocole['_id']),
+                          json={'protocoles': [{'protocole': protocole_id,
                                                 'valide': True}]})
     assert r.status_code == 422, r.text
     # Admin validates me
     r = administrateur.patch(observateur.url, headers={'If-Match': etag},
-                             json={'protocoles': [{'protocole': str(protocole['_id']),
+                             json={'protocoles': [{'protocole': protocole_id,
                                                    'valide': True}]})
     assert r.status_code == 200, r.text
     observateur.update_user()
-    assert observateur.user['protocoles'] == [{'protocole': str(protocole['_id']),
+    assert observateur.user['protocoles'] == [{'protocole': protocole_id,
                                                'valide': True}]
     # Macro-protocoles are not subscriptable
     etag = observateur.user['_etag']
-    r = observateur.patch(observateur.url, headers={'If-Match': etag},
-                          json={'protocoles': [{'protocole': str(macro_protocole['_id'])}]})
+    r = observateur.post(protocole_url.format(macro_protocole_id))
     assert r.status_code == 422, r.text
+
+
+def test_multi_join(observateur, administrateur, protocoles_base):
+    macro_protocole = protocoles_base[0]
+    protocole1_id = str(protocoles_base[1]['_id'])
+    protocole2_id = str(protocoles_base[2]['_id'])
+    protocole_url = '/protocoles/{}/action/join'
+    # Make the observateur join a protocole and validate it
+    etag = observateur.user['_etag']
+    r = administrateur.patch(observateur.url, headers={'If-Match': etag},
+                             json={'protocoles': [{'protocole': protocole1_id,
+                                                   'valide': True}]})
+    assert r.status_code == 200, r.text
+    observateur.update_user()
+    # Now observateur join another protocole, must not interfere with the other
+    r = observateur.post(protocole_url.format(protocole2_id))
+    assert r.status_code == 200, r.text
+    observateur.update_user()
+    assert observateur.user['protocoles'] == [{'protocole': protocole1_id, 'valide': True},
+                                              {'protocole': protocole2_id}]

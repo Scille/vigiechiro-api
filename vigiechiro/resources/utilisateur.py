@@ -63,12 +63,13 @@ DOMAIN = {
         },
         'protocoles': {
             'type': 'list',
+            'writerights': 'Administrateur',
             'schema': {
                 'type': 'dict',
                 'schema': {
                     'protocole': relation('protocoles', embeddable=True,
                                           utilisateur_validate_non_macro_protocole=True),
-                    'valide': {'type': 'boolean', 'writerights': 'Administrateur'}
+                    'valide': {'type': 'boolean'}
                 }
             }
         }
@@ -81,7 +82,6 @@ utilisateurs = EveBlueprint('utilisateurs', __name__, domain=DOMAIN,
 @utilisateurs.validate
 def utilisateur_validate_non_macro_protocole(self, validate, field, value):
     """Make sure the given value is a non macro protocole"""
-    print(field, 'touill---->')
     if not validate:
         return
     try:

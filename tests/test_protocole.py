@@ -105,10 +105,8 @@ def test_macro_protocoles(
         assert r.status_code == 422, r.text
 
 
-def test_participation_configuration(
-        protocoles_base,
-        new_protocole_payload,
-        administrateur):
+def test_participation_configuration(protocoles_base, new_protocole_payload,
+                                     administrateur):
     # Try to set dummy configuration
     new_protocole_payload['configuration_participation'] = ['dummy']
     r = administrateur.post('/protocoles', json=new_protocole_payload)

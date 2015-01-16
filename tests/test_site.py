@@ -76,10 +76,8 @@ def test_non_register_create_site(protocoles_base, observateur, administrateur):
 def test_create_site_non_valide(observateur, protocoles_base):
     # Register the observateur to a protocole, but doesn't validate it
     protocole_id = str(protocoles_base[1]['_id'])
-    etag = observateur.user['_etag']
-    r = observateur.patch(observateur.url,
-                          headers={'If-Match': etag},
-                          json={'protocoles': [{'protocole': protocole_id}]})
+    r = observateur.post('/protocoles/{}/action/join'.format(protocole_id))
+    assert r.status_code == 200, r.text
     # Observateur is allowed to create multiple sites
     site_payload = {
         'protocole': protocole_id,
