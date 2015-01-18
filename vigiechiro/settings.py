@@ -50,6 +50,8 @@ MONGO_PASSWORD = environ.get('MONGO_PASSWORD', '')
 MONGO_DBNAME = environ.get('MONGO_DBNAME', 'vigiechiro')
 
 ### Eve ###
+CACHE_CONTROL = 'must-revalidate'
+
 X_DOMAINS = FRONTEND_DOMAIN
 X_HEADERS = ['Accept', 'Content-type', 'Authorization', 'If-Match']
 X_EXPOSE_HEADERS = X_HEADERS

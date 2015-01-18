@@ -112,7 +112,7 @@ def route_moi():
         elif request.method == 'DELETE':
             response = eve.methods.deleteitem('utilisateurs', _id=user_id)
         elif request.method == 'OPTIONS':
-            send_response('utilisateurs', response)
+            eve.render.send_response('utilisateurs', response)
         else:
             abort(405)
         return eve.render.send_response('utilisateurs', response)
