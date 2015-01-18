@@ -175,7 +175,8 @@ def login(authomatic, provider_name):
                     'pseudo': user.name,
                     'email': user.email,
                     'tokens': {new_token: new_token_expire},
-                    'role': 'Observateur'
+                    'role': 'Observateur',
+                    'donnees_publiques': True
                 }
                 result = post_internal('utilisateurs', user_payload)
                 # Drop admin right for security
