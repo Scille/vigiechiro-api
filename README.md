@@ -7,10 +7,20 @@ Partie API (backend)
 
 ## Install
 ```
-sudo apt-get install mongodb
+# mongodb debian http://docs.mongodb.org/manual/tutorial/install-mongodb-on-debian/
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv 7F0CEB10
+echo 'deb http://downloads-distro.mongodb.org/repo/debian-sysvinit dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list
+
+# mongodb ubuntu http://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list
+```
+
+sudo apt-get update
+sudo apt-get install -y mongodb-org
 sudo apt-get install redis-server
 
-sudo service mongodb start
+sudo service mongod start
 sudo service redis-server start
 
 virtualenv venv
