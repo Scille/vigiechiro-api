@@ -31,7 +31,7 @@ class Roles(Enum):
 
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
-FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN', 'http://www.lvh.me:9000')
+FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN', 'http://localhost:9000')
 PORT = int(environ.get('BACKEND_PORT', 8080))
 BACKEND_DOMAIN = environ.get(
     'BACKEND_DOMAIN', 'http://api.lvh.me:{}'.format(PORT))
