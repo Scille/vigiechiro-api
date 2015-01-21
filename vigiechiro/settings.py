@@ -64,21 +64,6 @@ ALLOWED_ITEM_WRITE_ROLES = ['Administrateur']
 
 ### Authomatic ###
 AUTHOMATIC = {
-    'github': {
-        'class_': oauth2.GitHub,
-        'consumer_key': environ.get('GITHUB_API_KEY', ''),
-        'consumer_secret': environ.get('GITHUB_API_SECRET', ''),
-        'scope': ['user:email'],
-        'access_headers': {'User-Agent': 'Awesome-Octocat-App'},
-        '_apis': {
-            'Get your events': (
-                'GET',
-                'https://api.github.com/users/{user.username}/events'),
-            'Get your watched repos': (
-                'GET',
-                'https://api.github.com/user/subscriptions'),
-        },
-    },
     'google': {
         'class_': oauth2.Google,
         'consumer_key': environ.get('GOOGLE_API_KEY', ''),

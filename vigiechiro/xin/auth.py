@@ -153,10 +153,9 @@ def login(authomatic, provider_name):
             users_db = current_app.data.driver.db['utilisateurs']
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
-            # TODO fix github email
-            if provider_name == 'github':
-                user.email = 'fixme@github.com'
-            user_db = users_db.find_one({'email': user.email})
+            # Lookup for existing user by email and provider id
+            user_db = users_db.find_one({'$or': [{'email': user.email},
+                                                 {provider_id_name: user.id}]})
             if user_db:
                 # Add the new token and check expire date for existing ones
                 tokens = {new_token: new_token_expire}
