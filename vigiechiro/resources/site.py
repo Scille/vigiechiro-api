@@ -43,6 +43,7 @@ DOMAIN = {
             'type': 'list',
             'schema': {
                 'coordonnee': {'type': 'point'},
+                'geometries': {'type': 'geometryCollection'},
                 'representatif': {'type': 'boolean'},
                 'habitats': {
                     'type': 'list',
