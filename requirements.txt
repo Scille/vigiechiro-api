@@ -13,4 +13,5 @@ Werkzeug==0.9.6
 # authomatic's dependancies
 six
 # Application server
-gunicorn
+#gunicorn
+tornado
