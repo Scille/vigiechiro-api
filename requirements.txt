@@ -13,7 +13,7 @@ Werkzeug==0.9.6
 # authomatic's dependancies
 six
 # Application server
-#gunicorn
-#tornado
-#uwsgi
-waitress
+gunicorn
+# tornado
+# uwsgi
+# waitress
