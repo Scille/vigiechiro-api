@@ -15,4 +15,5 @@ six
 # Application server
 #gunicorn
 #tornado
-uwsgi
+#uwsgi
+waitress
