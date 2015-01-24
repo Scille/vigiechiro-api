@@ -8,3 +8,4 @@ from .taxon import taxons
 from .site import sites
 from .protocole import protocoles
 from .participation import participations
+from .grille_stoc import grille_stoc

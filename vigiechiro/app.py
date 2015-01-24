@@ -6,7 +6,8 @@ import redis
 from flask import Config
 
 from . import settings, resources
-from .resources import utilisateurs, fichiers, taxons, sites, protocoles, participations
+from .resources import (utilisateurs, fichiers, taxons, sites,
+                        protocoles, participations, grille_stoc)
 from .xin import Validator
 from .xin.auth import TokenAuth, auth_factory
 
@@ -20,7 +21,8 @@ def bootstrap():
         taxons,
         sites,
         protocoles,
-        participations]
+        participations,
+        grille_stoc]
     config['DOMAIN'] = {r.name: r.domain for r in resources}
 
     r = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT,
