@@ -52,7 +52,9 @@ py.test tests
 
 Création des indexes text (http://docs.mongodb.org/manual/tutorial/create-text-index-on-multiple-fields/)
 ```
-db.taxons.ensureIndex({$**": "text" }, { name: "TaxonsTextIndex" })
+db.utilisateurs.ensureIndex({email: "text", pseudo: "text", nom: "text", prenom: "text", organisation: "text", tag: "text"}, {default_language: "french", name: "utilisateursTextIndex"})
+db.taxons.ensureIndex({libelle_long: "text", libelle_court: "text", tags: "text"}, {default_language: "french", name: "taxonsTextIndex"})
+db.protocoles.ensureIndex({titre: "text", tags: "text"}, {default_language: "french", name: "protocolesTextIndex"})
 ```
 
 
