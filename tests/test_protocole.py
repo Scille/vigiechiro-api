@@ -13,7 +13,7 @@ def protocoles_base(request, taxons_base):
         'titre': 'Vigiechiro',
         'description': 'Procole parent vigiechiro',
         'macro_protocole': True,
-        'tag': ['chiroptères'],
+        'tags': ['chiroptères'],
         'taxon': taxons_base[0]['_id'],
         'type_site': 'LINEAIRE',
         'algo_tirage_site': 'CARRE',
@@ -23,7 +23,7 @@ def protocoles_base(request, taxons_base):
     payload_sub = {
         'titre': 'Vigiechiro-A',
         'description': 'Procole enfant vigiechiro',
-        'tag': ['chiroptères'],
+        'tags': ['chiroptères'],
         'taxon': taxons_base[0]['_id'],
         'type_site': 'LINEAIRE',
         'algo_tirage_site': 'CARRE',
@@ -34,7 +34,7 @@ def protocoles_base(request, taxons_base):
     payload_sub = {
         'titre': 'Vigieortho',
         'description': 'Procole vigieortho',
-        'tag': ['orthoptères'],
+        'tags': ['orthoptères'],
         'taxon': taxons_base[0]['_id'],
         'type_site': 'LINEAIRE',
         'algo_tirage_site': 'CARRE',
@@ -44,7 +44,7 @@ def protocoles_base(request, taxons_base):
     def finalizer():
         db.protocoles.remove()
     request.addfinalizer(finalizer)
-    return db.protocoles.find()
+    return db.protocoles.find().sort([('_id', 1)])
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ def test_access(protocoles_base, new_protocole_payload, observateur):
     url = '/protocoles/' + str(protocoles_base[0]['_id'])
     etag = protocoles_base[0]['_etag']
     r = observateur.patch(url, headers={'If-Match': etag},
-                          json={'tag': ['new_tag']})
+                          json={'tags': ['new_tag']})
     assert r.status_code == 403, r.text
     r = observateur.put(url, headers={'If-Match': etag},
                         json=new_protocole_payload)

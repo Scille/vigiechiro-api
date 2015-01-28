@@ -34,12 +34,10 @@ def users_base(request):
              'role': 'Administrateur',
              'tokens': {'IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE': token_expire}}
     eve_post_internal('utilisateurs', user2)
-    users = [user for user in db.utilisateurs.find()]
-
     def finalizer():
         db.utilisateurs.remove()
     request.addfinalizer(finalizer)
-    return users
+    return db.utilisateurs.find().sort([('_id', 1)])
 
 
 def test_dummy_user(administrateur):

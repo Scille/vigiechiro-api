@@ -57,7 +57,7 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
     def finalizer():
         db.taxons.remove()
     request.addfinalizer(finalizer)
-    return db.taxons.find()
+    return db.taxons.find().sort([('_id', 1)])
 
 
 @pytest.fixture
@@ -167,3 +167,12 @@ def test_unique_libelle(taxons_base, new_taxon_payload, administrateur):
         new_taxon_payload[libelle] = taxons_base[0][libelle]
         r = administrateur.post('/taxons', json=new_taxon_payload)
         assert r.status_code == 422, r.text
+
+
+def test_get_resume_list(taxons_base, observateur):
+    taxons_base = [t for t in taxons_base]
+    r = observateur.get('/taxons/liste')
+    assert r.status_code == 200, r.text
+    items = {item['_id']: item for item in  r.json()['_items']}
+    for taxon in taxons_base:
+        assert str(taxon['_id']) in items

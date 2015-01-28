@@ -44,8 +44,9 @@ def obs_sites_base(request, protocoles_base, observateur, administrateur):
     def finalizer():
         db.sites.remove()
     request.addfinalizer(finalizer)
+    observateur_id = ObjectId(observateur.user_id)
     return (observateur,
-        list(db.sites.find({'observateur': ObjectId(observateur.user_id)})))
+        db.sites.find({'observateur': observateur_id}).sort([('_id', 1)]))
 
 
 @pytest.fixture

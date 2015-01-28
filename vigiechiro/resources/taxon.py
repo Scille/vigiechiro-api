@@ -7,7 +7,8 @@
 
 from flask import current_app, abort
 
-from ..xin import EveBlueprint
+from ..xin import EveBlueprint, jsonify
+from ..xin.auth import requires_auth
 from ..xin.domain import relation
 
 
@@ -78,3 +79,11 @@ def on_update(updates, original):
 @taxons.event
 def on_replace(updates, original):
     _check_parents(updates, original)
+
+
+@taxons.route('/liste', methods=['GET'])
+@requires_auth(roles='Observateur')
+def get_resume_list():
+    """Return a brief list of per taxon id and libelle"""
+    items = current_app.data.driver.db['taxons'].find({}, {"libelle_long": 1})
+    return jsonify(_items=[i for i in items])

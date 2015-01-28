@@ -23,7 +23,7 @@ DOMAIN = {
         'description': {'type': 'string'},
         'parent': relation('protocoles', embeddable=False),
         'macro_protocole': {'type': 'boolean'},
-        'tag': {
+        'tags': {
             'type': 'list',
             'schema': {'type': 'string'}
         },
