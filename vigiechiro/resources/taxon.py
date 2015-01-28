@@ -22,7 +22,7 @@ DOMAIN = {
         'description': {'type': 'string'},
         'parents': {
             'type': 'list',
-            'schema': relation('taxons', embeddable=False),
+            'schema': relation('taxons', embeddable=True),
         },
         'liens': {
             'type': 'list',
