@@ -49,7 +49,7 @@ def _check_parents(updates, original=None):
 
     def check_recur(children, curr_id):
         if curr_id in children:
-            abort(422, "circular dependancy of parents"
+            abort(422, "circular dependency of parents"
                        " detected : {}".format(children))
         curr_doc = current_app.data.find_one('taxons', None, _id=curr_id)
         if not curr_doc:
