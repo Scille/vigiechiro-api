@@ -34,7 +34,7 @@ DOMAIN = {
         'protocole': relation('protocoles', required=True, postonly=True),
         'observateur': relation('utilisateurs', postonly=True),
         'commentaire': {'type': 'string'},
-        'numero_grille_stoc': {'type': 'string'},
+        'grille_stoc': relation('grille_stoc', embeddable=True),
         'verrouille': {'type': 'boolean', 'writerights': 'Administrateur'},
         'coordonnee': {'type': 'point'},
         'url_cartographie': {'type': 'url'},
