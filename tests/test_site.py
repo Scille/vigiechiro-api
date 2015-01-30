@@ -205,3 +205,29 @@ def test_increment_numero(administrateur, new_site_payload):
 def test_get_stoc(observateur):
     r = observateur.get('/sites/stoc')
     assert r.status_code == 200, r.text
+
+
+def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
+    # Register the observateur to a protocole
+    protocole_id = str(protocoles_base[1]['_id'])
+    etag = observateur.user['_etag']
+    r = administrateur.patch(observateur.url,
+                             headers={'If-Match': etag},
+                             json={'protocoles': [{'protocole': protocole_id,
+                                                   'valide': True}]})
+    assert r.status_code == 200, r.text
+    # Site payload's geojson doesn't match expected geojson schema
+    site_payload = {
+        "protocole": protocole_id,
+        "localites": [
+            {"type":"Point", "coordinates":[48.862004474432936,2.338886260986328]},
+            {"type":"Point", "coordinates":[48.877812415009195,2.3639488220214844]},
+            {"type":"LineString", "coordinates":[
+                [48.86539231071163,2.353992462158203],
+                [48.87239311228893,2.353649139404297],
+                [48.87736082887189,2.344379425048828]]
+            }
+        ]
+    }
+    r = observateur.post('/sites', json=site_payload)
+    assert r.status_code == 422, r.text

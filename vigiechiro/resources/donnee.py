@@ -37,31 +37,37 @@ DOMAIN = {
         'observations': {
             'type': 'list',
             'schema': {
-                'classification': {
-                    'type': 'list',
-                    'schema': {
-                        'temps_debut': {'type': 'integer', 'required': True},
-                        'temps_fin': {'type': 'integer', 'required': True},
-                        'frequence_mediane': {'type': 'integer', 'required': True},
-                        'tadarida_taxon': relation('taxons', required=True),
-                        'tadarida_probabilite': {'type': 'integer', 'required': True},
-                        'tadarida_taxon_autre': {
-                            'type': 'list',
+                'type': 'dict',
+                'schema': {
+                    'classification': {
+                        'type': 'list',
+                        'schema': {
+                            'type': 'dict',
                             'schema': {
-                                'taxon': relation('taxons', required=True),
-                                'probabilite': {'type': 'integer', 'required': True}
-                            }
-                        },
-                        'observateur_taxon': relation('taxons'),
-                        'observateur_probabilite': choice(['SUR', 'PROBABLE', 'POSSIBLE']),
-                        'validateur_taxon': relation('utilisateurs'),
-                        'validateur_probabilite': choice(['SUR', 'PROBABLE', 'POSSIBLE']),
-                        'commentaire': {
-                            'type': 'list',
-                            'schema': {
-                                'texte': {'type': 'string', 'required': True},
-                                'auteur': relation('utilisateurs', required=True),
-                                'date': {'type': 'date', 'required': True}
+                                'temps_debut': {'type': 'integer', 'required': True},
+                                'temps_fin': {'type': 'integer', 'required': True},
+                                'frequence_mediane': {'type': 'integer', 'required': True},
+                                'tadarida_taxon': relation('taxons', required=True),
+                                'tadarida_probabilite': {'type': 'integer', 'required': True},
+                                'tadarida_taxon_autre': {
+                                    'type': 'list',
+                                    'schema': {
+                                        'taxon': relation('taxons', required=True),
+                                        'probabilite': {'type': 'integer', 'required': True}
+                                    }
+                                },
+                                'observateur_taxon': relation('taxons'),
+                                'observateur_probabilite': choice(['SUR', 'PROBABLE', 'POSSIBLE']),
+                                'validateur_taxon': relation('utilisateurs'),
+                                'validateur_probabilite': choice(['SUR', 'PROBABLE', 'POSSIBLE']),
+                                'commentaire': {
+                                    'type': 'list',
+                                    'schema': {
+                                        'texte': {'type': 'string', 'required': True},
+                                        'auteur': relation('utilisateurs', required=True),
+                                        'date': {'type': 'date', 'required': True}
+                                    }
+                                }
                             }
                         }
                     }

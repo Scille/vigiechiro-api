@@ -43,9 +43,12 @@ DOMAIN = {
         'posts': {
             'type': 'list',
             'schema': {
-                'auteur': relation('utilisateurs', required=True),
-                'message': {'type': 'string', 'required': True},
-                'date': {'type': 'datetime', 'required': True},
+                'type': 'dict',
+                'schema': {
+                    'auteur': relation('utilisateurs', required=True),
+                    'message': {'type': 'string', 'required': True},
+                    'date': {'type': 'datetime', 'required': True},
+                }
             }
         },
         'configuration': {

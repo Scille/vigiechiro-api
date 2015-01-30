@@ -42,22 +42,25 @@ DOMAIN = {
         'localites': {
             'type': 'list',
             'schema': {
-                'coordonnee': {'type': 'point'},
-                'geometries': {'type': 'geometryCollection'},
-                'representatif': {'type': 'boolean'},
-                'habitats': {
-                    'type': 'list',
-                    'schema': {
-                        'type': 'dict',
+                'type': 'dict',
+                'schema': {
+                    'coordonnee': {'type': 'point'},
+                    'geometries': {'type': 'geometrycollection'},
+                    'representatif': {'type': 'boolean'},
+                    'habitats': {
+                        'type': 'list',
                         'schema': {
-                            'date': {'type': 'datetime'},
-                            'stoc_principal': {
-                                'type': 'dict',
-                                'schema': STOC_SCHEMA
-                            },
-                            'stoc_secondaire': {
-                                'type': 'dict',
-                                'schema': STOC_SCHEMA
+                            'type': 'dict',
+                            'schema': {
+                                'date': {'type': 'datetime'},
+                                'stoc_principal': {
+                                    'type': 'dict',
+                                    'schema': STOC_SCHEMA
+                                },
+                                'stoc_secondaire': {
+                                    'type': 'dict',
+                                    'schema': STOC_SCHEMA
+                                }
                             }
                         }
                     }
