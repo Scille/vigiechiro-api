@@ -30,7 +30,7 @@ def get_resource(resource, id):
     db = current_app.data.driver.db[resource]
     obj = db.find_one({'_id': id})
     if not obj:
-        abort(422, '{} is not a vaild {} resource'.format(id, resource))
+        abort(404, '{} is not a valid {} resource'.format(id, resource))
     return obj
 
 
