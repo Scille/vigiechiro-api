@@ -36,6 +36,7 @@ Boostrap de l'application
 virtualenv venv
 . ./venv/bin/activate
 pip install -e .
+pip install -r dev-requirements.txt
 
 ./runserver.py
 ```
