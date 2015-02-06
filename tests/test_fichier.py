@@ -16,7 +16,7 @@ def clean_fichiers(request):
 
 def test_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url
-    r = observateur.post('/fichiers/s3', json={'mime': 'image/png'})
+    r = observateur.post('/fichiers/s3', json={'titre': 'test', 'mime': 'image/png'})
     assert r.status_code == 201, r.text
     response = r.json()
     assert 'signed_request' in response
@@ -24,20 +24,36 @@ def test_upload(clean_fichiers, observateur):
     # Once the upload is done, we have to signify it to the server
     r = observateur.patch('/fichiers/' + response['_id'],
                           headers={'If-Match': response['_etag']},
-                          json={'upload_realise': True})
+                          json={'S3_upload_realise': True})
     assert r.status_code == 200, r.text
 
 
-def test_access_rights(
-        clean_fichiers,
-        observateur,
-        validateur,
-        administrateur):
-    r = observateur.post('/fichiers/s3', json={'mime': 'image/png'})
+def test_access_not_complete(clean_fichiers, observateur):
+    r = observateur.post('/fichiers/s3', json={'titre': 'test', 'mime': 'image/png'})
     assert r.status_code == 201, r.text
     response = r.json()
     # Default is other users can access uploaded files
     url = '/fichiers/' + response['_id']
+    url_s3_access = url + '/action/acces'
+    r = observateur.get(url_s3_access, allow_redirects=False)
+    assert r.status_code == 410, r.text
+    r = observateur.patch(url, json={'S3_upload_realise': True},
+                        headers={'If-Match': response['_etag']})
+    assert r.status_code == 200, r.text
+    r = observateur.get(url_s3_access, allow_redirects=False)
+    assert r.status_code == 302, r.text
+
+
+def test_access_rights(clean_fichiers, observateur, validateur, administrateur):
+    r = observateur.post('/fichiers/s3', json={'titre': 'test', 'mime': 'image/png'})
+    assert r.status_code == 201, r.text
+    response = r.json()
+    # Default is other users can access uploaded files
+    url = '/fichiers/' + response['_id']
+    r = observateur.patch(url, json={'S3_upload_realise': True},
+                          headers={'If-Match': response['_etag']})
+    assert r.status_code == 200, r.text
+    response = r.json()
     url_s3_access = url + '/action/acces'
     r = validateur.get(url)
     assert r.status_code == 200, r.text
@@ -65,7 +81,7 @@ def test_access_rights(
 
 
 def test_not_loggedin(clean_fichiers, observateur):
-    r = observateur.post('/fichiers/s3', json={'mime': 'image/png'})
+    r = observateur.post('/fichiers/s3', json={'titre': 'test', 'mime': 'image/png'})
     assert r.status_code == 201, r.text
     response = r.json()
     url_s3_access = '{}/fichiers/{}/action/acces'.format(
@@ -78,9 +94,8 @@ def test_no_post(administrateur):
     # POST is not allowed
     payload = {
         'proprietaire': administrateur.user_id,
-        'nom': 'bad_file',
+        'titre': 'bad_file',
         'mime': 'image/png',
-        'lien': 'http://dummy.com/shouldnotexist',
     }
     r = administrateur.post('/fichiers', json=payload)
     assert r.status_code == 405, r.text

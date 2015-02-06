@@ -79,6 +79,6 @@ AUTHOMATIC = {
 }
 
 ### S3 ###
-AWS_KEY = environ.get('AWS_KEY', '')
-AWS_SECRET = environ.get('AWS_SECRET', '')
-S3_BUCKET = environ.get('S3_BUCKET', '')
+AWS_S3_BUCKET = environ.get('AWS_S3_BUCKET', '')
+AWS_ACCESS_KEY_ID = environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = environ.get('AWS_SECRET_ACCESS_KEY', '')
