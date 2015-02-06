@@ -25,7 +25,6 @@ import eve.render
 from flask import request, abort, redirect, current_app
 from eve.methods.post import post_internal
 import requests
-import boto
 import re
 
 from ..xin import EveBlueprint, jsonify
