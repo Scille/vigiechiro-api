@@ -24,6 +24,7 @@ def bootstrap():
         participations,
         grille_stoc]
     config['DOMAIN'] = {r.name: r.domain for r in resources}
+    config['PROPAGATE_EXCEPTIONS'] = True
 
     r = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT,
                           db=0)
