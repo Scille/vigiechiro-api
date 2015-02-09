@@ -239,7 +239,7 @@ def s3_access_file(file_id):
         abort(410, 'file is not available')
     object_name = file_['S3_id']
     sign = _sign_request(verb='GET', object_name=object_name)
-    return redirect(sign['signed_url'], code=302)
+    return jsonify({'_status': 'ok', 'signed_request': sign['signed_url']})
 
 
 @fichiers.route('/s3', methods=['POST'])

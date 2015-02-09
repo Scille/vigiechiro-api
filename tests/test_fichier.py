@@ -35,13 +35,14 @@ def test_access_not_complete(clean_fichiers, observateur):
     # Default is other users can access uploaded files
     url = '/fichiers/' + response['_id']
     url_s3_access = url + '/action/acces'
-    r = observateur.get(url_s3_access, allow_redirects=False)
+    r = observateur.get(url_s3_access)
     assert r.status_code == 410, r.text
     r = observateur.patch(url, json={'S3_upload_realise': True},
                         headers={'If-Match': response['_etag']})
     assert r.status_code == 200, r.text
-    r = observateur.get(url_s3_access, allow_redirects=False)
-    assert r.status_code == 302, r.text
+    r = observateur.get(url_s3_access)
+    assert r.status_code == 200, r.text
+    assert 'signed_request' in r.json()
 
 
 def test_access_rights(clean_fichiers, observateur, validateur, administrateur):
@@ -57,8 +58,9 @@ def test_access_rights(clean_fichiers, observateur, validateur, administrateur):
     url_s3_access = url + '/action/acces'
     r = validateur.get(url)
     assert r.status_code == 200, r.text
-    r = validateur.get(url_s3_access, allow_redirects=False)
-    assert r.status_code == 302, r.text
+    r = validateur.get(url_s3_access)
+    assert r.status_code == 200, r.text
+    assert 'signed_request' in r.json()
     r = observateur.patch(url, headers={'If-Match': response['_etag']},
                           json={'prive': True})
     assert r.status_code == 200, r.text
@@ -67,17 +69,18 @@ def test_access_rights(clean_fichiers, observateur, validateur, administrateur):
     # Now access is only for myself...
     r = validateur.get(url)
     assert r.status_code == 403, r.text
-    r = validateur.get(url_s3_access, allow_redirects=False)
+    r = validateur.get(url_s3_access)
     assert r.status_code == 403, r.text
     r = observateur.get(url)
     assert r.status_code == 200, r.text
-    r = observateur.get(url_s3_access, allow_redirects=False)
-    assert r.status_code == 302, r.text
+    r = observateur.get(url_s3_access)
+    assert r.status_code == 200, r.text
     # ...but admin is still admin !
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
-    r = administrateur.get(url_s3_access, allow_redirects=False)
-    assert r.status_code == 302, r.text
+    r = administrateur.get(url_s3_access)
+    assert r.status_code == 200, r.text
+    assert 'signed_request' in r.json()
 
 
 def test_not_loggedin(clean_fichiers, observateur):
