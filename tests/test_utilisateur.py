@@ -177,7 +177,10 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     r = observateur.post(protocole_url.format(protocole_id))
     assert r.status_code == 200, r.text
     observateur.update_user()
-    assert observateur.user['protocoles'] == [{'protocole': protocole_id}]
+    protocoles = observateur.user['protocoles']
+    assert len(protocoles) == 1, protocoles
+    assert 'date_inscription' in protocoles[0], protocoles[0]
+    assert protocoles[0].get('protocole', '') == protocole_id, protocoles[0]
     # Try to validate myself
     etag = observateur.user['_etag']
     r = observateur.patch(observateur.url, headers={'If-Match': etag},
@@ -201,6 +204,24 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     assert r.status_code == 422, r.text
 
 
+def validate_dict(scheme, to_validate):
+    if isinstance(to_validate, list):
+        for sub_validate in to_validate:
+            validate_dict(scheme, sub_validate)
+    # Look for unknown keys
+    bad_keys = set(to_validate.keys()) - set(scheme.keys())
+    assert not bad_keys, bad_keys
+    required_keys = set()
+    for key, value in scheme.items():
+        if value.get('required', False):
+            required_keys.add(key)
+    missing_keys = required_keys - set(to_validate.keys())
+    assert missing_keys, missing_keys
+    for key, value in to_validate.items():
+        if 'value' in scheme[key]:
+            assert scheme[key]['value'] == value, key
+
+
 def test_multi_join(observateur, administrateur, protocoles_base):
     macro_protocole = protocoles_base[0]
     protocole1_id = str(protocoles_base[1]['_id'])
@@ -219,7 +240,8 @@ def test_multi_join(observateur, administrateur, protocoles_base):
     r = observateur.post(protocole_url.format(protocole2_id))
     assert r.status_code == 200, r.text
     observateur.update_user()
-    assert observateur.user['protocoles'] == [{'protocole': protocole1_id,
-                                               'date_inscription': date_inscription,
-                                               'valide': True},
-                                              {'protocole': protocole2_id}]
+    assert len(observateur.user['protocoles']) == 2
+    assert observateur.user['protocoles'][0] == {'protocole': protocole1_id,
+                                                 'date_inscription': date_inscription,
+                                                 'valide': True}
+    assert observateur.user['protocoles'][1]['protocole'] == protocole2_id
