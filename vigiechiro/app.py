@@ -6,8 +6,8 @@ import redis
 from flask import Config
 
 from . import settings, resources
-from .resources import (utilisateurs, fichiers, taxons, sites,
-                        protocoles, participations, grille_stoc)
+from .resources import (utilisateurs, fichiers, taxons, sites, protocoles,
+                        participations, grille_stoc, actualites)
 from .xin import Validator
 from .xin.auth import TokenAuth, auth_factory
 
@@ -22,7 +22,8 @@ def bootstrap():
         sites,
         protocoles,
         participations,
-        grille_stoc]
+        grille_stoc,
+        actualites]
     config['DOMAIN'] = {r.name: r.domain for r in resources}
     config['PROPAGATE_EXCEPTIONS'] = True
 

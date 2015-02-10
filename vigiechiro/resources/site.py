@@ -10,6 +10,8 @@ from flask import current_app, abort, jsonify
 from ..xin import EveBlueprint
 from ..xin.domain import relation, choice, get_resource
 
+from . import actualite
+
 
 STOC_SCHEMA = {
     'subdivision1': {'type': 'string', 'regex': r'^()$'},
@@ -98,9 +100,12 @@ def on_insert(items):
                      if p['protocole'] == item['protocole']), None):
             abort(422, 'Cannot create site without subscribing to protocole')
 
-    # TODO use counter
-    # for item in items:
-    #     item['numero'] = 1
+
+@sites.event
+def on_inserted(items):
+    for item in items:
+        actualite.create_actuality('NOUVEAU_SITE',
+            sujet=current_app.g.request_user['_id'], objet=item['_id'])
 
 
 def _check_rights(original):

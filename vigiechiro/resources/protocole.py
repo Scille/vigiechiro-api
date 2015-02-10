@@ -9,7 +9,7 @@ from flask import current_app, abort, jsonify
 from bson import ObjectId
 from datetime import datetime
 
-from . import participation
+from . import participation, actualite
 from ..xin import EveBlueprint
 from ..xin.auth import requires_auth
 from ..xin.domain import relation, choice, get_resource
@@ -95,4 +95,6 @@ def join_protocole(protocole_id):
     utilisateurs_db.update({'_id': current_app.g.request_user['_id']},
                            {'$push': {'protocoles': {'protocole': ObjectId(protocole_id),
                                                      'date_inscription': datetime.utcnow()}}})
-    return jsonify({})
+    actualite.create_actuality('INSCRIPTION_PROTOCOLE',
+        sujet=current_app.g.request_user['_id'], objet=protocole_id)
+    return jsonify({'_status': 'OK'})

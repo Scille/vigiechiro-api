@@ -9,3 +9,4 @@ from .site import sites
 from .protocole import protocoles
 from .participation import participations
 from .grille_stoc import grille_stoc
+from .actualite import actualites

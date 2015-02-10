@@ -10,6 +10,8 @@ from flask import abort, current_app
 from ..xin import EveBlueprint
 from ..xin.domain import relation, choice, get_resource
 
+from . import actualite
+
 
 DOMAIN = {
     'item_title': 'participation',
@@ -111,6 +113,13 @@ def on_insert(items):
     """
     for item in items:
         _verify_participation_relations(item)
+
+
+@participations.event
+def on_inserted(items):
+    for item in items:
+        actualite.create_actuality('NOUVELLE_PARTICIPATION',
+            sujet=current_app.g.request_user['_id'], objet=item['_id'])
 
 
 @participations.event
