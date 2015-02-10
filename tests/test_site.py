@@ -2,8 +2,9 @@ import requests
 from pymongo import MongoClient
 import pytest
 from bson import ObjectId
+from datetime import datetime
 
-from common import db, administrateur, observateur, eve_post_internal
+from common import db, administrateur, observateur, eve_post_internal, format_datetime
 from test_protocole import protocoles_base
 from test_taxon import taxons_base
 
@@ -16,6 +17,7 @@ def obs_sites_base(request, protocoles_base, observateur, administrateur):
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': etag},
                              json={'protocoles': [{'protocole': protocole_id,
+                                                   'date_inscription': format_datetime(datetime.utcnow()),
                                                    'valide': True}]})
     observateur.update_user()
     assert r.status_code == 200, r.text
@@ -96,6 +98,7 @@ def test_create_site(administrateur, observateur, protocoles_base):
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': etag},
                              json={'protocoles': [{'protocole': protocole_id,
+                                                   'date_inscription': format_datetime(datetime.utcnow()),
                                                    'valide': True}]})
     assert r.status_code == 200, r.text
     # Create site for the observateur
@@ -118,6 +121,7 @@ def test_create_site_explicit_obs(administrateur, observateur, protocoles_base):
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': etag},
                              json={'protocoles': [{'protocole': protocole_id,
+                                                   'date_inscription': format_datetime(datetime.utcnow()),
                                                    'valide': True}]})
     assert r.status_code == 200, r.text
     # Create a site, but specify another observateur than the poster !
@@ -214,6 +218,7 @@ def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': etag},
                              json={'protocoles': [{'protocole': protocole_id,
+                                                   'date_inscription': format_datetime(datetime.utcnow()),
                                                    'valide': True}]})
     assert r.status_code == 200, r.text
     # Site payload's geojson doesn't match expected geojson schema

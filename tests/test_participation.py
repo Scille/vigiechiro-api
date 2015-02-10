@@ -27,6 +27,7 @@ def participation_ready(clean_participations, obs_sites_base, administrateur):
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': observateur.user['_etag']},
                              json={'protocoles': [{'protocole': str(protocole['_id']),
+                                                   'date_inscription': format_datetime(datetime.utcnow()),
                                                    'valide': True}]})
     assert r.status_code == 200, r.text
     observateur.update_user()
@@ -43,6 +44,7 @@ def test_non_valide_observateur(clean_participations, obs_sites_base, administra
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': observateur.user['_etag']},
                              json={'protocoles': [{'protocole': protocole_id,
+                                                   'date_inscription': format_datetime(datetime.utcnow()),
                                                    'valide': False}]})
     assert r.status_code == 200, r.text
     # Cannot post any participation
@@ -57,7 +59,8 @@ def test_non_valide_observateur(clean_participations, obs_sites_base, administra
     r = administrateur.patch(observateur.url,
                              headers={'If-Match': observateur.user['_etag']},
                              json={'protocoles': [{'protocole': protocole_id,
-                                                  'valide': True}]})
+                                                   'date_inscription': format_datetime(datetime.utcnow()),
+                                                   'valide': True}]})
     assert r.status_code == 200, r.text
     # Post participation is now ok
     r = observateur.post('/participations',
@@ -88,6 +91,7 @@ def test_wrong_site(protocoles_base, obs_sites_base, validateur, administrateur)
     r = administrateur.patch(validateur.url,
                              headers={'If-Match': etag},
                              json={'protocoles': [{'protocole': protocole_id,
+                                                   'date_inscription': format_datetime(datetime.utcnow()),
                                                    'valide': True}]})
     validateur.update_user()
     assert r.status_code == 200, r.text

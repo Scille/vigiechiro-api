@@ -67,8 +67,9 @@ DOMAIN = {
             'schema': {
                 'type': 'dict',
                 'schema': {
-                    'protocole': relation('protocoles', embeddable=True,
+                    'protocole': relation('protocoles', embeddable=True, required=True,
                                           utilisateur_validate_non_macro_protocole=True),
+                    'date_inscription': {'type': 'datetime', 'required': True},
                     'valide': {'type': 'boolean'}
                 }
             }

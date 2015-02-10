@@ -5,7 +5,7 @@ import json
 from bson import ObjectId
 from datetime import datetime, timedelta
 
-from common import db, observateur, validateur, administrateur, eve_post_internal
+from common import db, observateur, validateur, administrateur, eve_post_internal, format_datetime
 from vigiechiro import settings
 from test_protocole import protocoles_base
 from test_taxon import taxons_base
@@ -185,12 +185,15 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
                                                 'valide': True}]})
     assert r.status_code == 422, r.text
     # Admin validates me
+    date_inscription = format_datetime(datetime.utcnow())
     r = administrateur.patch(observateur.url, headers={'If-Match': etag},
                              json={'protocoles': [{'protocole': protocole_id,
+                                                   'date_inscription': date_inscription,
                                                    'valide': True}]})
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['protocoles'] == [{'protocole': protocole_id,
+                                               'date_inscription': date_inscription,
                                                'valide': True}]
     # Macro-protocoles are not subscriptable
     etag = observateur.user['_etag']
@@ -205,8 +208,10 @@ def test_multi_join(observateur, administrateur, protocoles_base):
     protocole_url = '/protocoles/{}/action/join'
     # Make the observateur join a protocole and validate it
     etag = observateur.user['_etag']
+    date_inscription = format_datetime(datetime.utcnow())
     r = administrateur.patch(observateur.url, headers={'If-Match': etag},
                              json={'protocoles': [{'protocole': protocole1_id,
+                                                   'date_inscription': date_inscription,
                                                    'valide': True}]})
     assert r.status_code == 200, r.text
     observateur.update_user()
@@ -214,5 +219,7 @@ def test_multi_join(observateur, administrateur, protocoles_base):
     r = observateur.post(protocole_url.format(protocole2_id))
     assert r.status_code == 200, r.text
     observateur.update_user()
-    assert observateur.user['protocoles'] == [{'protocole': protocole1_id, 'valide': True},
+    assert observateur.user['protocoles'] == [{'protocole': protocole1_id,
+                                               'date_inscription': date_inscription,
+                                               'valide': True},
                                               {'protocole': protocole2_id}]

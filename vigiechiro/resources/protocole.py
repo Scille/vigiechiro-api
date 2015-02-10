@@ -7,6 +7,7 @@
 
 from flask import current_app, abort, jsonify
 from bson import ObjectId
+from datetime import datetime
 
 from . import participation
 from ..xin import EveBlueprint
@@ -92,5 +93,6 @@ def join_protocole(protocole_id):
     # Finally update user's protocole list
     utilisateurs_db = current_app.data.driver.db['utilisateurs']
     utilisateurs_db.update({'_id': current_app.g.request_user['_id']},
-                           {'$push': {'protocoles': {'protocole': ObjectId(protocole_id)}}})
+                           {'$push': {'protocoles': {'protocole': ObjectId(protocole_id),
+                                                     'date_inscription': datetime.utcnow()}}})
     return jsonify({})
