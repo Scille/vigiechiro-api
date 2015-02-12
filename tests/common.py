@@ -7,10 +7,11 @@ import pytest
 from pymongo import MongoClient
 from bson import ObjectId
 from eve.methods.post import post_internal
-from flask import current_app
+from flask import g
 from datetime import datetime, timedelta
 
 from vigiechiro import settings, app
+from vigiechiro.resources.utilisateurs import utilisateurs
 
 from wsgiref.handlers import format_date_time
 from time import mktime
@@ -23,14 +24,6 @@ def format_datetime(dt):
 
 db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
     settings.MONGO_DBNAME]
-
-
-def eve_post_internal(resource, payload):
-    with app.test_request_context() as c:
-        # Some inserts check the user's role
-        current_app.g.request_user = {'role': 'Administrateur'}
-        result = post_internal(resource, payload)
-        assert result[-1] == 201, result
 
 
 @pytest.fixture
@@ -74,10 +67,11 @@ class AuthRequests:
         }
         for key, value in fields:
             self.user[key] = value
-        eve_post_internal('utilisateurs', payload)
-        self.user_id = str(
-            db.utilisateurs.find_one({'pseudo': payload['pseudo']})['_id'])
-        self.update_user()
+        with app.test_request_context() as c:
+            g.request_user = {'role': 'Administrateur'}
+            self.user = utilisateurs.insert(payload)
+            self.user_id = str(self.user['_id'])
+        # self.update_user()
         self.url = '/utilisateurs/' + self.user_id
 
     def finalizer(self):

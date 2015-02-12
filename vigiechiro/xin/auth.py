@@ -9,21 +9,20 @@ from functools import wraps
 from datetime import datetime, timedelta
 import bson
 
-from flask import Blueprint, redirect
-from flask import app, current_app, abort, request
+from flask import Blueprint, redirect, g
+from flask import app, current_app, request
 import eve.auth
 import eve.render
-from eve.methods.post import post_internal
 from authomatic.extras.flask import FlaskAuthomatic
 
+from .tools import abort
 from .. import settings
-
 
 def check_auth(token, allowed_roles):
     """
         Token-based authentification with role filtering
         Once user profile has been retrieved from the given token,
-        it is stored in application context as **current_app.g.request_user**::
+        it is stored in application context as **g.request_user**::
 
             from flask import app, request, jsonify
             @app.route('/my_profile')
@@ -31,9 +30,9 @@ def check_auth(token, allowed_roles):
                 # Token-based auth is provided as username and empty password
                 check_auth(request.authorization.username, ['admin'])
                 # Return the user profile
-                return jsonify(current_app.g.request_user)
+                return jsonify(g.request_user)
     """
-    accounts = current_app.data.driver.db['utilisateurs']
+    accounts = current_app.data.db['utilisateurs']
     account = accounts.find_one({'tokens.{}'.format(token): {'$exists': True}})
     if account:
         if account['tokens'][token] < datetime.now(bson.utc):
@@ -47,7 +46,7 @@ def check_auth(token, allowed_roles):
                          if r in allowed_roles), False):
                 abort(403)
         # Keep request user account in local context, could be useful later
-        current_app.g.request_user = account
+        g.request_user = account
         return True
     return False
 
@@ -77,7 +76,7 @@ class TokenAuth(eve.auth.TokenAuth):
     def check_auth(self, token, allowed_roles, resource, method):
         if check_auth(token, allowed_roles):
             current_app.set_request_auth_value(
-                current_app.g.request_user['_id'])
+                g.request_user['_id'])
             return True
         else:
             return False
@@ -125,7 +124,7 @@ def auth_factory(services, mock_provider=False):
     def logout():
         if request.authorization:
             token = request.authorization['username']
-            users = current_app.data.driver.db['utilisateurs']
+            users = current_app.data.db['utilisateurs']
             token_field = 'tokens.{}'.format(token)
             lookup = {token_field: {'$exists': True}}
             result = users.update(lookup, {'$unset': {token_field: ""}})
@@ -150,12 +149,13 @@ def login(authomatic, provider_name):
                                               string.digits) for x in range(32))
             new_token_expire = (datetime.utcnow() +
                 timedelta(seconds=current_app.config['TOKEN_EXPIRE_TIME']))
-            users_db = current_app.data.driver.db['utilisateurs']
+            users_db = current_app.data.db['utilisateurs']
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
             # Lookup for existing user by email and provider id
             user_db = users_db.find_one({'$or': [{'email': user.email},
                                                  {provider_id_name: user.id}]})
+            from ..resource.utilisateurs import utilisateurs
             if user_db:
                 # Add the new token and check expire date for existing ones
                 tokens = {new_token: new_token_expire}
@@ -163,12 +163,13 @@ def login(authomatic, provider_name):
                 for token, token_expire in user_db['tokens'].items():
                     if now < token_expire:
                         tokens[token] = token_expire
-                users_db.update({'email': user.email},
+                # users_db.update({'email': user.email},
+                utilisateurs.update({'email': user.email},
                                 {"$set": {provider_id_name: user.id,
                                           'tokens': tokens}})
             else:
                 # We must switch to admin mode to insert a new user
-                current_app.g.request_user = {'role': 'Administrateur'}
+                # g.request_user = {'role': 'Administrateur'}
                 user_payload = {
                     provider_id_name: user.id,
                     'pseudo': user.name,
@@ -177,12 +178,11 @@ def login(authomatic, provider_name):
                     'role': 'Observateur',
                     'donnees_publiques': True
                 }
-                result = post_internal('utilisateurs', user_payload)
-                # Drop admin right for security
-                del current_app.g.request_user
-                if result[-1] != 201:
-                    logging.error('Cannot create user {} : {}'.format(
-                                  user_payload, result))
+                user_id = utilisateurs.insert(user_payload)
+                # user_id = users_db.insert(user_payload)
+                if not user_id:
+                    logging.error('Cannot create user {}'.format(
+                                  user_payload))
                     abort(500)
                 logging.info('Create new user : {}'.format(user.email))
             return redirect('{}/#/?token={}'.format(

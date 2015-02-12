@@ -2,13 +2,13 @@ import requests
 from pymongo import MongoClient
 import pytest
 
-from common import db, administrateur, observateur, eve_post_internal
+from common import db, administrateur, observateur
 
 
 @pytest.fixture
 def taxons_base(request):
     # Insert parent
-    parent_payload = {
+    parent = {
         'libelle_long': 'Chiroptera',
         'libelle_court': 'Chiro',
         'description': """D'après wikipedia :
@@ -21,43 +21,45 @@ Ces animaux, comme les Cétacés, sont souvent capables d'écholocation.
         'liens': ['http://fr.wikipedia.org/wiki/Chiroptera'],
         'tags': ['chiro', 'vigiechiro', 'ultrason']
     }
-    eve_post_internal('taxons', parent_payload)
-    parent_id = db.taxons.find_one(
-        {'libelle_long': parent_payload['libelle_long']})['_id']
+    parent['_id'] = db.taxons.insert(parent)
+
     # Then children
-    child1_payload = {
-        'libelle_long': 'Pteropus conspicillatus',
-        'libelle_court': 'Roussette',
-        'description': """D'après wikipedia :
+    children = [
+        {
+            'libelle_long': 'Pteropus conspicillatus',
+            'libelle_court': 'Roussette',
+            'description': """D'après wikipedia :
 Roussette est un nom vernaculaire ambigu en français,
 pouvant désigner plusieurs espèces différentes de chauves-souris frugivores,
 plus précisément parmi les Ptéropodidés, appelées aussi Flying foxes en anglais,
 traduit par renards volants.
 C'est le cas notamment des espèces des genres Acerodon, Pteropus et Rousettus.
 """,
-        'parents': [parent_id],
-        'liens': ['http://fr.wikipedia.org/wiki/Roussette_(chiropt%C3%A8re)'],
-        'tags': ['chiro', 'vigiechiro', 'ultrason']
-    }
-    eve_post_internal('taxons', child1_payload)
-    child2_payload = {
-        'libelle_long': 'Megadermatidae',
-        'libelle_court': 'faux-vampires',
-        'description': """D'après wikipedia :
+            'parents': [parent['_id']],
+            'liens': ['http://fr.wikipedia.org/wiki/Roussette_(chiropt%C3%A8re)'],
+            'tags': ['chiro', 'vigiechiro', 'ultrason']
+        },
+        {
+            'libelle_long': 'Megadermatidae',
+            'libelle_court': 'faux-vampires',
+            'description': """D'après wikipedia :
 Les mégadermatidés (Megadermatidae) sont une famille de chiroptères du sous-ordre
 des Yinpterochiroptera. C'est la famille des « faux-vampires ».
 Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de sang.
 """,
-        'parents': [parent_id],
-        'liens': ['http://fr.wikipedia.org/wiki/Megadermatidae'],
-        'tags': ['chiro', 'vigiechiro', 'ultrason']
-    }
-    eve_post_internal('taxons', child2_payload)
-
+            'parents': [parent['_id']],
+            'liens': ['http://fr.wikipedia.org/wiki/Megadermatidae'],
+            'tags': ['chiro', 'vigiechiro', 'ultrason']        
+        }
+    ]
+    for taxon in children:
+        taxon['_id'] = db.taxons.insert(taxon)
+    taxons = [parent] + children
     def finalizer():
-        db.taxons.remove()
+        for taxon in taxons:
+            db.taxons.remove({'_id': taxon['_id']})
     request.addfinalizer(finalizer)
-    return db.taxons.find().sort([('_id', 1)])
+    return taxons
 
 
 @pytest.fixture

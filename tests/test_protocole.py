@@ -2,49 +2,53 @@ import requests
 from pymongo import MongoClient
 import pytest
 
-from common import db, administrateur, observateur, eve_post_internal
+from common import db, administrateur, observateur
 from test_taxon import taxons_base
 
 
 @pytest.fixture
 def protocoles_base(request, taxons_base):
-    # Insert parent
-    payload_macro = {
+    # Insert macro protocole first
+    macro_protocole = {
         'titre': 'Vigiechiro',
-        'description': 'Procole parent vigiechiro',
-        'macro_protocole': True,
-        'tags': ['chiroptères'],
-        'taxon': taxons_base[0]['_id'],
-        'type_site': 'LINEAIRE',
-        'algo_tirage_site': 'CARRE',
+         'description': 'Procole parent vigiechiro',
+         'macro_protocole': True,
+         'tags': ['chiroptères'],
+         'taxon': taxons_base[0]['_id'],
+         'type_site': 'LINEAIRE',
+         'algo_tirage_site': 'CARRE'
     }
-    eve_post_internal('protocoles', payload_macro)
-    id_macro = db.protocoles.find_one({'titre': payload_macro['titre']})['_id']
-    payload_sub = {
-        'titre': 'Vigiechiro-A',
-        'description': 'Procole enfant vigiechiro',
-        'tags': ['chiroptères'],
-        'taxon': taxons_base[0]['_id'],
-        'type_site': 'LINEAIRE',
-        'algo_tirage_site': 'CARRE',
-        'parent': id_macro,
-        'configuration_participation': ['micro0_hauteur', 'micro0_position']
-    }
-    eve_post_internal('protocoles', payload_sub)
-    payload_sub = {
-        'titre': 'Vigieortho',
-        'description': 'Procole vigieortho',
-        'tags': ['orthoptères'],
-        'taxon': taxons_base[0]['_id'],
-        'type_site': 'LINEAIRE',
-        'algo_tirage_site': 'CARRE',
-    }
-    eve_post_internal('protocoles', payload_sub)
+    macro_protocole['_id'] = db.protocoles.insert(macro_protocole)
 
+    # Then regular protocoles
+    regular_protocoles = [
+        {
+            'titre': 'Vigiechiro-A',
+            'description': 'Procole enfant vigiechiro',
+            'tags': ['chiroptères'],
+            'taxon': taxons_base[0]['_id'],
+            'type_site': 'LINEAIRE',
+            'algo_tirage_site': 'CARRE',
+            'parent': macro_protocole['_id'],
+            'configuration_participation': ['micro0_hauteur', 'micro0_position']
+        },
+        {
+            'titre': 'Vigieortho',
+            'description': 'Procole vigieortho',
+            'tags': ['orthoptères'],
+            'taxon': taxons_base[0]['_id'],
+            'type_site': 'LINEAIRE',
+            'algo_tirage_site': 'CARRE'
+        }
+    ]
+    for protocole in regular_protocoles:
+        protocole['_id'] = db.protocoles.insert(protocole)
+    protocoles = [macro_protocole] + regular_protocoles
     def finalizer():
-        db.protocoles.remove()
+        for protocole in protocoles:
+            db.protocoles.remove({'_id': protocole['_id']})
     request.addfinalizer(finalizer)
-    return db.protocoles.find().sort([('_id', 1)])
+    return protocoles
 
 
 @pytest.fixture

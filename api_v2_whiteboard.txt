@@ -1,0 +1,526 @@
+Api v2 whiteboard
+=================
+
+Utilisateurs
+------------
+
+
+### Lister les utilisateurs
+
+`GET /utilisateurs`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ page        | integer | Page courante
+ max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+
+**Response**
+```
+[
+    {
+        "_id": "54ba5dfd1d41c83768e76fc2",
+        "_created": "2015-01-17T13:05:01Z",
+        "_updated": "2015-01-17T13:05:01Z",
+        "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+        "email": "user@github.com",
+        "pseudo": "user",
+        "nom": "Doe",
+        "prenom": "John",
+        "adress": "87th Octal street Neverland"
+        "telephone": "+33 6 78 32 28 88",
+        "organisation": "MNHN",
+        "professionnel": true,
+        "donnees_publiques": true,
+        "commentaire": "There once...",
+        "role": "Observateur",
+    }
+]
+```
+
+
+### Consulter un utilisateur
+
+`GET /utilisateurs/#id`
+
+**Response**
+```
+{
+    "_id": "54ba5dfd1d41c83768e76fc2",
+    "_created": "2015-01-17T13:05:01Z",
+    "_updated": "2015-01-17T13:05:01Z",
+    "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+    "email_public": "user@github.com",
+    "pseudo": "user",
+    "nom": "Doe",
+    "prenom": "John",
+    "adress": "87th Octal street Neverland"
+    "telephone": "+33 6 78 32 28 88",
+    "organisation": "MNHN",
+    "professionnel": true,
+    "donnees_publiques": true,
+    "commentaire": "There once...",
+    "role": "Observateur",
+}
+```
+
+### Consulter son propre profil
+
+`GET /moi`
+
+**Response**
+```
+{
+    "_id": "54ba5dfd1d41c83768e76fc2",
+    "_created": "2015-01-17T13:05:01Z",
+    "_updated": "2015-01-17T13:05:01Z",
+    "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+    "email": "user@github.com",
+    'email_publique': "user@github.com",
+    "pseudo": "user",
+    "nom": "Doe",
+    "prenom": "John",
+    "adress": "87th Octal street Neverland"
+    "telephone": "+33 6 78 32 28 88",
+    "organisation": "MNHN",
+    "professionnel": true,
+    "donnees_publiques": true,
+    "commentaire": "There once...",
+    "role": "Observateur",
+}
+```
+
+
+### Modifier son propre profil
+
+`PATCH /moi`
+
+**Input**
+
+Nom               |  Type   | Description
+------------------|---------|-------------
+pseudo            | string  |
+email             | string  |
+email_publique    | boolean |
+nom               | string  |
+prenom            | string  |
+telephone         | string  |
+adresse           | string  |
+commentaire       | string  |
+organisation      | string  |
+professionnel     | boolean |
+donnees_publiques | boolean |
+
+
+### Modifier le rôle d'un utilisateur
+
+`PATCH /utilisateurs/#id/role`
+
+**Accès**
+
+Administrateur seulement
+
+**Input**
+
+Nom  |  Type   | Description
+-----|---------|-------------
+role | string  | nouveau role : `Administrateur`, `Validateur` ou `Observateur`
+
+
+Protocoles
+----------
+
+### Lister les protocoles
+
+`GET /protocoles`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ page        | integer | Page courante
+ max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+
+
+### Lister les protocoles d'un utilisateur
+
+`GET /utilisateurs/#id/protocoles`
+
+`GET /moi/protocoles`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ type        | string  | `tous`, `valide` ou `en_attente`
+ sort        | string  | Classement par `nom` ou `date_rejoin`
+ direction   | string  | Classement `asc` ou `desc`
+
+**Response**
+```
+[
+    {
+        'valide': True,
+        ...
+    }
+]
+```
+
+### Rejoindre un protocole
+
+`POST /protocoles/#id/rejoindre`
+
+
+### Valider un observateur dans un protocole
+
+`POST /utilisateurs/#id/protocoles/#id/valider`
+
+**Accès**
+
+Administrateur seulement
+
+
+### Créer un protocole
+
+`POST /protocoles`
+
+**Accès**
+
+Administrateur seulement
+
+
+### Modifier un protocole
+
+`PATCH /protocoles/#id`
+
+**Accès**
+
+Administrateur seulement
+
+
+Taxons
+------
+
+### Lister les taxons
+
+`GET /taxons`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ page        | integer | Page courante
+ max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+
+**Response**
+```
+[
+    {
+        ...
+    }
+]
+```
+
+### Consulter un taxon
+
+`GET /taxons/#id`
+
+**Response**
+```
+{
+    ...
+}
+```
+
+
+### Créer un taxon
+
+`POST /taxons`
+
+**Accès**
+
+Administrateur seulement
+
+
+### Modifier un taxon
+
+`PATCH /taxons/#id`
+
+**Accès**
+
+Administrateur seulement
+
+
+Sites
+-----
+
+### Lister les sites
+
+`GET /sites`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ page        | integer | Page courante
+ max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+
+**Response**
+```
+[
+    {
+        ...
+    }
+]
+```
+
+### Consulter un site
+
+`GET /sites/#id`
+
+**Response**
+```
+{
+    ...
+}
+```
+
+### Créer un site
+
+`POST /sites`
+
+**Accès**
+
+Observateur enregistré auprès d'un protocole
+
+
+### Modifier un site
+
+`PATCH /sites/#id`
+
+**Accès**
+
+Observateur ayant créé le site
+
+
+Participations
+--------------
+
+### Lister les participations
+
+`GET /participations`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ page        | integer | Page courante
+ max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+
+**Response**
+```
+[
+    {
+        ...
+    }
+]
+```
+
+### Consulter une participation
+
+`GET /participations/#id`
+
+**Response**
+```
+{
+    ...
+}
+```
+
+### Créer une participation
+
+`POST /participations`
+
+**Accès**
+
+Observateur validé auprès d'un protocole et disposant d'un site verrouillé
+
+
+### Modifier un participation
+
+`PATCH /participations/#id`
+
+**Accès**
+
+Observateur ayant créé la participation
+
+
+### Commenter la participation
+
+`POST /participation/#id/comment`
+
+**Input**
+
+Nom               |  Type   | Description
+------------------|---------|-------------
+commentaire       | string  |
+
+
+Données
+-------
+
+
+Fichiers
+--------
+
+### Enregistrer un nouveau fichier
+
+`POST /fichiers`
+
+**Input**
+
+Nom               |  Type   | Description
+------------------|---------|-------------
+ titre            | string  | Nom du fichier
+ mime             | string  | Mime type du fichier
+ prive            | boolean | Le fichier est-il visible par les autres observateurs ?
+ prive            | boolean |
+ multipart        | boolean | Le fichier va-t-il être uploader en multipart ?
+
+Note: si le fichier à uploader fait plus de 5mo, il doit être uploader en multipart
+
+**Response**
+```
+{
+    "signed_url": "https://vigiechiro.s3.com/..."
+}
+```
+
+### Multipart : Recupérer l'url S3 d'upload d'une partie
+
+`PUT /fichiers/#id/multipart`
+
+
+### Multipart : Finir l'upload en multipart
+
+`POST /fichiers/#id/multipart`
+
+
+### Multipart : Annuler l'upload en multipart
+
+`DELETE /fichiers/#id/multipart`
+
+
+### Accèder à un fichier
+
+`GET /fichiers/#id`
+
+**Response**
+```
+{
+    "signed_url": "https://vigiechiro.s3.com/..."
+}
+```
+
+
+Actualités
+----------
+
+### Lister les actualités
+
+`GET /actualites`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ depuis      |   date  | Filtre sur la date des actualités
+ a_partir    |   date  | Filtre sur la date des actualités
+ max_results | integer | Nombre de résultats (défaut 20, max 100)
+ sujet       |    id   | Id d'une ressource impliquée dans l'actualité
+ type        | string  | Type d'actualité (`NOUVEAU_PROTOCOLE`, `NOUVELLE_PARTICIPATION` ou `INSCRIPTION_PROTOCOLE`)
+
+**Response**
+```
+[
+    {
+        ...
+    }
+]
+```
+
+
+Grille STOC
+-----------
+
+### Retrouver une grille STOC
+
+`GET /grille_stoc`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ a_lat       |  float  | latitude du point inférieur gauche constituant le rectangle de recherche
+ a_long      |  float  | longitude du point inférieur gauche constituant le rectangle de recherche
+ b_lat       |  float  | latitude du point supérieur droit constituant le rectangle de recherche
+ b_long      |  float  | longitude du point supérieur droit constituant le rectangle de recherche
+
+**Note**
+
+Pour des raisons de performances, la réquête ne renvoie qu'au maximum 40 éléments
+
+**Response**
+```
+[
+    {
+        ...
+    }
+]
+```
+
+
+Recherche
+---------
+
+### Rechercher un taxon
+
+`GET /recherche/taxon`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ detail      | boolean | Renvoie le corps des résultats en plus de leur id (défaut: faux)
+ max_results | integer | Nombre de résultats maximum (défaut 5, max 10)
+ q           | string  | élément à rechercher
+
+**Exemple**
+
+`GET /recherche/taxon?q=*chauve*`
+
+**Response**
+```
+[
+    {
+        "_id": "54ba464f1d41c83768e76fbf",
+        "_value": "Chauve-souris",
+        "_score": 89,
+    },
+    ...
+]
+```
+
+
+### Rechercher un protocole
+
+`GET /recherche/protocole`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ detail      | boolean | Renvoie le corps des résultats en plus de leur id (défaut: faux)
+ max_results | integer | Nombre de résultats maximum (défaut 5, max 10)
+ q           | string  | élément à rechercher

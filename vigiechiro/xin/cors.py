@@ -6,8 +6,8 @@
 """
 
 from datetime import timedelta
-from flask import make_response, request, current_app
-from functools import update_wrapper
+from flask import make_response, request, current_app, abort
+from functools import update_wrapper, wraps
 
 from .. import settings
 
@@ -52,5 +52,30 @@ def crossdomain(origin=None, methods=None, headers=None, max_age=21600,
             return resp
 
         f.provide_automatic_options = False
+        return update_wrapper(wrapped_function, f)
+    return decorator
+
+
+def preprocessor(if_match=False, payload=False):
+    """
+        A decorator to clean&parse the incoming request, then provide
+        the results as arguments to the decorated function
+    """
+    def decorator(f):
+        def wrapped_function(*args, **kwargs):
+            if if_match:
+                # Make sure If-Match header is present
+                if_match_value = request.headers.get('If-Match', None)
+                if not if_match:
+                    abort(412, 'missing header If-Match')
+                # Now add the if_match to the params
+                kwargs['if_match'] = if_match_value
+            if payload:
+                # Make sure payload is valid json
+                payload_value = request.get_json()
+                if not payload:
+                    abort(412, 'Content-Type is not `application/json`')
+                kwargs['payload'] = payload_value
+            return f(*args, **kwargs)
         return update_wrapper(wrapped_function, f)
     return decorator

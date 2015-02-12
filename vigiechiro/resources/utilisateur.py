@@ -3,6 +3,131 @@
     ~~~~~~~~~~~~~~~~~~
 
     see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893760
+
+    Utilisateurs
+    ------------
+
+
+    ### Lister les utilisateurs
+
+    `GET /utilisateurs`
+
+    **Parameters**
+
+    Nom          |  Type   | Description
+    -------------|---------|-------------
+     page        | integer | Page courante
+     max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+
+    **Response**
+    ```
+    [
+        {
+            "_id": "54ba5dfd1d41c83768e76fc2",
+            "_created": "2015-01-17T13:05:01Z",
+            "_updated": "2015-01-17T13:05:01Z",
+            "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+            "email": "user@github.com",
+            "pseudo": "user",
+            "nom": "Doe",
+            "prenom": "John",
+            "adress": "87th Octal street Neverland"
+            "telephone": "+33 6 78 32 28 88",
+            "organisation": "MNHN",
+            "professionnel": true,
+            "donnees_publiques": true,
+            "role": "Observateur",
+        }
+    ]
+    ```
+
+
+    ### Consulter un utilisateur
+
+    `GET /utilisateurs/#id`
+
+    **Response**
+    ```
+    {
+        "_id": "54ba5dfd1d41c83768e76fc2",
+        "_created": "2015-01-17T13:05:01Z",
+        "_updated": "2015-01-17T13:05:01Z",
+        "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+        "email": "user@github.com",
+        "pseudo": "user",
+        "nom": "Doe",
+        "prenom": "John",
+        "adress": "87th Octal street Neverland"
+        "telephone": "+33 6 78 32 28 88",
+        "organisation": "MNHN",
+        "professionnel": true,
+        "donnees_publiques": true,
+        "role": "Observateur",
+    }
+    ```
+    Note: l'email est à `null` si l'utilisateur n'a pas validé le champ `email_publique`
+
+    ### Consulter son propre profil
+
+    `GET /moi`
+
+    **Response**
+    ```
+    {
+        "_id": "54ba5dfd1d41c83768e76fc2",
+        "_created": "2015-01-17T13:05:01Z",
+        "_updated": "2015-01-17T13:05:01Z",
+        "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+        "email": "user@github.com",
+        'email_publique': true,
+        "pseudo": "user",
+        "nom": "Doe",
+        "prenom": "John",
+        "adress": "87th Octal street Neverland"
+        "telephone": "+33 6 78 32 28 88",
+        "organisation": "MNHN",
+        "professionnel": true,
+        "donnees_publiques": true,
+        "bio": "There once..."
+        "role": "Observateur",
+    }
+    ```
+
+
+    ### Modifier son propre profil
+
+    `PATCH /moi`
+
+    **Input**
+
+    Nom               |  Type   | Description
+    ------------------|---------|-------------
+    pseudo            | string  |
+    email             | string  |
+    email_publique    | boolean |
+    nom               | string  |
+    prenom            | string  |
+    telephone         | string  |
+    adresse           | string  |
+    bio               | string  |
+    organisation      | string  |
+    professionnel     | boolean |
+    donnees_publiques | boolean |
+
+
+    ### Modifier le rôle d'un utilisateur
+
+    `PATCH /utilisateurs/#id/role`
+
+    **Accès**
+
+    Administrateur seulement
+
+    **Input**
+
+    Nom  |  Type   | Description
+    -----|---------|-------------
+    role | string  | nouveau role : `Administrateur`, `Validateur` ou `Observateur`
 """
 
 from flask import current_app, request, abort
@@ -12,9 +137,10 @@ import eve.methods
 from bson import ObjectId
 from bson.errors import InvalidId
 
-from ..xin import EveBlueprint
+from ..xin import XinBlueprint, EveBlueprint, jsonify
 from ..xin.auth import requires_auth
-from ..xin.domain import relation, choice
+from ..xin.domain import relation, choice, get_resource
+from ..xin.validator import Validator
 
 
 DOMAIN = {
@@ -38,6 +164,7 @@ DOMAIN = {
                       'unique': True},
         'pseudo': {'type': 'string', 'required': True},
         'email': {'type': 'string', 'required': True, 'unique': True},
+        'email_public': {'type': 'string', 'required': True, 'unique': True},
         'nom': {'type': 'string'},
         'prenom': {'type': 'string'},
         'telephone': {'type': 'string'},

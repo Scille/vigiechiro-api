@@ -10,6 +10,9 @@ from authomatic.providers import oauth2
 from enum import Enum
 
 
+# RFC 1123 (ex RFC 822)
+DATE_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+
 ## vigiechiro ##
 DEV_FAKE_AUTH = environ.get('DEV_FAKE_AUTH', 'False').lower() == 'true'
 TOKEN_EXPIRE_TIME = 24 * 3600

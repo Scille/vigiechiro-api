@@ -5,8 +5,9 @@ import json
 from bson import ObjectId
 from datetime import datetime, timedelta
 
-from common import db, observateur, validateur, administrateur, eve_post_internal, format_datetime
+from common import db, observateur, validateur, administrateur, format_datetime
 from vigiechiro import settings
+from vigiechiro.resources import utilisateurs
 from test_protocole import protocoles_base
 from test_taxon import taxons_base
 
@@ -14,36 +15,39 @@ from test_taxon import taxons_base
 @pytest.fixture(scope="module")
 def users_base(request):
     token_expire = datetime.utcnow() + timedelta(days=1)
-    user1 = {'nom': 'Doe',
-             'prenom': 'John',
-             'pseudo': 'n00b',
-             'telephone': '01 23 45 67 89',
-             'donnees_publiques': False,
-             'email': 'john.doe@gmail.com',
-             'role': 'Observateur',
-             'tokens': {'WPKQHC7LLNSI5KJAFEYXTD89W61RSDBO': token_expire,
-                        '6Z2GN5MJ8P1B234SP5RVJJTO2A2NOLF0': token_expire}}
-    eve_post_internal('utilisateurs', user1)
-    user2 = {'nom': 'van rossum',
-             'prenom': 'guido',
-             'pseudo': 'gr0k',
-             'email': 'guido@python.org',
-             'donnees_publiques': True,
-             'tags': ['Python', 'BDFL'],
-             'organisation': 'Python fundation',
-             'role': 'Administrateur',
-             'tokens': {'IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE': token_expire}}
-    eve_post_internal('utilisateurs', user2)
+    users = [
+      {'nom': 'Doe',
+       'prenom': 'John',
+       'pseudo': 'n00b',
+       'telephone': '01 23 45 67 89',
+       'donnees_publiques': False,
+       'email': 'john.doe@gmail.com',
+       'role': 'Observateur',
+       'tokens': {'WPKQHC7LLNSI5KJAFEYXTD89W61RSDBO': token_expire,
+                  '6Z2GN5MJ8P1B234SP5RVJJTO2A2NOLF0': token_expire}},
+        {'nom': 'van rossum',
+         'prenom': 'guido',
+         'pseudo': 'gr0k',
+         'email': 'guido@python.org',
+         'donnees_publiques': True,
+         'tags': ['Python', 'BDFL'],
+         'organisation': 'Python fundation',
+         'role': 'Administrateur',
+         'tokens': {'IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE': token_expire}}
+    ]
+    for user in users:
+        user['_id'] = utilisateurs.insert(user, auto_abort=False)
     def finalizer():
-        db.utilisateurs.remove()
+        for user in users:
+            db.utilisateurs.remove({'_id': user['_id']})
     request.addfinalizer(finalizer)
-    return db.utilisateurs.find().sort([('_id', 1)])
+    return users
 
 
 def test_dummy_user(administrateur):
     for dummy in ['549982ae13adf2435290074b', 'dummy', '01234', ' ', '/']:
         r = administrateur.get('/utilisateurs/' + dummy)
-        assert r.status_code == 404, r.text
+        assert r.status_code in [404, 422], r.text
 
 
 def test_dummy_role(administrateur):
@@ -71,7 +75,7 @@ def test_user_route(observateur):
 def test_rights_write(observateur, administrateur):
     # Change data for myself is allowed...
     payload = {'donnees_publiques': True}
-    r = observateur.patch(observateur.url,
+    r = observateur.patch('/utilisateurs/moi',
                           headers={'If-Match': observateur.user['_etag']},
                           json=payload)
     assert r.status_code == 200, r.text
@@ -83,7 +87,7 @@ def test_rights_write(observateur, administrateur):
                           json=payload)
     assert r.status_code == 403, r.text
     # Same thing, cannot change my own rights
-    r = observateur.patch(observateur.url,
+    r = observateur.patch('/utilisateurs/moi',
                           headers={'If-Match': observateur.user['_etag']},
                           json={'role': 'Administrateur'})
     assert r.status_code == 422, r.text
@@ -99,7 +103,7 @@ def test_rights_write(observateur, administrateur):
     for payload in [{'pseudo': 'my new pseudo !'},
                     {'email': 'new@email.com'},
                     {'nom': 'newLastName', 'prenom': 'newFirstName'}]:
-        r = observateur.patch(observateur.url,
+        r = observateur.patch('/utilisateurs/moi',
                               headers={'If-Match': etag},
                               json=payload)
         assert r.status_code == 200, r.text
@@ -122,7 +126,7 @@ def test_rigths_read(observateur, validateur):
 def test_readonly_fields(observateur, administrateur):
     payloads = [{'role': 'Administrateur'}]
     for payload in payloads:
-        r = observateur.patch(observateur.url,
+        r = observateur.patch('/utilisateurs/moi',
                               headers={'If-Match': observateur.user['_etag']},
                               json=payload)
         assert r.status_code == 422, r.text
@@ -143,7 +147,7 @@ def test_internal_resource(observateur):
                 {'facebook_id': '1872655'},
                 {'google_id': '1872655'}]
     for payload in payloads:
-        r = observateur.patch(observateur.url,
+        r = observateur.patch('/utilisateurs/moi',
                               headers={'If-Match': observateur.user['_etag']},
                               json=payload)
         assert r.status_code == 422, r.text
