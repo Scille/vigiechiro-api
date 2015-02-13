@@ -4,7 +4,7 @@ from .tools import jsonify, parse_id
 
 class Paginator:
     """Pagination heavy lifting"""
-    def __init__(self):
+    def __init__(self, max_results_limit=20):
         # Check request params
         try:
             self.max_results = int(request.args.get('max_results', 20))
@@ -12,13 +12,11 @@ class Paginator:
             self.skip = (self.page - 1) * self.max_results
             if self.skip < 0:
                 abort(422, 'page params must be > 0')
-            if self.max_results > 100:
-                abort(422, 'max_results params must be < 100')
+            if self.max_results > max_results_limit:
+                abort(422, 'max_results params must be < {}'.format(
+                    max_results_limit))
         except ValueError:
             abort(422, 'Invalid max_results and/or page params')
-        bad_params = set(request.args.keys()) - {'page', 'max_results'}
-        if bad_params:
-            abort(422, 'Unknown params {}'.format(bad_params))
 
     def make_response(self, cursor):
         return jsonify({

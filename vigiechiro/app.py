@@ -9,6 +9,7 @@ from .resources.utilisateurs import utilisateurs
 from .resources.taxons import taxons
 from .resources.fichiers import fichiers
 from .resources.protocoles import protocoles
+from .resources.grille_stoc import grille_stoc
 
 from .xin.auth import auth_factory
 from .xin.tools import ObjectIdConverter
@@ -55,6 +56,7 @@ def init_app():
     app.register_blueprint(taxons)
     app.register_blueprint(protocoles)
     app.register_blueprint(fichiers)
+    app.register_blueprint(grille_stoc)
     make_json_app(app)
     return app
 

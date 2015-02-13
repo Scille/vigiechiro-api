@@ -174,7 +174,7 @@ Nom          |  Type   | Description
 
 ### Valider un observateur dans un protocole
 
-`POST /utilisateurs/#id/protocoles/#id/valider`
+`POST /protocoles/#protocole_id/#observateur_id/valider`
 
 **Accès**
 
@@ -587,12 +587,12 @@ Grille STOC
 
 **Parameters**
 
-Nom          |  Type   | Description
--------------|---------|-------------
- a_lat       |  float  | latitude du point inférieur gauche constituant le rectangle de recherche
- a_long      |  float  | longitude du point inférieur gauche constituant le rectangle de recherche
- b_lat       |  float  | latitude du point supérieur droit constituant le rectangle de recherche
- b_long      |  float  | longitude du point supérieur droit constituant le rectangle de recherche
+Nom          |  Type   | Requis | Description
+-------------|---------|--------|-------------
+ sw_lat      |  float  |  oui   | latitude du point sud ouest
+ sw_lng      |  float  |  oui   | longitude du point sud ouest
+ ne_lat      |  float  |  oui   | latitude du point nord est
+ ne_lng      |  float  |  oui   | longitude du point nord est
 
 **Note**
 
