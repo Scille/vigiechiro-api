@@ -5,15 +5,15 @@
     see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893760
 """
 
-from flask import current_app, request, g
+from flask import current_app, request, g, abort
 from bson import ObjectId
 from bson.errors import InvalidId
 
 from ..xin import Resource, preprocessor
-from ..xin.tools import get_resource, jsonify, abort
+from ..xin.tools import jsonify, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-
+from ..xin.snippets import get_resource, Paginator
 
 SCHEMA = {
     'github_id': {'type': 'string', 'writerights': 'Administrateur',
@@ -66,11 +66,15 @@ SCHEMA = {
 utilisateurs = Resource('utilisateurs', __name__, schema=SCHEMA)
 
 
-DEFAULT_USER_PROJECTION = {'tokens': 0, 'github_id': 0,
-                           'google_id': 0, 'facebook_id': 0,
-                           'email': 0}
-RESTRICTED_USER_PROJECTION = {'tokens': 0, 'github_id': 0,
-                              'google_id': 0, 'facebook_id': 0}
+DEFAULT_USER_PROJECTION = {
+    'tokens': 0, 'github_id': 0,
+    'google_id': 0, 'facebook_id': 0,
+    'email': 0
+}
+RESTRICTED_USER_PROJECTION = {
+    'tokens': 0, 'github_id': 0,
+    'google_id': 0, 'facebook_id': 0
+}
 
 
 @utilisateurs.validator.attribute
@@ -88,22 +92,11 @@ def non_macro_protocole(context):
 @utilisateurs.route('/utilisateurs', methods=['GET'])
 @requires_auth(roles='Observateur')
 def list_users():
-    # Check params
-    try:
-        limit = int(request.args.get('max_results', 20))
-        skip = (int(request.args.get('page', 1)) - 1) * limit
-        if skip < 0:
-            abort(422, 'page params must be > 0')
-        if limit > 100:
-            abort(422, 'max_results params must be < 100')
-    except ValueError:
-        abort(422, 'Invalid max_results and/or page params')
-    bad_params = set(request.args.keys()) - {'page', 'max_results'}
-    if bad_params:
-        abort(422, 'Unknown params {}'.format(bad_params))
-    db = current_app.data.db['utilisateurs']
-    elements = list(db.find(None, DEFAULT_USER_PROJECTION, skip=skip, limit=limit))
-    return jsonify({'_items': elements})
+    pagination = Paginator()
+    cursor = utilisateurs.find(None, DEFAULT_USER_PROJECTION,
+                               skip=pagination.skip,
+                               limit=pagination.max_results)
+    return pagination.make_response(cursor)
 
 
 @utilisateurs.route('/utilisateurs/moi', methods=['GET'])
@@ -117,7 +110,11 @@ def get_request_user_profile():
 @utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_user_profile(user_id):
-    user = utilisateurs.get_resource(user_id, projection=DEFAULT_USER_PROJECTION)
+    if g.request_user['role'] == 'Observateur':
+        projection = DEFAULT_USER_PROJECTION
+    else:
+        projection = RESTRICTED_USER_PROJECTION
+    user = utilisateurs.get_resource(user_id, projection=projection)
     return jsonify(**user)
 
 
@@ -132,7 +129,7 @@ def patch_request_user_profile(if_match, payload):
     if invalid_fields:
         abort(422, {field: 'invalid field' for field in invalid_fields})
     result = utilisateurs.update(g.request_user['_id'], payload, if_match)
-    return jsonify(result)
+    return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))
 
 
 @utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['PATCH'])
@@ -140,4 +137,4 @@ def patch_request_user_profile(if_match, payload):
 @preprocessor(if_match=True, payload=True)
 def patch_user(user_id, if_match, payload):
     result = utilisateurs.update(user_id, payload, if_match)
-    return jsonify(result)
+    return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))

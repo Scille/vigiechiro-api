@@ -3,15 +3,17 @@ from datetime import datetime
 from bson import ObjectId
 
 from vigiechiro import app
-from vigiechiro.xin.validator import GenericValidator
+from vigiechiro.xin.schema import GenericValidator
 
 
-@pytest.fixture
-def flask_context():
-    return app.test_request_context()
+def with_flask_context(f):
+    def decorator(*args, **kwargs):
+        with app.test_request_context():
+            return f(*args, **kwargs)
+    return decorator
 
 
-def test_basic_validation(flask_context):
+def test_basic_validation():
     schema = {
         'a': {'type': 'integer'},
         'b': {'type': 'string'},
@@ -29,7 +31,8 @@ def test_basic_validation(flask_context):
         'serialized': {'type': 'datetime'}
     }
     v = GenericValidator(schema)
-    with flask_context:
+    @with_flask_context
+    def test():
         result = v.validate({'a': 1, 'b': 'touille', 'c': {}})
         assert result.is_valid, result.errors
         result = v.validate({'a': 1, 'b': 'touille', 'c': {'ca': []}})
@@ -50,15 +53,17 @@ def test_basic_validation(flask_context):
         assert not result.is_valid, result.errors
         result = v.validate({'serialized': 'Fri, 23 Nov 2012 08:11:19 GMT'})
         assert result.is_valid, result.errors
+    test()
 
 
-def test_serialized(flask_context):
+def test_serialized():
     schema = {
         '_id': {'type': 'objectid'},
         's': {'type': 'datetime'}
     }
     v = GenericValidator(schema)
-    with app.test_request_context() as c:
+    @with_flask_context
+    def test():
         result = v.validate({'_id': '54ba464f1d41c83768e76fbf',
                              's': 'Fri, 23 Nov 2012 08:11:19 GMT'})
         assert result.is_valid, result.errors
@@ -69,9 +74,10 @@ def test_serialized(flask_context):
         assert isinstance(result.document['_id'], ObjectId)
         assert isinstance(result.document['s'], datetime)
         assert result.is_valid, result.errors
+    test()
 
 
-def test_bad_serialized(flask_context):
+def test_bad_serialized():
     schema = {
         '_id': {'type': 'objectid'},
         's': {'type': 'datetime'}
@@ -79,7 +85,8 @@ def test_bad_serialized(flask_context):
     v = GenericValidator(schema)
     valid_doc = {'_id': '54ba464f1d41c83768e76fbf',
                  's': 'Fri, 23 Nov 2012 08:11:19 GMT'}
-    with flask_context:
+    @with_flask_context
+    def test():
         bad_doc = valid_doc.copy()
         for dummy in ['54ba464f1d41c83768e76', '54ba464f1d41c83768e76fbffff',
                       '', 'dummy']:
@@ -92,15 +99,17 @@ def test_bad_serialized(flask_context):
             bad_doc['_id'] = dummy
             result = v.validate(bad_doc)
             assert not result.is_valid, result
+    test()
 
 
-def test_required_fields(flask_context):
+def test_required_fields():
     schema = {
         'r': {'type': 'string', 'required': True},
         'nr': {'type': 'string', 'required': False}
     }
     v = GenericValidator(schema)
-    with flask_context:
+    @with_flask_context
+    def test():
         valid_docs = [
             {'r': 'data', 'nr': 'data'},
             {'r': 'data'}
@@ -119,6 +128,7 @@ def test_required_fields(flask_context):
         for doc in invalid_docs:
             result = v.validate(doc, is_update=True)
             assert result.is_valid, result
+    test()
 
 
 # def test_types_validation():

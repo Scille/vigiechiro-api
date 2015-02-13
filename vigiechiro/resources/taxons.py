@@ -1,0 +1,105 @@
+"""
+    Donnee site
+    ~~~~~~~~~~~
+
+    see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893670
+"""
+
+from flask import current_app, request, g
+from bson import ObjectId
+from bson.errors import InvalidId
+
+from ..xin import Resource, preprocessor
+from ..xin.tools import jsonify, abort, dict_projection
+from ..xin.auth import requires_auth
+from ..xin.schema import relation
+from ..xin.snippets import get_payload, get_if_match, Paginator
+
+
+SCHEMA = {
+    'libelle_long': {'type': 'string', 'required': True, 'unique': True},
+    'libelle_court': {'type': 'string', 'required': True, 'unique': True},
+    'description': {'type': 'string'},
+    'parents': {
+        'type': 'list',
+        'schema': relation('taxons', embeddable=True),
+        'non_recursive_dependancy': True
+    },
+    'liens': {
+        'type': 'list',
+        'schema': {'type': 'url'}
+    },
+    'tags': {
+        'type': 'list',
+        'schema': {'type': 'string'}
+    },
+    'photos': {
+        'type': 'list',
+        'schema': relation('fichiers', required=True)
+    },
+    'date_valide': {'type': 'datetime'},
+}
+CONST_FIELDS = {'proprietaire', 'nom', 'mime', 'lien'}
+
+taxons = Resource('taxons', __name__, schema=SCHEMA)
+
+
+@taxons.validator.attribute
+def non_recursive_dependancy(context):
+    if not context.schema['non_recursive_dependancy']:
+        return
+    own_id = context.additional_context.get('old_document', {}).get('_id', None)
+    children = [own_id] if own_id else []
+    def check_recur(children, curr_id):
+        if curr_id in children:
+            abort(422, "circular dependency of parents"
+                       " detected : {}".format(children))
+        curr_doc = taxons.get_resource(curr_id)
+        if not curr_doc:
+            abort(422, "parents ids leads to a broken parent"
+                       " link '{}'".format(value, curr_parent))
+        children.append(curr_id)
+        for parent in curr_doc.get('parents', []):
+            check_recur(children.copy(), parent)
+    parents = context.value
+    if len(set(parents)) != len(parents):
+        abort(422, "Duplication in parents : {}".format(parents))
+    for curr_id in parents:
+        check_recur(children.copy(), curr_id)
+
+
+@taxons.route('/taxons', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_taxons():
+    pagination = Paginator()
+    cursor = taxons.find(skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(cursor)
+
+
+@taxons.route('/taxons', methods=['POST'])
+@requires_auth(roles='Administrateur')
+def create_taxon():
+    payload = get_payload()
+    new_id = taxons.insert(payload)
+    return jsonify({'_id': new_id}), 201
+
+
+@taxons.route('/taxons/<objectid:taxon_id>', methods=['GET'])
+@requires_auth(roles='Observateur')
+def display_taxon(taxon_id):
+    return jsonify(**taxons.get_resource(taxon_id))
+
+
+@taxons.route('/taxons/<objectid:taxon_id>', methods=['PATCH'])
+@requires_auth(roles='Administrateur')
+def edit_taxon(taxon_id):
+    result = taxons.update(taxon_id, get_payload(), get_if_match())
+    return jsonify(result)
+
+
+@taxons.route('/taxons/liste', methods=['GET'])
+@requires_auth(roles='Observateur')
+def get_resume_list():
+    """Return a brief list of per taxon id and libelle"""
+    items = taxons.find({}, {"libelle_long": 1})
+    return jsonify(_items=[i for i in items])

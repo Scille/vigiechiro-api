@@ -6,15 +6,18 @@ import string
 import pytest
 from pymongo import MongoClient
 from bson import ObjectId
-from eve.methods.post import post_internal
 from flask import g
 from datetime import datetime, timedelta
 
 from vigiechiro import settings, app
-from vigiechiro.resources.utilisateurs import utilisateurs
+from vigiechiro.resources import utilisateurs as utilisateurs_resource
 
 from wsgiref.handlers import format_date_time
 from time import mktime
+
+
+db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
+    settings.MONGO_DBNAME]
 
 
 def format_datetime(dt):
@@ -22,8 +25,11 @@ def format_datetime(dt):
     return format_date_time(stamp)
 
 
-db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
-    settings.MONGO_DBNAME]
+def with_flask_context(f):
+    def decorator(*args, **kwargs):
+        with app.test_request_context():
+            return f(*args, **kwargs)
+    return decorator
 
 
 @pytest.fixture
@@ -69,7 +75,7 @@ class AuthRequests:
             self.user[key] = value
         with app.test_request_context() as c:
             g.request_user = {'role': 'Administrateur'}
-            self.user = utilisateurs.insert(payload)
+            self.user = utilisateurs_resource.insert(payload)
             self.user_id = str(self.user['_id'])
         # self.update_user()
         self.url = '/utilisateurs/' + self.user_id

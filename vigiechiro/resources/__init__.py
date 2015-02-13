@@ -2,6 +2,9 @@
 	This module contains the definitions of the functional resources
 """
 
+from .utilisateurs import utilisateurs
+from .taxons import taxons
+
 # from .utilisateur import blueprint
 # from .fichier import fichiers
 # from .taxon import taxons

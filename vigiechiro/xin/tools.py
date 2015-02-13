@@ -10,7 +10,7 @@ import datetime
 import bson
 import hashlib
 from werkzeug import Response
-from flask import app, current_app, abort
+from flask import app, current_app, abort, request
 from flask.ext.pymongo import PyMongo
 from bson.json_util import dumps
 from werkzeug.routing import BaseConverter
@@ -117,24 +117,9 @@ def jsonify(*args, **kwargs):
                                mimetype='application/json')
 
 
-def parse_id(obj_id, auto_abort=True):
+def parse_id(obj_id):
     try:
         obj_id = bson.ObjectId(obj_id)
     except bson.errors.InvalidId:
-        if auto_abort:
-          abort(422, 'Invalid ObjectId {}'.format(obj_id))
-        else:
-            return None
+        return None
     return obj_id
-
-
-def get_resource(resource, obj_id, auto_abort=True, projection=None):
-    """Retrieve object from database with it ID and resource name"""
-    obj_id = parse_id(obj_id, auto_abort)
-    obj = current_app.data.db[resource].find_one({'_id': obj_id}, projection)
-    if not obj:
-        if auto_abort:
-            abort(404, '{} is not a valid {} resource'.format(obj_id, resource))
-        else:
-            return None
-    return obj

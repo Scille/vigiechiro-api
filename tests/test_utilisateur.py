@@ -5,9 +5,9 @@ import json
 from bson import ObjectId
 from datetime import datetime, timedelta
 
-from common import db, observateur, validateur, administrateur, format_datetime
+from common import db, observateur, validateur, administrateur, format_datetime, with_flask_context
 from vigiechiro import settings
-from vigiechiro.resources import utilisateurs
+from vigiechiro.resources import utilisateurs as utilisateurs_resource
 from test_protocole import protocoles_base
 from test_taxon import taxons_base
 
@@ -35,8 +35,8 @@ def users_base(request):
          'role': 'Administrateur',
          'tokens': {'IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE': token_expire}}
     ]
-    for user in users:
-        user['_id'] = utilisateurs.insert(user, auto_abort=False)
+    users = [with_flask_context(lambda: taxons_resource.insert(user))()
+                for user in users]
     def finalizer():
         for user in users:
             db.utilisateurs.remove({'_id': user['_id']})

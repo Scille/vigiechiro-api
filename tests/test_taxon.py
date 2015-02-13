@@ -2,7 +2,8 @@ import requests
 from pymongo import MongoClient
 import pytest
 
-from common import db, administrateur, observateur
+from common import db, administrateur, observateur, with_flask_context
+from vigiechiro.resources import taxons as taxons_resource
 
 
 @pytest.fixture
@@ -21,7 +22,12 @@ Ces animaux, comme les Cétacés, sont souvent capables d'écholocation.
         'liens': ['http://fr.wikipedia.org/wiki/Chiroptera'],
         'tags': ['chiro', 'vigiechiro', 'ultrason']
     }
-    parent['_id'] = db.taxons.insert(parent)
+    @with_flask_context
+    def insert_parent():
+        inserted = taxons_resource.insert(parent, auto_abort=False)
+        assert inserted
+        return inserted
+    parent = insert_parent()
 
     # Then children
     children = [
@@ -52,8 +58,15 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
             'tags': ['chiro', 'vigiechiro', 'ultrason']        
         }
     ]
-    for taxon in children:
-        taxon['_id'] = db.taxons.insert(taxon)
+    @with_flask_context
+    def insert_children():
+        inserted_children = []
+        for taxon in children:
+            inserted_taxon = taxons_resource.insert(taxon, auto_abort=False)
+            assert inserted_taxon
+            inserted_children.append(inserted_taxon)
+        return inserted_children
+    children = insert_children()
     taxons = [parent] + children
     def finalizer():
         for taxon in taxons:
@@ -105,12 +118,6 @@ def test_multi_parents(taxons_base, administrateur):
                              json={'parents': payload['parents']})
     assert r.status_code == 200, r.text
     etag = r.json()['_etag']
-    # Use put instead of patch
-    payload = {field: payload[field]
-               for field in payload.keys() if not field.startswith('_')}
-    r = administrateur.put(url, headers={'If-Match': etag},
-                           json=payload)
-    assert r.status_code == 200, r.text
     # Try with 2 times the same
     r = administrateur.get(url)
     parents = [str(taxons_base[1]['_id']) for _ in range(2)]
@@ -140,13 +147,13 @@ def test_dummy_parent(taxons_base, new_taxon_payload, administrateur):
                   str(taxons_base[0]['_id']), str(administrateur.user['_id'])]:
         r = administrateur.patch(url, headers={'If-Match': etag},
                                  json={'parents': [dummy]})
-        assert r.status_code == 422, r.text
+        assert r.status_code in [404, 422], r.text
     # Check for POST too
     for dummy in ['dummy', '5490237a1d41c81800d52c18',
                   str(administrateur.user['_id'])]:
         new_taxon_payload['parents'] = [dummy]
         r = administrateur.post('/taxons', json=new_taxon_payload)
-        assert r.status_code == 422, r.text
+        assert r.status_code in [404, 422], r.text
 
 
 def test_modif(taxons_base, administrateur, observateur):

@@ -6,6 +6,7 @@ from flask.ext.pymongo import PyMongo
 
 from . import settings
 from .resources.utilisateurs import utilisateurs
+from .resources.taxons import taxons
 
 from .xin.auth import TokenAuth, auth_factory
 from .xin.tools import ObjectIdConverter
@@ -74,6 +75,7 @@ def init_app():
     app.register_blueprint(auth_factory(settings.AUTHOMATIC.keys(),
                                         mock_provider=settings.DEV_FAKE_AUTH))
     app.register_blueprint(utilisateurs)
+    app.register_blueprint(taxons)
     make_json_app(app)
     return app
 

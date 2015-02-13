@@ -3,11 +3,10 @@
     ~~~~~~~~~~~~~~~~
 
     Rewrite of Cerberus schema validator
-    Macro&tools for defining Cerberus schema
 """
 
 import re
-from flask import request, g
+from flask import request, g, current_app
 from cerberus.errors import ERROR_BAD_TYPE, ERROR_READONLY_FIELD
 from bson import ObjectId
 from datetime import datetime
@@ -37,15 +36,17 @@ def choice(choices, **kwargs):
 
 class ValidatorContext:
     """Validation result object"""
-    def __init__(self, schema, document, is_update=False):
+
+    def __init__(self, schema, document, is_update=False, additional_context=None):
+        self.schema = schema
+        self.document = document
+        self.is_update = is_update
+        self.additional_context = additional_context or {}
         self._stack = []
         self.errors = {}
-        self.schema = schema
         self.field = ''
         self.value = document
-        self.is_update = is_update
         self.is_valid = True
-        self.document = document
 
     def push(self, schema, field, value):
         self._stack.append((self.schema, self.field, self.value))
@@ -99,9 +100,9 @@ class GenericValidator:
     ERROR_UNALLOWED_VALUES = "unallowed values %s"
     ERROR_UNALLOWED_VALUE = "unallowed value %s"
     ERROR_ITEMS_LIST = "length of list should be %d"
-    ERROR_READONLY_FIELD = "field is read-only"
     ERROR_MAX_VALUE = "max value is %d"
     ERROR_MIN_VALUE = "min value is %d"
+    ERROR_READONLY_FIELD = "field is read-only"
     ERROR_EMPTY_NOT_ALLOWED = "empty values not allowed"
     ERROR_NOT_NULLABLE = "null value not allowed"
     ERROR_REGEX = "value does not match regex '%s'"
@@ -110,9 +111,6 @@ class GenericValidator:
 
     def __init__(self, schema):
         self.schema = schema
-        self._context = {}
-        self._context_stack = []
-        self._path_stack = []
         # Dynamic init of generic types
         self._validate_type_factory(int, 'integer')
         self._validate_type_factory(str, 'string')
@@ -133,10 +131,10 @@ class GenericValidator:
             name = validate_function.__name__
         setattr(self, '_validate_attribute_' + name, validate_function)
 
-    def validate(self, document, is_update=False):
-        self._path_stack = []
+    def validate(self, document, is_update=False, additional_context=None):
         context = ValidatorContext({'type': 'dict', 'schema': self.schema},
-                                   document, is_update=is_update)
+                                   document, is_update=is_update,
+                                   additional_context=additional_context)
         self._validate_schema(context)
         return context
 
@@ -148,29 +146,35 @@ class GenericValidator:
 
     def _validate_attribute_readonly(self, context):
         if context.schema['read_only']:
-            context.add_error('Field is readonly')
+            context.add_error(self.ERROR_READONLY_FIELD)
 
     def _validate_attribute_regex(self, context):
         regex = context.schema['regex']
         pattern = re.compile(regex)
         if not pattern.match(context.value):
-            context.add_error("Field doesn't match regex {}".format(regex))
-
-    def _validate_serializer_type_datetime(self, context):
-        if isinstance(context.value, str):
-            return str_to_date(context.value)
-        else:
-            return context.value
+            context.add_error(self.ERROR_REGEX % regex)
 
     def _validate_type_datetime(self, context):
+        # If value is not a datetime object, try to unserialize it
+        if isinstance(context.value, str):
+            # If the unserialized succeed, update the context stack
+            unserialized = str_to_date(context.value)
+            if unserialized:
+                schema, field, _ = context.pop()
+                context.value[field] = unserialized
+                context.push(schema, field, unserialized)
         if not isinstance(context.value, datetime):
             context.add_error(self.ERROR_BAD_TYPE % "datetime")
 
-    def _validate_serializer_type_objectid(self, context):
-        unserialized = parse_id(context.value, auto_abort=False)
-        return unserialized if unserialized else context.value
-
     def _validate_type_objectid(self, context):
+        # If value is not a ObjectId object, try to unserialize it
+        if isinstance(context.value, str):
+            # If the unserialized succeed, update the context stack
+            unserialized = parse_id(context.value)
+            if unserialized:
+                schema, field, _ = context.pop()
+                context.value[field] = unserialized
+                context.push(schema, field, unserialized)
         if not isinstance(context.value, ObjectId):
             context.add_error(self.ERROR_BAD_TYPE % 'ObjectId')
 
@@ -240,14 +244,6 @@ class GenericValidator:
 
     def _validate_attribute_type(self, context):
         type_name = context.schema['type']
-        # Retrieve the serializer function if it exists
-        serializer_type = getattr(self, "_validate_serializer_type_" + type_name, None)
-        if serializer_type:
-            # Unserialize the current value and update the context stack
-            unserialized_value = serializer_type(context)
-            schema, field, _ = context.pop()
-            context.value[field] = unserialized_value
-            context.push(schema, field, unserialized_value)
         # Retrieve the validate function among object's methods
         validate_type = getattr(self, "_validate_type_" + type_name, None)
         if not validate_type:
@@ -261,7 +257,7 @@ class GenericValidator:
 
     def _validate_type_list(self, context):
         if not isinstance(context.value, list):
-            context.add_error('list expected')
+            context.add_error(self.ERROR_BAD_TYPE % 'list')
             return
         list_schema = context.schema.get('schema', None)
         if not list_schema:
@@ -274,7 +270,7 @@ class GenericValidator:
 
     def _validate_type_dict(self, context):
         if not isinstance(context.value, dict):
-            context.add_error('dict expected')
+            context.add_error(self.ERROR_BAD_TYPE % 'dict')
             return
         # Check for unexpected fields
         dict_schema = context.schema.get('schema', None)
@@ -290,7 +286,7 @@ class GenericValidator:
             for field in unexpected_fiels:
                 value = context.value.pop(field)
                 context.push(None, field, value)
-                context.add_error('unexpected field')
+                context.add_error(self.ERROR_UNKNOWN_FIELD)
                 context.pop()
             # Check for missing required fields
             if not context.is_update:
@@ -298,7 +294,7 @@ class GenericValidator:
                 for field in missing_fields:
                     if dict_schema[field].get('required', False):
                         context.push(dict_schema[field], field, None)
-                        context.add_error('required field')
+                        context.add_error(self.ERROR_REQUIRED_FIELD)
                         context.pop()
             # Now recursively validate each field
             for field, value in context.value.items():
@@ -314,6 +310,8 @@ class GenericValidator:
 
 
 class Validator(GenericValidator):
+
+    ERROR_UNIQUE_FIELD = "value '%s' is not unique"
 
     def _validate_attribute_postonly(self, context):
         """Field can be altered by non-admin during POST only"""
@@ -336,14 +334,15 @@ class Validator(GenericValidator):
         pass
 
     def _validate_attribute_unique(self, context):
-        # TODO
-        pass
-    #     if unique:
-    #         query = {field: value}
-    #         if self._id:
-    #             try:
-    #                 query[config.ID_FIELD] = {'$ne': ObjectId(self._id)}
-    #             except:
-    #                 query[config.ID_FIELD] = {'$ne': self._id}
-    
-    #        if app.data.find_one(self.resource, None, **query):
+        # return
+        if not context.schema['unique']:
+            return
+        query = {context.field: context.value}
+        old_document = context.additional_context.get('old_document', {})
+        document_id = old_document.get('_id', None)
+        if document_id:
+            query['_id'] = {'$ne': document_id}
+        resource_name = context.additional_context['resource'].name
+        # import pdb; pdb.set_trace()
+        if current_app.data.db[resource_name].find_one(query):
+            context.add_error(self.ERROR_UNIQUE_FIELD % context.value)
