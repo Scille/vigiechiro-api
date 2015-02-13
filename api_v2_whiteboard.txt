@@ -384,44 +384,171 @@ Nom               |  Type   | Description
 ------------------|---------|-------------
  titre            | string  | Nom du fichier
  mime             | string  | Mime type du fichier
- prive            | boolean | Le fichier est-il visible par les autres observateurs ?
- prive            | boolean |
  multipart        | boolean | Le fichier va-t-il être uploader en multipart ?
 
 Note: si le fichier à uploader fait plus de 5mo, il doit être uploader en multipart
 
-**Response**
+**Response : Singlepart upload**
 ```
+201
 {
-    "signed_url": "https://vigiechiro.s3.com/..."
+    "titre": "kitten.png",
+    "mime": "image/png",
+    "proprietaire": "54ba5dfd1d41c83768e76fc2",
+    "disponible": False,
+    "s3_id": "..."
+    "s3_upload_done": False,
+    "s3_signed_url": "https://vigiechiro.s3.com/..."
 }
 ```
+
+**Response : Multipart upload**
+```
+201
+{
+    "titre": "kitten.png",
+    "mime": "image/png",
+    "proprietaire": "54ba5dfd1d41c83768e76fc2",
+    "disponible": False,
+    "s3_id": "..."
+    "s3_upload_done": False,
+    "s3_multipart_upload_id": "..."
+}
+```
+
+Note : le lien fourni a une validité de 10s
+
 
 ### Multipart : Recupérer l'url S3 d'upload d'une partie
 
 `PUT /fichiers/#id/multipart`
 
+**Parameters**
 
-### Multipart : Finir l'upload en multipart
-
-`POST /fichiers/#id/multipart`
-
-
-### Multipart : Annuler l'upload en multipart
-
-`DELETE /fichiers/#id/multipart`
-
-
-### Accèder à un fichier
-
-`GET /fichiers/#id`
+Nom          |  Type   | Description
+-------------|---------|-------------
+ part_number | integer | partie à uploader (commençant à 1)
 
 **Response**
 ```
+200
 {
-    "signed_url": "https://vigiechiro.s3.com/..."
+    "s3_signed_url": "https://vigiechiro.s3.com/..."
 }
 ```
+
+**Accès**
+
+Créateur du fichier seulement
+
+Note: cette fonctionnalité n'est accessible qui si le fichier a été créé 
+comme multipart ("s3_multipart_upload_id" != "") et tant que la fin de
+l'upload n'a pas été terminé ("s3_upload_done" == False)
+
+Note : le lien fourni a une validité de 10s
+
+
+### Annuler l'upload du fichier
+
+`DELETE /fichiers/#id`
+
+**Response**
+```
+204
+{
+}
+```
+
+**Accès**
+
+Créateur du fichier seulement
+
+Note: cette fonctionnalité n'est accessible qui si l'upload n'a pas été 
+terminé ("s3_upload_done" == False)
+
+
+### Signifier la fin de l'upload du fichier
+
+`POST /fichiers/#id`
+
+**Multipart : Input**
+
+Nom                    |  Type   | Description
+-----------------------|---------|-------------
+ parts                 | list    | list des partie uploadées
+ parts[x][part_number] | integer | index de la partie
+ parts[x][etag]        | etag    | etag de la partie
+
+Note : dans le cas d'un singlepart upload, pas d'input n'est requis
+
+**Response**
+```
+200
+{
+    "titre": "kitten.png",
+    "mime": "image/png",
+    "proprietaire": "54ba5dfd1d41c83768e76fc2",
+    "disponible": False,
+    "s3_id": "..."
+    "s3_upload_done": True
+}
+```
+
+**Accès**
+
+Créateur du fichier seulement
+
+Note: cette fonctionnalité n'est accessible qui si l'upload n'a pas été 
+terminé ("s3_upload_done" == False)
+
+
+### Accèder aux metadonnées d'un fichier
+
+`GET /fichiers/#id`
+
+**Accès**
+
+Si propriétaire.donnees_publiques == False : propriétaire, administrateur et validateur
+Sinon : tous les observateurs
+
+**Response**
+```
+200
+{
+    "titre": "kitten.png",
+    "mime": "image/png",
+    "proprietaire": "54ba5dfd1d41c83768e76fc2",
+    "disponible": False,
+    "s3_id": "..."
+    "s3_upload_done": True
+}
+```
+
+
+### Accèder au contenu d'un fichier
+
+`GET /fichiers/#id/acces`
+
+**Parameters**
+
+Nom          |  Type   | Description
+-------------|---------|-------------
+ redirection | boolean | redirige vers le fichier au lieu de renvoyer le lien d'accès
+
+**Accès**
+
+Si propriétaire.donnees_publiques == False : propriétaire, administrateur et validateur
+Sinon : tous les observateurs
+
+**Response (redirection=False)**
+```
+200
+{
+    "s3_signed_url": "https://vigiechiro.s3.com/..."
+}
+```
+
+Note : le lien fourni a une validité de 10s
 
 
 Actualités

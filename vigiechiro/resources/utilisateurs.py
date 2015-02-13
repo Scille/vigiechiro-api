@@ -9,11 +9,13 @@ from flask import current_app, request, g, abort
 from bson import ObjectId
 from bson.errors import InvalidId
 
-from ..xin import Resource, preprocessor
+from ..xin import Resource
 from ..xin.tools import jsonify, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-from ..xin.snippets import get_resource, Paginator
+from ..xin.snippets import get_resource, Paginator, get_if_match, get_payload
+from .protocoles import protocoles as protocoles_resource
+
 
 SCHEMA = {
     'github_id': {'type': 'string', 'writerights': 'Administrateur',
@@ -50,11 +52,10 @@ SCHEMA = {
     },
     'protocoles': {
         'type': 'list',
-        'writerights': 'Administrateur',
         'schema': {
             'type': 'dict',
             'schema': {
-                'protocole': relation('protocoles', embeddable=True, required=True,
+                'protocole': relation('protocoles', required=True,
                                       non_macro_protocole=True),
                 'date_inscription': {'type': 'datetime', 'required': True},
                 'valide': {'type': 'boolean'}
@@ -63,18 +64,38 @@ SCHEMA = {
     }
 }
 
-utilisateurs = Resource('utilisateurs', __name__, schema=SCHEMA)
-
-
 DEFAULT_USER_PROJECTION = {
     'tokens': 0, 'github_id': 0,
     'google_id': 0, 'facebook_id': 0,
     'email': 0
 }
+
 RESTRICTED_USER_PROJECTION = {
     'tokens': 0, 'github_id': 0,
     'google_id': 0, 'facebook_id': 0
 }
+
+
+utilisateurs = Resource('utilisateurs', __name__, schema=SCHEMA)
+
+
+def _expend_joined_protocoles(document):
+    if 'protocoles' not in document:
+        return document
+    for join in document['protocoles']:
+        protocole_id = join['protocole']
+        protocole = protocoles_resource.find_one(
+            {'_id': protocole_id}, {'titre': 1})
+        if protocole:
+            join['protocole'] = protocole
+    return document
+
+
+def _choose_utilisateur_projection():
+    if g.request_user['role'] == 'Observateur':
+        return DEFAULT_USER_PROJECTION
+    else:
+        return RESTRICTED_USER_PROJECTION
 
 
 @utilisateurs.validator.attribute
@@ -93,7 +114,7 @@ def non_macro_protocole(context):
 @requires_auth(roles='Observateur')
 def list_users():
     pagination = Paginator()
-    cursor = utilisateurs.find(None, DEFAULT_USER_PROJECTION,
+    cursor = utilisateurs.find(None, _choose_utilisateur_projection(),
                                skip=pagination.skip,
                                limit=pagination.max_results)
     return pagination.make_response(cursor)
@@ -104,24 +125,22 @@ def list_users():
 def get_request_user_profile():
     user = utilisateurs.get_resource(g.request_user['_id'],
                                      projection=RESTRICTED_USER_PROJECTION)
-    return jsonify(**user)
+    return jsonify(**_expend_joined_protocoles(user))
 
 
 @utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_user_profile(user_id):
-    if g.request_user['role'] == 'Observateur':
-        projection = DEFAULT_USER_PROJECTION
-    else:
-        projection = RESTRICTED_USER_PROJECTION
-    user = utilisateurs.get_resource(user_id, projection=projection)
-    return jsonify(**user)
+    user = utilisateurs.get_resource(user_id,
+        projection=_choose_utilisateur_projection())
+    return jsonify(**_expend_joined_protocoles(user))
 
 
 @utilisateurs.route('/utilisateurs/moi', methods=['PATCH'])
 @requires_auth(roles='Observateur')
-@preprocessor(if_match=True, payload=True)
-def patch_request_user_profile(if_match, payload):
+def patch_request_user_profile():
+    if_match = get_if_match()
+    payload = get_payload()
     allowed_fields = {'pseudo', 'email', 'email_publique', 'nom', 'prenom',
                       'telephone', 'adresse', 'commentaire', 'organisation',
                       'professionnel', 'donnees_publiques'}
@@ -134,7 +153,8 @@ def patch_request_user_profile(if_match, payload):
 
 @utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['PATCH'])
 @requires_auth(roles='Administrateur')
-@preprocessor(if_match=True, payload=True)
-def patch_user(user_id, if_match, payload):
+def patch_user(user_id):
+    if_match = get_if_match()
+    payload = get_payload()
     result = utilisateurs.update(user_id, payload, if_match)
     return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))

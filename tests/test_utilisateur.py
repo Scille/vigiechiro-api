@@ -8,8 +8,9 @@ from datetime import datetime, timedelta
 from common import db, observateur, validateur, administrateur, format_datetime, with_flask_context
 from vigiechiro import settings
 from vigiechiro.resources import utilisateurs as utilisateurs_resource
-from test_protocole import protocoles_base
+from test_protocoles import protocoles_base
 from test_taxon import taxons_base
+
 
 @pytest.fixture(scope="module")
 def users_base(request):
@@ -21,6 +22,7 @@ def users_base(request):
        'telephone': '01 23 45 67 89',
        'donnees_publiques': False,
        'email': 'john.doe@gmail.com',
+       'email_public': 'john.doe.public@gmail.com',
        'role': 'Observateur',
        'tokens': {'WPKQHC7LLNSI5KJAFEYXTD89W61RSDBO': token_expire,
                   '6Z2GN5MJ8P1B234SP5RVJJTO2A2NOLF0': token_expire}},
@@ -117,20 +119,30 @@ def test_rights_write(observateur, administrateur):
 
 
 def test_rigths_read(observateur, validateur):
-    # Observateur cannot list or see others user's profile
+    # Observateur has limited view on others user's profile
     r = observateur.get('/utilisateurs')
-    assert r.status_code == 403, r.text
+    assert r.status_code == 200, r.text
+    utilisateur = r.json()['_items'][0]
+    assert 'email' not in utilisateur, utilisateur
     r = observateur.get(validateur.url)
-    assert r.status_code == 403, r.text
-    # Validateur and upper roles can see all users
+    assert r.status_code == 200, r.text
+    assert 'email' not in r.json()
+    # Validateur and upper has full access on profiles
     r = validateur.get('/utilisateurs')
     assert r.status_code == 200, r.text
+    utilisateur = r.json()['_items'][0]
+    assert 'email' in utilisateur, utilisateur
     r = validateur.get(observateur.url)
     assert r.status_code == 200, r.text
+    assert 'email' in r.json()
+    # Of course, observateur has full access of it own profile
+    r = observateur.get('/utilisateurs/moi')
+    assert r.status_code == 200, r.text
+    assert 'email' in r.json()
 
 
 def test_readonly_fields(observateur, administrateur):
-    payloads = [{'role': 'Administrateur'}]
+    payloads = [{'role': 'Administrateur'}, {'protocoles': []}]
     for payload in payloads:
         r = observateur.patch('/utilisateurs/moi',
                               headers={'If-Match': observateur.user['_etag']},
@@ -173,7 +185,7 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     macro_protocole_id = str(macro_protocole['_id'])
     protocole = protocoles_base[1]
     protocole_id = str(protocole['_id'])
-    protocole_url = '/protocoles/{}/action/join'
+    protocole_url = '/protocoles/{}/join'
     # Try to join dummy protocoles
     for bad_protocole_id in ['dummy', observateur.user_id,
                              '549b444b13adf218427fb681']:
@@ -190,26 +202,18 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     protocoles = observateur.user['protocoles']
     assert len(protocoles) == 1, protocoles
     assert 'date_inscription' in protocoles[0], protocoles[0]
-    assert protocoles[0].get('protocole', '') == protocole_id, protocoles[0]
+    assert (protocoles[0].get('protocole', '') ==
+            {'_id': protocole_id, 'titre': protocole['titre']}), protocoles[0]
     # Try to validate myself
-    etag = observateur.user['_etag']
-    r = observateur.patch(observateur.url, headers={'If-Match': etag},
-                          json={'protocoles': [{'protocole': protocole_id,
-                                                'valide': True}]})
-    assert r.status_code == 422, r.text
+    validate_url = '/protocoles/{}/{}/valider'.format(protocole_id, observateur.user_id)
+    r = observateur.post(validate_url)
+    assert r.status_code == 403, r.text
     # Admin validates me
-    date_inscription = format_datetime(datetime.utcnow())
-    r = administrateur.patch(observateur.url, headers={'If-Match': etag},
-                             json={'protocoles': [{'protocole': protocole_id,
-                                                   'date_inscription': date_inscription,
-                                                   'valide': True}]})
+    r = administrateur.post(validate_url)
     assert r.status_code == 200, r.text
     observateur.update_user()
-    assert observateur.user['protocoles'] == [{'protocole': protocole_id,
-                                               'date_inscription': date_inscription,
-                                               'valide': True}]
+    assert observateur.user['protocoles'][0]['valide']
     # Macro-protocoles are not subscriptable
-    etag = observateur.user['_etag']
     r = observateur.post(protocole_url.format(macro_protocole_id))
     assert r.status_code == 422, r.text
 
@@ -235,8 +239,10 @@ def validate_dict(scheme, to_validate):
 def test_multi_join(observateur, administrateur, protocoles_base):
     macro_protocole = protocoles_base[0]
     protocole1_id = str(protocoles_base[1]['_id'])
+    protocole1_titre = protocoles_base[1]['titre']
     protocole2_id = str(protocoles_base[2]['_id'])
-    protocole_url = '/protocoles/{}/action/join'
+    protocole2_titre = protocoles_base[2]['titre']
+    protocole_url = '/protocoles/{}/join'
     # Make the observateur join a protocole and validate it
     etag = observateur.user['_etag']
     date_inscription = format_datetime(datetime.utcnow())
@@ -251,7 +257,9 @@ def test_multi_join(observateur, administrateur, protocoles_base):
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert len(observateur.user['protocoles']) == 2
-    assert observateur.user['protocoles'][0] == {'protocole': protocole1_id,
-                                                 'date_inscription': date_inscription,
-                                                 'valide': True}
-    assert observateur.user['protocoles'][1]['protocole'] == protocole2_id
+    assert (observateur.user['protocoles'][0]['protocole'] ==
+            {'_id': protocole1_id, 'titre': protocole1_titre})
+    assert observateur.user['protocoles'][0]['valide'] == True
+    assert (observateur.user['protocoles'][1]['protocole'] ==
+            {'_id': protocole2_id, 'titre': protocole2_titre})
+    assert observateur.user['protocoles'][1].get('valide', False) == False

@@ -2,6 +2,7 @@ from functools import wraps
 
 from flask import Flask, Blueprint, current_app, abort
 from datetime import datetime
+from bson import ObjectId
 
 from .cors import crossdomain
 from .schema import Validator
@@ -74,50 +75,75 @@ class Resource(Blueprint):
         payload['_id'] = current_app.data.db[self.name].insert(payload)
         return payload
 
-    def update(self, id, payload, if_match, auto_abort=True):
-        """Update in database a new document of the resource"""
-        # Retreive and check payload
-        if not payload:
-            if auto_abort:
-                abort(422, 'Bad payload')
-            else:
-                raise DocumentException('Bad payload')
+    def _atomic_update(self, obj_id, payload, if_match=False):
         # Retrieve previous version of the document
-        old_document = current_app.data.db[self.name].find_one({'_id': id})
-        if not old_document:
-            abort(404)
-        # Check If-Match conidition
-        if old_document.get('_etag', '') != if_match:
-            abort(412, 'If-Match condition has failed')
+        if not isinstance(obj_id, ObjectId):
+            raise ValueError("obj_id must be ObjectId")
+        document = self.find_one({'_id': obj_id})
+        if not document:
+            return (404, )
+        old_etag = document['_etag']
+        # Check for race condition
+        if if_match and old_etag != if_match:
+            return (412, 'If-Match condition has failed')
         # Provide to the validator additional data needed for some validatations
         additional_context = {
             'resource': self,
-            'old_document': old_document
+            'old_document': document
         }
         # Validate payload against resource schema
         result = self.validator.validate(payload, is_update=True,
                                          additional_context=additional_context)
         if result.errors:
-            if auto_abort:
-                abort(422, result.errors)
-            else:
-                raise DocumentException(result.errors)
+            return (422, result.errors)
+        # Merge payload to update existing document
+        document.update(payload)
         # Complete the payload with metada
-        payload['_updated'] = datetime.utcnow().replace(microsecond=0)
-        payload['_etag'] = build_etag(payload)
+        document['_updated'] = datetime.utcnow().replace(microsecond=0)
+        del document['_etag']
+        document['_etag'] = build_etag(document)
         # Finally do the actual update in db using again the if_match
         # field in the lookup to prevent race condition
         result = current_app.data.db[self.name].update(
-            {'_id': id, '_etag': if_match}, {'$set': payload})
+            {'_id': obj_id, '_etag': old_etag}, document)
         if not result['updatedExisting']:
+            return (412, 'If-Match condition has failed')
+        return (200, document)
+
+    def update(self, obj_id, payload, if_match=False, auto_abort=True):
+        """
+            Update in database a document of the resource
+            :param if_match: race condition politic, if if_match is False the
+                             update will be repeatedly tried until accepted,
+                             if if_match is an etag, the update will be rejected
+                             if it differs from the document's etag
+        """
+        def error(code, msg=None):
             if auto_abort:
-                abort(412, 'If-Match condition has failed')
+                abort(code, msg)
             else:
-                raise DocumentException('If-Match condition has failed')
-        return payload
+                raise DocumentException((code, msg))
+        # Retrieve and check payload
+        if not payload:
+            error(422, 'bad payload')
+        if not if_match:
+            # No if_match, in case of race condition, repeatedly try the update
+            while True:
+                result = self._atomic_update(obj_id, payload.copy())
+                if result[0] != 412:
+                    break
+        else:
+            # Else abort in case of race condition
+            result = self._atomic_update(obj_id, payload, if_match=if_match)
+            if result[0] != 200:
+                error(*result)
+        return result[1]
 
     def find(self, *args, **kwargs):
         return current_app.data.db[self.name].find(*args, **kwargs)
+
+    def remove(self, *args, **kwargs):
+        return current_app.data.db[self.name].remove(*args, **kwargs)
 
     def find_one(self, *args, **kwargs):
         return current_app.data.db[self.name].find_one(*args, **kwargs)

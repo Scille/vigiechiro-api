@@ -17,11 +17,10 @@ from werkzeug.routing import BaseConverter
 
 
 def dict_projection(data, projection):
-    opt_in = {k for k, v in projection.items() if isinstance(v, bool) and v}
-    opt_out = {k for k, v in projection.items() if isinstance(v, bool) and not v}
+    opt_in = {k for k, v in projection.items() if not isinstance(v,dict) and v}
+    opt_out = {k for k, v in projection.items() if not isinstance(v, dict) and not v}
     # If one field is opt in, all the filter is done by opt in
     if opt_in:
-        print(opt_in)
         # Remove all the fields except the opt in and the ones which
         # must be recursively checked (i.e. remove the fields marked as opt out
         # and the ones not mentioned in projection)

@@ -5,11 +5,7 @@
     see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893670
 """
 
-from flask import current_app, request, g
-from bson import ObjectId
-from bson.errors import InvalidId
-
-from ..xin import Resource, preprocessor
+from ..xin import Resource
 from ..xin.tools import jsonify, abort, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation
@@ -22,7 +18,7 @@ SCHEMA = {
     'description': {'type': 'string'},
     'parents': {
         'type': 'list',
-        'schema': relation('taxons', embeddable=True),
+        'schema': relation('taxons'),
         'non_recursive_dependancy': True
     },
     'liens': {
@@ -39,7 +35,7 @@ SCHEMA = {
     },
     'date_valide': {'type': 'datetime'},
 }
-CONST_FIELDS = {'proprietaire', 'nom', 'mime', 'lien'}
+
 
 taxons = Resource('taxons', __name__, schema=SCHEMA)
 
@@ -68,6 +64,20 @@ def non_recursive_dependancy(context):
         check_recur(children.copy(), curr_id)
 
 
+def expend_parents_libelles(document):
+    # TODO: this can be optimized by caching taxons' libelles
+    if 'parents' not in document:
+        return document
+    parents = []
+    for parent_id in document['parents']:
+        parent = taxons.find_one({'_id': parent_id},
+                                 {'libelle_long': 1, 'libelle_court': 1})
+        if parent:
+            parents.append(parent)
+    document['parents'] = parents
+    return document
+
+
 @taxons.route('/taxons', methods=['GET'])
 @requires_auth(roles='Observateur')
 def list_taxons():
@@ -80,8 +90,8 @@ def list_taxons():
 @requires_auth(roles='Administrateur')
 def create_taxon():
     payload = get_payload()
-    new_id = taxons.insert(payload)
-    return jsonify({'_id': new_id}), 201
+    inserted_payload = taxons.insert(payload)
+    return jsonify(inserted_payload), 201
 
 
 @taxons.route('/taxons/<objectid:taxon_id>', methods=['GET'])

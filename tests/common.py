@@ -41,6 +41,13 @@ def administrateur(request):
 
 
 @pytest.fixture
+def validateur(request):
+    auth = AuthRequests(role='Validateur')
+    request.addfinalizer(auth.finalizer)
+    return auth
+
+
+@pytest.fixture
 def observateur(request):
     auth = AuthRequests(role='Observateur')
     request.addfinalizer(auth.finalizer)
@@ -48,8 +55,9 @@ def observateur(request):
 
 
 @pytest.fixture
-def validateur(request):
-    auth = AuthRequests(role='Validateur')
+def observateur_other(request):
+    # It can be useful to have a friend to play with...
+    auth = AuthRequests(role='Observateur')
     request.addfinalizer(auth.finalizer)
     return auth
 

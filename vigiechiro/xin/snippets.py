@@ -34,13 +34,13 @@ def get_resource(resource, obj_id, auto_abort=True, projection=None):
     obj_id = parse_id(obj_id)
     if not obj_id:
         if auto_abort:
-            abort(422, 'Invalid ObjectId {}'.format(obj_id))
+            abort(422, 'invalid ObjectId `{}`'.format(obj_id))
         else:
             return None
     obj = current_app.data.db[resource].find_one({'_id': obj_id}, projection)
     if not obj:
         if auto_abort:
-            abort(404, '{} is not a valid {} resource'.format(obj_id, resource))
+            abort(404, '`{}` is not a valid {} resource'.format(obj_id, resource))
         else:
             return None
     return obj

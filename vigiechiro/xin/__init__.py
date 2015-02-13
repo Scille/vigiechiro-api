@@ -6,4 +6,3 @@
 """
 
 from .resource import Resource
-from .cors import preprocessor

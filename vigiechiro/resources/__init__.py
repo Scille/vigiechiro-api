@@ -4,6 +4,8 @@
 
 from .utilisateurs import utilisateurs
 from .taxons import taxons
+from .protocoles import protocoles
+from .fichiers import fichiers
 
 # from .utilisateur import blueprint
 # from .fichier import fichiers

@@ -197,15 +197,15 @@ class GenericValidator:
 
     def _validate_attribute_max(self, context):
         max = context.schema['max']
-        if isinstance(context.value, (_int_types, float)):
-            if context.value > max_value:
-                context.add_error(self.ERROR_MAX_VALUE % max_value)
+        if isinstance(context.value, (int, float)):
+            if context.value > max:
+                context.add_error(self.ERROR_MAX_VALUE % max)
 
     def _validate_attribute_min(self, context):
         min = context.schema['min']
-        if isinstance(context.value, (_int_types, float)):
-            if context.value < min_value:
-                context.add_error(self.ERROR_MIN_VALUE % min_value)
+        if isinstance(context.value, (int, float)):
+            if context.value < min:
+                context.add_error(self.ERROR_MIN_VALUE % min)
 
     def _validate_attribute_allowed(self, context):
         allowed_values = context.schema['allowed']
@@ -235,7 +235,15 @@ class GenericValidator:
         pass
 
     def _validate_schema(self, context):
-       for attribute in context.schema.keys():
+        # A schema must containt a type, which is guaranteed to be applied first
+        if 'type' not in context.schema:
+            raise ValidatorSchemaException('{} : schema must contain a `type`'.format(
+                context.get_current_path()))
+        self._validate_attribute_type(context)
+        # Apply the rest of the attributes
+        for attribute in context.schema.keys():
+            if attribute == 'type':
+                continue
             validate_attribute = getattr(self, "_validate_attribute_" + attribute, None)
             if not validate_attribute:
                 raise ValidatorSchemaException('{} : unknown attribute `{}`'.format(
@@ -330,11 +338,20 @@ class Validator(GenericValidator):
             context.add_error(self.ERROR_READONLY_FIELD)
 
     def _validate_attribute_data_relation(self, context):
-        # TODO
-        pass
+        data_relation = context.schema['data_relation']
+        resource_name = data_relation.get('resource', None)
+        field = data_relation.get('field', None)
+        projection = data_relation.get('projection', {})
+        if not resource_name or not field:
+            raise ValidatorSchemaException('missing `field` and/or `resource`')
+        data_relation = current_app.data.db[resource_name].find_one(
+            {field: context.value}, projection)
+        if not data_relation:
+            context.add_error("value '%s' must exist in resource"
+                              " '%s', field '%s'." %
+                              (context.value, resource_name, field))
 
     def _validate_attribute_unique(self, context):
-        # return
         if not context.schema['unique']:
             return
         query = {context.field: context.value}
@@ -343,6 +360,5 @@ class Validator(GenericValidator):
         if document_id:
             query['_id'] = {'$ne': document_id}
         resource_name = context.additional_context['resource'].name
-        # import pdb; pdb.set_trace()
         if current_app.data.db[resource_name].find_one(query):
             context.add_error(self.ERROR_UNIQUE_FIELD % context.value)
