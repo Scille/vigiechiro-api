@@ -9,14 +9,13 @@ from functools import wraps
 from datetime import datetime, timedelta
 import bson
 
-from flask import Blueprint, redirect, g
-from flask import app, current_app, request
-import eve.auth
-import eve.render
+from flask import Blueprint, redirect, g, Response
+from flask import app, current_app, request, abort
 from authomatic.extras.flask import FlaskAuthomatic
 
-from .tools import abort
+from .tools import jsonify
 from .. import settings
+
 
 def check_auth(token, allowed_roles):
     """
@@ -63,23 +62,12 @@ def requires_auth(roles=[]):
         def decorated(*args, **kwargs):
             auth = request.authorization
             if not auth or not check_auth(auth.username, roles):
-                return current_app.auth.authenticate()
+                # Returns a 401 that enables basic auth
+                resp = Response(None, 401, {'WWW-Authenticate': 'Basic realm:"%s"' % __package__})
+                abort(401, description='Please provide proper credentials', response=resp)
             return f(*args, **kwargs)
         return decorated
     return decorator
-
-
-class TokenAuth(eve.auth.TokenAuth):
-
-    """Custom token & roles authentification for Eve"""
-
-    def check_auth(self, token, allowed_roles, resource, method):
-        if check_auth(token, allowed_roles):
-            current_app.set_request_auth_value(
-                g.request_user['_id'])
-            return True
-        else:
-            return False
 
 
 def auth_factory(services, mock_provider=False):
@@ -131,7 +119,7 @@ def auth_factory(services, mock_provider=False):
             if not result['n']:
                 abort(404)
             logging.info('Destroying token {}'.format(token))
-        return eve.render.send_response(None, [])
+        return jsonify({'_status': 'Disconnected'})
     return auth_blueprint
 
 
@@ -155,7 +143,6 @@ def login(authomatic, provider_name):
             # Lookup for existing user by email and provider id
             user_db = users_db.find_one({'$or': [{'email': user.email},
                                                  {provider_id_name: user.id}]})
-            from ..resource.utilisateurs import utilisateurs
             if user_db:
                 # Add the new token and check expire date for existing ones
                 tokens = {new_token: new_token_expire}
@@ -163,10 +150,9 @@ def login(authomatic, provider_name):
                 for token, token_expire in user_db['tokens'].items():
                     if now < token_expire:
                         tokens[token] = token_expire
-                # users_db.update({'email': user.email},
-                utilisateurs.update({'email': user.email},
-                                {"$set": {provider_id_name: user.id,
-                                          'tokens': tokens}})
+                users_db.update({'email': user.email},
+                                    {"$set": {provider_id_name: user.id,
+                                             'tokens': tokens}})
             else:
                 # We must switch to admin mode to insert a new user
                 # g.request_user = {'role': 'Administrateur'}
@@ -178,8 +164,7 @@ def login(authomatic, provider_name):
                     'role': 'Observateur',
                     'donnees_publiques': True
                 }
-                user_id = utilisateurs.insert(user_payload)
-                # user_id = users_db.insert(user_payload)
+                user_id = users_db.insert(user_payload)
                 if not user_id:
                     logging.error('Cannot create user {}'.format(
                                   user_payload))

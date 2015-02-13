@@ -11,7 +11,6 @@ from vigiechiro.resources import utilisateurs as utilisateurs_resource
 from test_protocole import protocoles_base
 from test_taxon import taxons_base
 
-
 @pytest.fixture(scope="module")
 def users_base(request):
     token_expire = datetime.utcnow() + timedelta(days=1)
@@ -35,8 +34,15 @@ def users_base(request):
          'role': 'Administrateur',
          'tokens': {'IP12XQN81X4AX3NYP9TIRDUVDJS4KJXE': token_expire}}
     ]
-    users = [with_flask_context(lambda: taxons_resource.insert(user))()
-                for user in users]
+    @with_flask_context
+    def insert_users():
+        inserted_users = []
+        for user in users:
+            inserted_user = utilisateurs_resource.insert(user, auto_abort=False)
+            assert inserted_user
+            inserted_users.append(inserted_user)
+        return inserted_users
+    users = insert_users()
     def finalizer():
         for user in users:
             db.utilisateurs.remove({'_id': user['_id']})

@@ -9,17 +9,20 @@ from vigiechiro import settings
 from test_utilisateur import users_base
 
 
+PROTECTED_URL = settings.BACKEND_DOMAIN + '/utilisateurs/moi'
+
+
 def test_allowed():
-    assert requests.get(settings.BACKEND_DOMAIN).status_code == 401
+    assert requests.get(PROTECTED_URL).status_code == 401
 
 
 def test_token_access(users_base):
     user = users_base[0]
     for token in user['tokens']:
-        r = requests.get(settings.BACKEND_DOMAIN, auth=(token, None))
+        r = requests.get(PROTECTED_URL, auth=(token, None))
         assert r.status_code == 200
     dummy_token = 'J9QV87RDUW9UFE8D6WSKXYYZ6CGBG17G'
-    r = requests.get(settings.BACKEND_DOMAIN, auth=(dummy_token, None))
+    r = requests.get(PROTECTED_URL, auth=(dummy_token, None))
     assert r.status_code == 401
 
 
@@ -44,7 +47,7 @@ def test_single_login():
     print(qs)
     assert 'token' in qs
     token = qs['token'][0]
-    r = requests.get(settings.BACKEND_DOMAIN, auth=(token, None))
+    r = requests.get(PROTECTED_URL, auth=(token, None))
     assert r.status_code == 200, r.text
     return token
 
@@ -54,13 +57,13 @@ def test_multi_login():
     # Test multi-login as well, both should work at the same time
     second_token = test_single_login()
     for token in [first_token, second_token]:
-        r = requests.get(settings.BACKEND_DOMAIN, auth=(token, None))
+        r = requests.get(PROTECTED_URL, auth=(token, None))
         assert r.status_code == 200, r.text
 
 
 def test_logout(observateur):
     r = observateur.post('/logout')
     assert r.status_code == 200
-    r = observateur.get('/')
+    r = observateur.get('/utilisateurs/moi')
     assert r.status_code == 401
 

@@ -28,6 +28,7 @@ def format_datetime(dt):
 def with_flask_context(f):
     def decorator(*args, **kwargs):
         with app.test_request_context():
+            g.request_user = {'role': 'Administrateur'}
             return f(*args, **kwargs)
     return decorator
 
@@ -73,10 +74,13 @@ class AuthRequests:
         }
         for key, value in fields:
             self.user[key] = value
-        with app.test_request_context() as c:
-            g.request_user = {'role': 'Administrateur'}
-            self.user = utilisateurs_resource.insert(payload)
-            self.user_id = str(self.user['_id'])
+        @with_flask_context
+        def insert_user():
+            inserted = utilisateurs_resource.insert(payload, auto_abort=False)
+            assert inserted
+            return inserted
+        self.user = insert_user()
+        self.user_id = str(self.user['_id'])
         # self.update_user()
         self.url = '/utilisateurs/' + self.user_id
 

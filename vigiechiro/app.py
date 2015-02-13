@@ -8,34 +8,9 @@ from . import settings
 from .resources.utilisateurs import utilisateurs
 from .resources.taxons import taxons
 
-from .xin.auth import TokenAuth, auth_factory
+from .xin.auth import auth_factory
 from .xin.tools import ObjectIdConverter
 
-
-# def bootstrap():
-#     config = Config(dirname(abspath(__file__)))
-#     config.from_pyfile('settings.py')
-#     resources = [
-#         # utilisateurs,
-#         fichiers,
-#         taxons,
-#         sites,
-#         protocoles,
-#         participations,
-#         grille_stoc,
-#         actualites]
-#     config['DOMAIN'] = {r.name: r.domain for r in resources}
-#     config['PROPAGATE_EXCEPTIONS'] = True
-
-
-#     app = Eve(auth=TokenAuth, validator=Validator, redis=r, settings=config)
-#     app.register_blueprint(auth_factory(settings.AUTHOMATIC.keys(),
-#                                         mock_provider=settings.DEV_FAKE_AUTH))
-
-#     for resource in resources:
-#         app.register_blueprint(resource)
-#     app.register_blueprint(utilisateurs.blueprint)
-#     return app
 
 from flask import Flask, jsonify
 from werkzeug.exceptions import default_exceptions
