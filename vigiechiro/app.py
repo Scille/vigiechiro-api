@@ -53,6 +53,7 @@ def init_app():
     app.register_blueprint(resources.grille_stoc)
     app.register_blueprint(resources.actualites)
     app.register_blueprint(resources.sites)
+    app.register_blueprint(resources.participations)
     make_json_app(app)
     return app
 

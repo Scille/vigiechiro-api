@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime
 
 from common import db, observateur, validateur, administrateur, format_datetime, with_flask_context
 from vigiechiro import settings
@@ -25,22 +26,24 @@ def test_actualites(observateur, administrateur, protocoles_base):
         'protocole': protocole_id
         })
     assert r.status_code == 201, r.text
+    site_id = r.json()['_id']
     # Lock the site
-    r = administrateur.patch('/sites/{}/verrouille'.format(r.json()['_id']),
+    r = administrateur.patch('/sites/{}/verrouille'.format(site_id),
         json={'verrouille': True})
     assert r.status_code == 200, r.text
-    # TODO : Create a participation
-    # r = observateur.post('/participations')
-
+    # Create a participation
+    r = observateur.post('/sites/{}/participations'.format(site_id),
+                         json={'date_debut': format_datetime(datetime.utcnow())})
     # Now check the actualities to retrieve the actions
     r = observateur.get('/moi/actualites')
     assert r.status_code == 200, r.text
     actualites = r.json()['_items']
     print(actualites)
-    assert len(actualites) == 3, actualites
-    actualites[0]['action'] == 'NOUVEAU_SITE'
-    actualites[1]['action'] == 'VALIDATION_PROTOCOLE'
-    actualites[2]['action'] == 'INSCRIPTION_PROTOCOLE'
+    assert len(actualites) == 4, actualites
+    actualites[0]['action'] == 'NOUVELLE_PARTICIPATION'
+    actualites[1]['action'] == 'NOUVEAU_SITE'
+    actualites[2]['action'] == 'VALIDATION_PROTOCOLE'
+    actualites[3]['action'] == 'INSCRIPTION_PROTOCOLE'
 
 
 def test_follow():

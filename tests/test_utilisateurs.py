@@ -257,3 +257,7 @@ def test_multi_join(observateur, administrateur, protocoles_base):
     assert (observateur.user['protocoles'][1]['protocole'] ==
             {'_id': protocole2_id, 'titre': protocole2_titre})
     assert observateur.user['protocoles'][1].get('valide', False) == False
+    # List observateur's protocoles
+    r = observateur.get('/moi/protocoles')
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 2, r.json()

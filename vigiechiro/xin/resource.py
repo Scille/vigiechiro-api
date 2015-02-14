@@ -75,7 +75,7 @@ class Resource(Blueprint):
         payload['_id'] = current_app.data.db[self.name].insert(payload)
         return payload
 
-    def _atomic_update(self, obj_id, payload, if_match=False):
+    def _atomic_update(self, obj_id, payload, if_match=False, custom_merge=None):
         # Retrieve previous version of the document
         if not isinstance(obj_id, ObjectId):
             raise ValueError("obj_id must be ObjectId")
@@ -97,7 +97,10 @@ class Resource(Blueprint):
         if result.errors:
             return (422, result.errors)
         # Merge payload to update existing document
-        document.update(payload)
+        if custom_merge:
+            document = custom_merge(document, payload)
+        else:
+            document.update(payload)
         # Complete the payload with metada
         document['_updated'] = datetime.utcnow().replace(microsecond=0)
         del document['_etag']
@@ -110,7 +113,7 @@ class Resource(Blueprint):
             return (412, 'If-Match condition has failed')
         return (200, document)
 
-    def update(self, obj_id, payload, if_match=False, auto_abort=True):
+    def update(self, obj_id, payload, if_match=False, auto_abort=True, custom_merge=None):
         """
             Update in database a document of the resource
             :param if_match: race condition politic, if if_match is False the
@@ -129,12 +132,14 @@ class Resource(Blueprint):
         if not if_match:
             # No if_match, in case of race condition, repeatedly try the update
             while True:
-                result = self._atomic_update(obj_id, payload.copy())
+                result = self._atomic_update(obj_id, payload.copy(),
+                                             custom_merge=custom_merge)
                 if result[0] != 412:
                     break
         else:
             # Else abort in case of race condition
-            result = self._atomic_update(obj_id, payload, if_match=if_match)
+            result = self._atomic_update(obj_id, payload, if_match=if_match,
+                                         custom_merge=custom_merge)
             if result[0] != 200:
                 error(*result)
         return result[1]

@@ -47,9 +47,9 @@ def get_resource(resource, obj_id, auto_abort=True, projection=None):
 def get_payload(allowed_fields=None):
     """Return the json payload if present or abort request"""
     payload = request.get_json()
-    provided_fields = set(payload.keys())
     if not payload:
         abort(412, 'Content-Type is not `application/json`')
+    provided_fields = set(payload.keys())
     if allowed_fields:
         invalid_fields = provided_fields - set(allowed_fields)
         if invalid_fields:

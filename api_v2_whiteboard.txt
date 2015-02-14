@@ -1,6 +1,17 @@
 Api v2 whiteboard
 =================
 
+Introductions
+-------------
+
+### verbes HTTP :
+
+ - GET : récupération d'élément (retourne 200)
+ - POST : création d'élément (retourne 201)
+ - PATCH : modification unitaire (retourne 200)
+ - PUT : modification non unitaire (par exemple d'une liste), if_match requis (retourne 200)
+ - DELETE : destruction d'élément (retourn 204)
+
 Utilisateurs
 ------------
 
@@ -287,11 +298,14 @@ Nom          |  type   | Requis | Description
 
 **Response**
 ```
-[
-    {
-        ...
-    }
-]
+200
+{
+    '_items': [
+        {
+            ...
+        }
+    ]    
+}
 ```
 
 
@@ -309,11 +323,14 @@ Nom          |  type   | Requis | Description
 
 **Response**
 ```
-[
-    {
-        ...
-    }
-]
+200
+{
+    '_items': [
+        {
+            ...
+        }
+    ]    
+}
 ```
 
 ### Créer un site
@@ -509,31 +526,91 @@ Nom          |  type   | Requis | Description
 
 ### Créer une participation
 
-`POST /participations`
+`POST /site/#site_id/participations`
 
+**Input**
+
+Nom                    |  Type   | Requis | Description
+-----------------------|---------|--------|-------------
+numero                 | integer |  oui   | draft : à terme le numero sera déterminé automatiquement par l'api
+date_debut             | datetime|  oui   |
+date_fin               | datetime|  non   |
+commentaire            | string  |  non   |
+meteo                  | dict    |  non   |
+meteo.temperature_debut| integer |  non   |
+meteo.temperature_fin  | integer |  non   |
+meteo.vent             | string  |  non   | NUL', 'FAIBLE', 'MOYEN' ou 'FORT'
+meteo.couverture       | string  |  non   | '0-25', '25-50', '50-75' ou '75-100'
+pieces_jointes         | list    |  non   |
+pieces_jointes[x]      | ojectid |        | lien vers une ressource fichier
+configuration          | dict    |  oui   | configuration contenant des champs variables en fonction du type de protocole
+
+**Response**
+```
+201
+{
+    ...
+}
+```
 **Accès**
 
 Observateur validé auprès d'un protocole et disposant d'un site verrouillé
 
 
-### Modifier un participation
+### Modifier une participation
 
 `PATCH /participations/#id`
 
+**Input**
+
+Nom                    |  Type   | Requis | Description
+-----------------------|---------|--------|-------------
+date_debut             | datetime|  non   |
+date_fin               | datetime|  non   |
+commentaire            | string  |  non   |
+meteo                  | dict    |  non   |
+meteo.temperature_debut| integer |  non   |
+meteo.temperature_fin  | integer |  non   |
+meteo.vent             | string  |  non   | NUL', 'FAIBLE', 'MOYEN' ou 'FORT'
+meteo.couverture       | string  |  non   | '0-25', '25-50', '50-75' ou '75-100'
+configuration          | dict    |  non   | configuration contenant des champs variables en fonction du type de protocole
+
 **Accès**
 
-Observateur ayant créé la participation
+Administrateur et observateur ayant créé la participation
 
 
-### Commenter la participation
+### Ajouter des pièce jointes à la participation
 
-`POST /participation/#id/comment`
+`POST /participations/#id/pieces_jointes`
 
 **Input**
 
-Nom               |  Type   | Description
-------------------|---------|-------------
-commentaire       | string  |
+Nom                    |  Type   | Requis | Description
+-----------------------|---------|--------|-------------
+pieces_jointes         | list    |  oui   |
+pieces_jointes[x]      | ojectid |        | lien vers une ressource fichier dont l'upload est terminé
+
+Note : seuls les fichiers de mime type `image/*`, `application/ta`, `application/tac`, `sound/wav`/`audio/x-wav` sont acceptés
+
+**Accès**
+
+Administrateur et observateur ayant créé la participation
+
+
+### Poster un message dans la participation
+
+`POST /participation/#id/messages`
+
+**Input**
+
+Nom     |  Type   | Requis | Description
+--------|---------|--------|-------------
+message | string  |  oui   |
+
+**Accès**
+
+Administrateur, Validateur et observateur ayant créé la participation
 
 
 Données

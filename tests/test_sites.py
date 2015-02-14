@@ -51,6 +51,14 @@ def new_site_payload(request, protocoles_base):
     return payload
 
 
+def test_list_own_sites(obs_sites_base):
+    observateur, sites_base = obs_sites_base
+    url = 'sites/{}'.format(sites_base[0]['_id'])
+    r = observateur.get('/moi/sites')
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 2, r.json()
+
+
 def test_non_register_create_site(protocoles_base, observateur, administrateur):
     # Cannot create site if not register to a protocole
     site_payload = {
@@ -133,7 +141,6 @@ def test_lock_site(administrateur, obs_sites_base):
     observateur, sites_base = obs_sites_base
     url = 'sites/{}'.format(sites_base[0]['_id'])
     url_verrouille = url + '/verrouille'
-    etag = sites_base[0]['_etag']
     #  Observateur cannot lock site
     r = observateur.patch(url_verrouille, json={'verrouille': True})
     assert r.status_code == 403, r.text
@@ -144,8 +151,7 @@ def test_lock_site(administrateur, obs_sites_base):
     assert r.status_code == 200, r.text
     assert 'verrouille' in r.json() and r.json()['verrouille']
     # Now observateur cannot modify the site
-    etag = r.json()['_etag']
-    r = observateur.patch(url, headers={'If-Match': etag},
+    r = observateur.patch(url, headers={'If-Match': r.json()['_etag']},
                           json={'commentaire': "Can't touch this !"})
     assert r.status_code == 403, r.text
 

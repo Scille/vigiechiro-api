@@ -83,6 +83,15 @@ def list_sites():
     return pagination.make_response(cursor)
 
 
+@sites.route('/moi/sites', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_user_sites():
+    pagination = Paginator()
+    cursor = sites.find({'observateur': g.request_user['_id']},
+                        skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(cursor)
+
+
 @sites.route('/sites', methods=['POST'])
 @requires_auth(roles='Observateur')
 def create_site():

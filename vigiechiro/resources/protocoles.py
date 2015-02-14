@@ -75,6 +75,16 @@ def list_protocoles():
     return pagination.make_response(cursor)
 
 
+@protocoles.route('/moi/protocoles', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_user_protocoles():
+    pagination = Paginator()
+    joined_ids = [p['protocole'] for p in g.request_user.get('protocoles', [])]
+    cursor = protocoles.find({'_id': {'$in': joined_ids}},
+                             skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(cursor)
+
+
 @protocoles.route('/protocoles', methods=['POST'])
 @requires_auth(roles='Administrateur')
 def create_protocole():

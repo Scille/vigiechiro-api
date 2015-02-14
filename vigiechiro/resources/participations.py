@@ -5,183 +5,187 @@
     see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893657
 """
 
-from flask import abort, current_app
+from flask import abort, current_app, g
+from datetime import datetime
 
-from ..xin import EveBlueprint
-from ..xin.domain import relation, choice, get_resource
+from ..xin import Resource
+from ..xin.tools import jsonify, abort, dict_projection
+from ..xin.auth import requires_auth
+from ..xin.schema import relation, choice
+from ..xin.snippets import get_payload, get_if_match, Paginator, get_resource
 
-from . import actualite
+from .actualites import create_actuality_nouvelle_participation
 
 
-DOMAIN = {
-    'item_title': 'participation',
-    'resource_methods': ['GET', 'POST'],
-    'item_methods': ['GET', 'PATCH', 'PUT'],
-    'allowed_read_roles': ['Observateur'],
-    'allowed_write_roles': ['Observateur'],
-    'allowed_item_read_roles': ['Observateur'],
-    'allowed_item_write_roles': ['Observateur'],
-    'schema': {
-        'observateur': relation('utilisateurs', required=True),
-        'protocole': relation('protocoles', required=True),
-        'site': relation('sites', required=True),
-        # 'numero': {'type': 'integer', 'required': True},
-        'date_debut': {'type': 'datetime', 'required': True},
-        'date_fin': {'type': 'datetime'},
-        'meteo': {
+SCHEMA = {
+    'observateur': relation('utilisateurs', required=True),
+    'protocole': relation('protocoles', required=True),
+    'site': relation('sites', required=True),
+    # 'numero': {'type': 'integer', 'required': True},
+    'date_debut': {'type': 'datetime', 'required': True},
+    'date_fin': {'type': 'datetime'},
+    'meteo': {
+        'type': 'dict',
+        'schema': {
+            'temperature_debut': {'type': 'integer'},
+            'temperature_fin': {'type': 'integer'},
+            'vent': choice(['NUL', 'FAIBLE', 'MOYEN', 'FORT']),
+            'couverture': choice(['0-25', '25-50', '50-75', '75-100']),
+        }
+    },
+    'commentaire': {'type': 'string'},
+    'pieces_jointes': {
+        'type': 'list',
+        'schema': relation('fichiers', required=True)
+    },
+    'messages': {
+        'type': 'list',
+        'schema': {
             'type': 'dict',
             'schema': {
-                'temperature_debut': {'type': 'integer'},
-                'temperature_fin': {'type': 'integer'},
-                'vent': choice(['NUL', 'FAIBLE', 'MOYEN', 'FORT']),
-                'couverture': choice(['0-25', '25-50', '50-75', '75-100']),
+                'auteur': relation('utilisateurs', required=True),
+                'message': {'type': 'string', 'required': True},
+                'date': {'type': 'datetime', 'required': True},
             }
-        },
-        'commentaire': {'type': 'string'},
-        'pieces_jointes': {
-            'type': 'list',
-            'schema': relation('fichiers', required=True)
-        },
-        'posts': {
-            'type': 'list',
-            'schema': {
-                'type': 'dict',
-                'schema': {
-                    'auteur': relation('utilisateurs', required=True),
-                    'message': {'type': 'string', 'required': True},
-                    'date': {'type': 'datetime', 'required': True},
-                }
-            }
-        },
-        'configuration': {
-            'type': 'dict',
-            'schema': {
-                'detecteur_enregistreur_numero_serie': {'type': 'string'},
-                # TODO : create the custom_code type (dynamically
-                # parametrized regex)
-                # 'detecteur_enregistreur_type': {'type': 'custom_code'},
-                'micro0_position': choice(['SOL', 'CANOPEE']),
-                'micro0_numero_serie': {'type': 'string'},
-                # 'micro0_type': {'type': 'custom_code'},
-                'micro0_hauteur': {'type': 'integer'},
-                'micro1_position': choice(['SOL', 'CANOPEE']),
-                'micro1_numero_serie': {'type': 'string'},
-                # 'micro1_type': {'type': 'custom_code'},
-                'micro1_hauteur': {'type': 'integer'},
-                # 'piste0_expansion': {'type': 'custom_code'},
-                # 'piste1_expansion': {'type': 'custom_code'}
-            }
+        }
+    },
+    'configuration': {
+        'type': 'dict',
+        'schema': {
+            'detecteur_enregistreur_numero_serie': {'type': 'string'},
+            # TODO : create the custom_code type (dynamically
+            # parametrized regex)
+            # 'detecteur_enregistreur_type': {'type': 'custom_code'},
+            'micro0_position': choice(['SOL', 'CANOPEE']),
+            'micro0_numero_serie': {'type': 'string'},
+            # 'micro0_type': {'type': 'custom_code'},
+            'micro0_hauteur': {'type': 'integer'},
+            'micro1_position': choice(['SOL', 'CANOPEE']),
+            'micro1_numero_serie': {'type': 'string'},
+            # 'micro1_type': {'type': 'custom_code'},
+            'micro1_hauteur': {'type': 'integer'},
+            # 'piste0_expansion': {'type': 'custom_code'},
+            # 'piste1_expansion': {'type': 'custom_code'}
         }
     }
 }
 
 
-participations = EveBlueprint('participations', __name__, domain=DOMAIN,
-                              auto_prefix=True)
+participations = Resource('participations', __name__, schema=SCHEMA)
 
 
-def _verify_participation_relations(payload):
-    if (current_app.g.request_user['role'] != 'Administrateur' and
-            current_app.g.request_user['_id'] != payload['observateur']):
-        abort(422, 'only Administrateur can post for someone else')
-    observateur = get_resource('utilisateurs', payload['observateur'])
-    protocole = get_resource('protocoles', payload['protocole'])
-    # Make sure the observateur has subscribed the protocole and is validated
-    protocole_subscribe = next((p for p in observateur.get('protocoles', [])
-                                if p['protocole'] == payload['protocole']), None)
-    if not protocole_subscribe:
-        abort(422, "user hasn't subscribed to protocole {}".format(
-            protocole['titre']))
-    if not protocole_subscribe.get('valide', False):
-        abort(422, "user cannot post to protocole {} until beeing"
-                   " validated".format(protocole['titre']))
-    # Now check site is linked to the requested protocole
-    site = get_resource('sites', payload['site'])
-    if site['protocole'] != payload['protocole']:
-        abort(422, "the site is not linked to protocole {}".format(
-            protocole['titre']))
-    if site['observateur'] != payload['observateur']:
-        abort(422, "cannot create a participation in a site the observateur"
-                   " is not owner")
+@participations.route('/participations', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_participations():
+    pagination = Paginator()
+    cursor = participations.find(skip=pagination.skip,
+                                 limit=pagination.max_results)
+    return pagination.make_response(cursor)
 
 
-@participations.event
-def on_insert(items):
-    """
-        New participation should only be issued by observateur registered
-        and accepted for the given protocole.
-    """
-    for item in items:
-        _verify_participation_relations(item)
+@participations.route('/moi/participations', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_user_participations():
+    pagination = Paginator()
+    cursor = participations.find({'observateur': g.request_user['_id']},
+                                 skip=pagination.skip,
+                                 limit=pagination.max_results)
+    return pagination.make_response(cursor)
 
 
-@participations.event
-def on_inserted(items):
-    for item in items:
-        actualite.create_actuality('NOUVELLE_PARTICIPATION',
-            sujet=current_app.g.request_user['_id'], objet=item['_id'])
+@participations.route('/participations/<objectid:participation_id>', methods=['GET'])
+@requires_auth(roles='Observateur')
+def display_participation(participation_id):
+    return jsonify(**participations.get_resource(participation_id))
 
 
-@participations.event
-def on_replace(item, original):
-    """
-        Check authorisations before replace:
-         - Administrateur can modify all participations
-         - Observateur can only modify it own participations
-    """
-    _verify_participation_relations(item)
+@participations.route('/sites/<objectid:site_id>/participations', methods=['POST'])
+@requires_auth(roles='Observateur')
+def create_participation(site_id):
+    # TODO : handle numero automatically
+    # payload = get_payload({'numero': True, 'date_debut': False,
+    payload = get_payload({'date_debut': False, 'date_fin': False,
+                           'commentaire': False, 'meteo': False,
+                           'configuration': False})
+    payload['observateur'] = g.request_user['_id']
+    payload['site'] = site_id
+    site_resource = get_resource('sites', site_id, auto_abort=False)
+    if not site_resource:
+        abort(422, {'site': 'no site with this id'})
+    if site_resource['observateur'] != g.request_user['_id']:
+        abort(422, {'site': "observateur doesn't own this site"})
+    if not site_resource.get('verrouille', False):
+        abort(422, {'site': "cannot create protocole on an unlocked site"})
+    protocole_id = site_resource['protocole']
+    payload['protocole'] = protocole_id
+    # Make sure observateur has joined protocole and is validated
+    joined = next((p for p in g.request_user.get('protocoles', [])
+                   if p['protocole'] == protocole_id), None)
+    if not joined:
+        abort(422, {'site': 'not registered to corresponding protocole'})
+    inserted_payload = participations.insert(payload)
+    # Finally create corresponding actuality
+    create_actuality_nouvelle_participation(inserted_payload)
+    return jsonify(**inserted_payload), 201
 
 
-@participations.event
-def on_update(updates, original):
-    """
-        Check authorisations before update:
-         - Administrateur can modify all participations
-         - Observateur can only modify it own participations
-    """
-    # Only run the verification if update involves observateur/protocole/site
-    verify_needed = False
-    updates = updates.copy()
-    for field in ('observateur', 'protocole', 'site'):
-        if field in updates:
-            verify_needed = True
-        else:
-            updates[field] = original[field]
-    if verify_needed:
-        _verify_participation_relations(updates)
+def _check_edit_access(participation_resource):
+    # Only owner and admin can edit
+    if (g.request_user['role'] != 'Administrateur' and
+        g.request_user['_id'] != participation_resource['observateur']):
+        abort(403)
 
 
-def get_configuration_fields():
-    return DOMAIN['schema']['configuration']['schema'].keys()
+def _check_add_message_access(participation_resource):
+    # Administrateur, Validateur and owner are allowed
+    if (g.request_user['role'] == 'Observateur' and
+        g.request_user['_id'] != participation_resource['observateur']):
+        abort(403)
 
 
-# @participations.route('/<participation_id>/action/commenter', methods=['GET'])
-# @requires_auth(roles='Observateur')
-# def comment(participation_id):
-#     """Add a new comment to the given participation"""
-#     participation_db = current_app.data.driver.db[participations.name]
-#     try:
-#         participation_id = bson.ObjectId(participation_id)
-#     except bson.errors.InvalidId:
-#         abort('Invalid ObjectId {}'.format(participation_id), code=400)
-#     participation = participation_db.find_one({'_id': participation_id})
-#     if not participation:
-#         abort(404)
-#     if 'posts' not in participation:
-#         participation['posts'] = []
-#     # participation['posts'].append(request.json)
-#     check_rights(participation)
-#     object_name = file_['nom']
-#     expires = int(time.time() + 10)
-#     get_request = "GET\n\n\n{}\n/{}/{}".format(
-#         expires,
-#         current_app.config['S3_BUCKET'],
-#         object_name)
-#     signature = base64.encodestring(
-#         hmac.new(current_app.config['AWS_SECRET'].encode(),
-#                  get_request.encode(), sha1).digest())
-#     signature = urllib.parse.quote_plus(signature.strip())
-#     url = 'https://{}.s3.amazonaws.com/{}'.format(
-#         current_app.config['S3_BUCKET'], object_name)
-#     return redirect('{}?AWSAccessKeyId={}&Expires={}&Signature={}'.format(
-#         url, current_app.config['AWS_KEY'], expires, signature), code=302)
+@participations.route('/participations/<objectid:participation_id>', methods=['PATCH'])
+@requires_auth(roles='Observateur')
+def edit_participation(participation_id):
+    participation_resource = participations.get_resource(participation_id)
+    _check_edit_access(participation_resource)
+    payload = get_payload({'date_debut': False, 'date_fin': False,
+                           'commentaire': False, 'meteo': False,
+                           'configuration': False})
+    inserted_payload = participations.update(participation_id, payload)
+    return jsonify(**inserted_payload), 200
+
+
+@participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['POST'])
+@requires_auth(roles='Observateur')
+def add_pieces_jointes(participation_id):
+    participation_resource = participations.get_resource(participation_id)
+    _check_edit_access(participation_resource)
+    payload = get_payload({'pieces_jointes': True})
+    # TODO check files data type
+    def custom_merge(document, payload):
+        # Append data at the end of the list
+        pieces = document.get('pieces_jointes', [])
+        document['pieces_jointes'] = pieces + payload['pieces_jointes']
+        return document
+    inserted_payload = participations.update(participation_id, payload,
+                                             custom_merge=custom_merge)
+    return jsonify(**inserted_payload), 201
+
+
+@participations.route('/participations/<objectid:participation_id>/messages', methods=['POST'])
+@requires_auth(roles='Observateur')
+def add_post(participation_id):
+    participation_resource = participations.get_resource(participation_id)
+    _check_add_message_access(participation_resource)
+    payload = {'messages': [
+        {'auteur': g.request_user['_id'], 'date': datetime.utcnow(),
+         'message': get_payload({'message': True})['message']}
+    ]}
+    def custom_merge(document, payload):
+        # Append data at the beginning of the list
+        previous_messages = document.get('messages', [])
+        document['messages'] = [payload['messages']] + previous_messages
+        return document
+    inserted_payload = participations.update(participation_id, payload,
+                                             custom_merge=custom_merge)
+    return jsonify(**inserted_payload), 201

@@ -9,3 +9,4 @@ from .fichiers import fichiers
 from .grille_stoc import grille_stoc
 from .actualites import actualites
 from .sites import sites
+from .participations import participations
