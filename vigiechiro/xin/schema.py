@@ -276,6 +276,28 @@ class GenericValidator:
             self._validate_schema(context)
             context.pop()
 
+    def _validate_type_set(self, context):
+        if isinstance(context.value, set):
+            # Set is not supported by mongodb, convert it to list
+            unserialized = list(context.value)
+            schema, field, _ = context.pop()
+            context.value[field] = unserialized
+            context.push(schema, field, unserialized)
+            return
+        error = lambda: context.add_error(self.ERROR_BAD_TYPE % 'set')
+        if not isinstance(context.value, list):
+            # Try to convert list into set
+            try:
+                list_set = set(context.value)
+                # Make sure we didn't loos any element
+                if len(list_set) != len(context.value):
+                    error()
+            except TypeError:
+                error()
+        else:
+            error()
+        return
+
     def _validate_type_dict(self, context):
         if not isinstance(context.value, dict):
             context.add_error(self.ERROR_BAD_TYPE % 'dict')

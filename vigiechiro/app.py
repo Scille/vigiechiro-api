@@ -5,22 +5,16 @@ from flask import Flask
 from flask.ext.pymongo import PyMongo
 
 from . import settings
-from .resources.utilisateurs import utilisateurs
-from .resources.taxons import taxons
-from .resources.fichiers import fichiers
-from .resources.protocoles import protocoles
-from .resources.grille_stoc import grille_stoc
+from . import resources
 
 from .xin.auth import auth_factory
 from .xin.tools import ObjectIdConverter
 
 
-from flask import Flask, jsonify
-from werkzeug.exceptions import default_exceptions
-from werkzeug.exceptions import HTTPException
-
-
 def make_json_app(app):
+    from flask import Flask, jsonify
+    from werkzeug.exceptions import default_exceptions
+    from werkzeug.exceptions import HTTPException
     """
     Creates a JSON-oriented Flask app.
 
@@ -52,13 +46,16 @@ def init_app():
     app.url_map.converters['objectid'] = ObjectIdConverter
     app.register_blueprint(auth_factory(settings.AUTHOMATIC.keys(),
                                         mock_provider=settings.DEV_FAKE_AUTH))
-    app.register_blueprint(utilisateurs)
-    app.register_blueprint(taxons)
-    app.register_blueprint(protocoles)
-    app.register_blueprint(fichiers)
-    app.register_blueprint(grille_stoc)
+    app.register_blueprint(resources.utilisateurs)
+    app.register_blueprint(resources.taxons)
+    app.register_blueprint(resources.protocoles)
+    app.register_blueprint(resources.fichiers)
+    app.register_blueprint(resources.grille_stoc)
+    app.register_blueprint(resources.actualites)
+    app.register_blueprint(resources.sites)
     make_json_app(app)
     return app
+
 
 app = init_app()
 

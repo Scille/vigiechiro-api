@@ -6,10 +6,10 @@ from urllib.parse import urlparse, parse_qs
 
 from common import db, observateur
 from vigiechiro import settings
-from test_utilisateur import users_base
+from test_utilisateurs import users_base
 
 
-PROTECTED_URL = settings.BACKEND_DOMAIN + '/utilisateurs/moi'
+PROTECTED_URL = settings.BACKEND_DOMAIN + '/moi'
 
 
 def test_allowed():
@@ -31,7 +31,7 @@ def test_expiration_token(observateur):
     token_expire = token_expire = datetime.utcnow() - timedelta(seconds=1)
     db.utilisateurs.update({'_id': ObjectId(observateur.user_id)},
                            {'$set': {'tokens.'+observateur.token: token_expire}})
-    r = observateur.get('/utilisateurs/moi')
+    r = observateur.get('/moi')
     assert r.status_code == 401, r.text
     content = r.json()
 
@@ -64,6 +64,6 @@ def test_multi_login():
 def test_logout(observateur):
     r = observateur.post('/logout')
     assert r.status_code == 200
-    r = observateur.get('/utilisateurs/moi')
+    r = observateur.get('/moi')
     assert r.status_code == 401
 

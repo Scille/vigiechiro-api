@@ -13,7 +13,7 @@ from werkzeug import Response
 from flask import app, current_app, abort, request
 from flask.ext.pymongo import PyMongo
 from bson.json_util import dumps
-from werkzeug.routing import BaseConverter
+from werkzeug.routing import BaseConverter, ValidationError
 
 
 def dict_projection(data, projection):
@@ -47,7 +47,10 @@ class ObjectIdConverter(BaseConverter):
         ... def route(object_id): return 'ok'
     """
     def to_python(self, value):
-        return parse_id(value)
+        converted = parse_id(value)
+        if not converted:
+            raise ValidationError()
+        return converted
 
     def to_url(self, value):
         return str(value)

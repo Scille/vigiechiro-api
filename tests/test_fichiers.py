@@ -90,7 +90,7 @@ def test_access_rights(file_uploaded, observateur, observateur_other,
     assert r.status_code == 200, r.text
     assert 's3_signed_url' in r.json()
     # Switch to private file
-    r = observateur.patch('/utilisateurs/moi',
+    r = observateur.patch('/moi',
                           headers={'If-Match': observateur.user['_etag']},
                           json={'donnees_publiques': False})
     assert r.status_code == 200, r.text

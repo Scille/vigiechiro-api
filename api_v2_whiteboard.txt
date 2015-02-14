@@ -11,10 +11,11 @@ Utilisateurs
 
 **Parameters**
 
-Nom          |  Type   | Description
--------------|---------|-------------
- page        | integer | Page courante
- max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+ q           | string  |  non   | Filtre de recherche
 
 **Response**
 ```
@@ -113,7 +114,7 @@ professionnel     | boolean |
 donnees_publiques | boolean |
 
 
-### Modifier le rôle d'un utilisateur
+### Modifier un utilisateur
 
 `PATCH /utilisateurs/#id/role`
 
@@ -123,9 +124,20 @@ Administrateur seulement
 
 **Input**
 
-Nom  |  Type   | Description
------|---------|-------------
-role | string  | nouveau role : `Administrateur`, `Validateur` ou `Observateur`
+Nom               |  Type   | Requis | Description
+------------------|---------|-------------
+role              | string  |  non   | nouveau role : `Administrateur`, `Validateur` ou `Observateur`
+pseudo            | string  |  non   |
+email             | string  |  non   |
+email_publique    | boolean |  non   |
+nom               | string  |  non   |
+prenom            | string  |  non   |
+telephone         | string  |  non   |
+adresse           | string  |  non   |
+commentaire       | string  |  non   |
+organisation      | string  |  non   |
+professionnel     | boolean |  non   |
+donnees_publiques | boolean |  non   |
 
 
 Protocoles
@@ -137,10 +149,10 @@ Protocoles
 
 **Parameters**
 
-Nom          |  Type   | Description
--------------|---------|-------------
- page        | integer | Page courante
- max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
 
 
 ### Lister les protocoles d'un utilisateur
@@ -174,7 +186,13 @@ Nom          |  Type   | Description
 
 ### Valider un observateur dans un protocole
 
-`POST /protocoles/#protocole_id/#observateur_id/valider`
+`PUT /protocoles/#protocole_id/observateurs/#observateur_id`
+
+**Input**
+
+Nom               |  Type   | Description
+------------------|---------|-------------
+valide            | boolean |
 
 **Accès**
 
@@ -208,10 +226,10 @@ Taxons
 
 **Parameters**
 
-Nom          |  Type   | Description
--------------|---------|-------------
- page        | integer | Page courante
- max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
 
 **Response**
 ```
@@ -261,10 +279,11 @@ Sites
 
 **Parameters**
 
-Nom          |  Type   | Description
--------------|---------|-------------
- page        | integer | Page courante
- max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+ q           | string  |  non   | Filtre de recherche
 
 **Response**
 ```
@@ -275,33 +294,158 @@ Nom          |  Type   | Description
 ]
 ```
 
-### Consulter un site
 
-`GET /sites/#id`
+### Lister ses propres sites
+
+`GET /moi/sites`
+
+**Parameters**
+
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+ q           | string  |  non   | Filtre de recherche
 
 **Response**
 ```
-{
-    ...
-}
+[
+    {
+        ...
+    }
+]
 ```
 
 ### Créer un site
 
 `POST /sites`
 
+**Input**
+
+Nom               |  Type   | Requis | Description
+------------------|---------|--------|-------------
+protocole         | objectid|  oui   |
+commentaire       | string  |  non   |
+grille_stoc       | objectid|  non   |
+
+
 **Accès**
 
-Observateur enregistré auprès d'un protocole
+Observateur enregistré et validé auprès du protocole spécifié
+
+**Response**
+```
+201
+{
+    ...
+}
+```
+
+
+### Consulter un site
+
+`GET /sites/#id`
+
+**Response**
+```
+200
+{
+    ...
+}
+```
+
+
+### Changer l'observateur du site
+
+`PATCH /sites/#id/observateur`
+
+**Accès**
+
+Administrateur seulement
+
+**Input**
+
+Nom               |  Type   | Requis | Description
+------------------|---------|--------|----
+observateur       | objectid|  oui   |
 
 
 ### Modifier un site
 
 `PATCH /sites/#id`
 
+**Input**
+
+Nom               |  Type   | Description
+------------------|---------|-------------
+commentaire       | string  |
+grille_stoc       | objectid|
+
 **Accès**
 
-Observateur ayant créé le site
+ - si non verrouillé : Administrateur et propriétaire
+ - si verrouillé : Administrateur seulement
+
+
+### Verrouiller un site
+
+`PATCH /sites/#id/verrouille`
+
+**Input**
+
+Nom               |  Type   | Description
+------------------|---------|-------------
+verrouille        | boolean |
+
+**Accès**
+
+Administrateur
+
+
+## Ajouter une localité
+
+`PUT /sites/#id/localite`
+
+**Input**
+
+Nom               |  Type              | Requis | Description
+------------------|--------------------|--------|-------------
+nom               | string             |  oui   |
+coordonnee        | point              |  non   |
+geometries        | geometrycollection |  non   |
+representatif     | boolean            |  non   |
+
+**Accès**
+
+ - si non verrouillé : Administrateur et propriétaire
+ - si verrouillé : Administrateur seulement
+
+
+## Ajouter un habitat à une localité
+
+`PUT /sites/#id/localite/#localite_nom/habitat`
+
+**Input**
+
+Nom               |  Type       | Description
+------------------|-------------|-------------
+stoc_principal    | schema_stoc |
+stoc_secondaire   | schema_stoc |
+
+        'schema': {
+            'date': {'type': 'datetime'},
+            'stoc_principal': {
+                'type': 'dict',
+                'schema': STOC_SCHEMA
+            },
+            'stoc_secondaire': {
+                'type': 'dict',
+                'schema': STOC_SCHEMA
+            }
+
+**Accès**
+
+Administrateur et propriétaire
 
 
 Participations
@@ -313,10 +457,11 @@ Participations
 
 **Parameters**
 
-Nom          |  Type   | Description
--------------|---------|-------------
- page        | integer | Page courante
- max_results | integer | Nombre de résultats par page (défaut 20, max 100)
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+ q           | string  |  non   | Filtre de recherche
 
 **Response**
 ```
@@ -326,6 +471,29 @@ Nom          |  Type   | Description
     }
 ]
 ```
+
+
+### Lister ses propres participations
+
+`GET /moi/participations`
+
+**Parameters**
+
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+ q           | string  |  non   | Filtre de recherche
+
+**Response**
+```
+[
+    {
+        ...
+    }
+]
+```
+
 
 ### Consulter une participation
 
@@ -337,6 +505,7 @@ Nom          |  Type   | Description
     ...
 }
 ```
+
 
 ### Créer une participation
 
@@ -554,27 +723,26 @@ Note : le lien fourni a une validité de 10s
 Actualités
 ----------
 
-### Lister les actualités
+### Lister les actualités de l'utilisateur
 
-`GET /actualites`
+`GET /moi/actualites`
 
 **Parameters**
 
-Nom          |  Type   | Description
--------------|---------|-------------
- depuis      |   date  | Filtre sur la date des actualités
- a_partir    |   date  | Filtre sur la date des actualités
- max_results | integer | Nombre de résultats (défaut 20, max 100)
- sujet       |    id   | Id d'une ressource impliquée dans l'actualité
- type        | string  | Type d'actualité (`NOUVEAU_PROTOCOLE`, `NOUVELLE_PARTICIPATION` ou `INSCRIPTION_PROTOCOLE`)
+Nom          |  Type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats (défaut 20, max 100)
 
 **Response**
 ```
-[
-    {
-        ...
-    }
-]
+{
+    '_items': [
+        {
+            ...
+        }
+    ]
+}
 ```
 
 
@@ -592,19 +760,19 @@ Nom          |  Type   | Requis | Description
  sw_lat      |  float  |  oui   | latitude du point sud ouest
  sw_lng      |  float  |  oui   | longitude du point sud ouest
  ne_lat      |  float  |  oui   | latitude du point nord est
- ne_lng      |  float  |  oui   | longitude du point nord est
-
-**Note**
-
-Pour des raisons de performances, la réquête ne renvoie qu'au maximum 40 éléments
+ ne_lng      |  float  |  oui   | longitude du point nord estmax_results
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 40)
 
 **Response**
 ```
-[
-    {
-        ...
-    }
-]
+{
+    '_items': [
+        {'_id': '54de89c31d41c80dc8e9bd88', 'numero': '590018',
+        'centre': {'type': 'Point', 'coordinates': [2.181529126, 51.0245531]}}
+    ],
+    '_meta': {'page': 1, 'total': 1, 'max_results': 20}
+}
 ```
 
 
@@ -617,11 +785,11 @@ Recherche
 
 **Parameters**
 
-Nom          |  Type   | Description
--------------|---------|-------------
- detail      | boolean | Renvoie le corps des résultats en plus de leur id (défaut: faux)
- max_results | integer | Nombre de résultats maximum (défaut 5, max 10)
- q           | string  | élément à rechercher
+Nom          |  type   | Requis | Description
+-------------|---------|--------|----
+ detail      | boolean |  non   | Renvoie le corps des résultats en plus de leur id (défaut: faux)
+ max_results | integer |  non   | Nombre de résultats maximum (défaut 5, max 10)
+ q           | string  |  oui   | élément à rechercher
 
 **Exemple**
 
@@ -646,8 +814,8 @@ Nom          |  Type   | Description
 
 **Parameters**
 
-Nom          |  Type   | Description
--------------|---------|-------------
- detail      | boolean | Renvoie le corps des résultats en plus de leur id (défaut: faux)
- max_results | integer | Nombre de résultats maximum (défaut 5, max 10)
- q           | string  | élément à rechercher
+Nom          |  type   | Requis | Description
+-------------|---------|--------|----
+ detail      | boolean |  non   | Renvoie le corps des résultats en plus de leur id (défaut: faux)
+ max_results | integer |  non   | Nombre de résultats maximum (défaut 5, max 10)
+ q           | string  |  oui   | élément à rechercher

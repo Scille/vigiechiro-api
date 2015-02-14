@@ -14,7 +14,7 @@ from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import get_payload, get_if_match, Paginator
 
-# from .participations import SCHEMA as PARTICIPATIONS_SCHEMA
+from .actualites import create_actuality_validation_protocole, create_actuality_inscription_protocole
 
 
 SCHEMA = {
@@ -111,6 +111,7 @@ def get_resume_list():
 @requires_auth(roles='Observateur')
 def user_join_protocole(protocole_id):
     """Register the request user to the given protocole"""
+    from .utilisateurs import utilisateurs as utilisateurs_resource, get_payload_add_following
     # Check if the user already joined the protocole
     joined_protocoles = g.request_user.get('protocoles', [])
     if next((p for p in joined_protocoles
@@ -120,23 +121,26 @@ def user_join_protocole(protocole_id):
     # Cannot join a macro protocole
     if protocole_resource.get('macro_protocole', False):
         abort(422, "Cannot join a macro protocole")
-    # Finally update user's protocole list
+    # Update user's protocole list
     inscription = {'protocole': protocole_id,
                    'date_inscription': datetime.utcnow(),
                    'valide': False}
     joined_protocoles.append(inscription)
-    from .utilisateurs import utilisateurs as utilisateurs_resource
-    utilisateurs_resource.update(g.request_user['_id'],
-                                 {'protocoles': joined_protocoles})
-    # TODO : create actuality
+    payload = {'protocoles': joined_protocoles}
+    # User automatically follow the protocole
+    payload.update(get_payload_add_following(protocole_id))
+    utilisateurs_resource.update(g.request_user['_id'], payload)
+    # Finally create corresponding actuality
+    create_actuality_inscription_protocole(protocole_resource, g.request_user)
     return jsonify(**inscription)
 
 
-@protocoles.route('/protocoles/<objectid:protocole_id>/<objectid:user_id>/valider', methods=['POST'])
+@protocoles.route('/protocoles/<objectid:protocole_id>/observateurs/<objectid:user_id>', methods=['PUT'])
 @requires_auth(roles='Administrateur')
 def user_validate_protocole(protocole_id, user_id):
     """Validate a user into a protocole"""
     from .utilisateurs import utilisateurs as utilisateurs_resource
+    payload = get_payload({'valide'})
     user_resource = utilisateurs_resource.get_resource(user_id)
     # Make sure the user has joined the protocole and is not valid yet
     joined_protocoles = user_resource.get('protocoles', [])
@@ -149,7 +153,8 @@ def user_validate_protocole(protocole_id, user_id):
         abort(422, 'user {} has already been validated into protocole {}'.format(
             user_id, protocole_id))
     # Finally update user's protocole status
-    to_validate_protocole['valide'] = True
+    to_validate_protocole['valide'] = payload['valide']
     utilisateurs_resource.update(user_id, {'protocoles': joined_protocoles})
-    # TODO : create actuality
+    # Finally create corresponding actuality
+    create_actuality_validation_protocole({'_id': protocole_id}, g.request_user)
     return jsonify(**to_validate_protocole)

@@ -4,9 +4,9 @@ import pytest
 from datetime import datetime
 
 from common import db, administrateur, validateur, observateur, eve_post_internal, format_datetime
-from test_protocole import protocoles_base
-from test_taxon import taxons_base
-from test_site import obs_sites_base
+from test_protocoles import protocoles_base
+from test_taxons import taxons_base
+from test_sites import obs_sites_base
 
 
 @pytest.fixture

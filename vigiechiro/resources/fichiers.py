@@ -29,6 +29,7 @@ from ..xin.schema import relation
 from ..xin.snippets import get_payload
 from .utilisateurs import utilisateurs as utilisateurs_resource
 
+
 SCHEMA = {
     'titre': {'type': 'string', 'postonly': True, 'required': True},
     'mime': {'type': 'string', 'postonly': True, 'required': True},

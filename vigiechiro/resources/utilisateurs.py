@@ -61,6 +61,10 @@ SCHEMA = {
                 'valide': {'type': 'boolean'}
             }
         }
+    },
+    'actualites_suivies': {
+        'type': 'set',
+        'schema': {'type': 'objectid'}
     }
 }
 
@@ -77,6 +81,16 @@ RESTRICTED_USER_PROJECTION = {
 
 
 utilisateurs = Resource('utilisateurs', __name__, schema=SCHEMA)
+
+
+def get_payload_add_following(ids):
+    ids = {ids} if not isinstance(ids, list) else ids
+    actualites_suivies = set(g.request_user.get('actualites_suivies', []))
+    if not ids - actualites_suivies:
+        # No new following
+        return {}
+    payload = {'actualites_suivies': actualites_suivies | ids}
+    return payload
 
 
 def _expend_joined_protocoles(document):
@@ -120,7 +134,7 @@ def list_users():
     return pagination.make_response(cursor)
 
 
-@utilisateurs.route('/utilisateurs/moi', methods=['GET'])
+@utilisateurs.route('/moi', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_request_user_profile():
     user = utilisateurs.get_resource(g.request_user['_id'],
@@ -136,25 +150,23 @@ def get_user_profile(user_id):
     return jsonify(**_expend_joined_protocoles(user))
 
 
-@utilisateurs.route('/utilisateurs/moi', methods=['PATCH'])
+@utilisateurs.route('/moi', methods=['PATCH'])
 @requires_auth(roles='Observateur')
 def patch_request_user_profile():
-    if_match = get_if_match()
-    payload = get_payload()
-    allowed_fields = {'pseudo', 'email', 'email_publique', 'nom', 'prenom',
+    allowed_fields = {'pseudo', 'email_publique', 'nom', 'prenom',
                       'telephone', 'adresse', 'commentaire', 'organisation',
-                      'professionnel', 'donnees_publiques'}
-    invalid_fields = set(payload.keys()) - allowed_fields
-    if invalid_fields:
-        abort(422, {field: 'invalid field' for field in invalid_fields})
-    result = utilisateurs.update(g.request_user['_id'], payload, if_match)
+                      'professionnel', 'donnees_publiques', 'email'}
+    payload = get_payload(allowed_fields)
+    result = utilisateurs.update(g.request_user['_id'], payload, get_if_match())
     return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))
 
 
 @utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['PATCH'])
 @requires_auth(roles='Administrateur')
 def patch_user(user_id):
-    if_match = get_if_match()
+    allowed_fields = {'pseudo', 'email_publique', 'nom', 'prenom',
+                      'telephone', 'adresse', 'commentaire', 'organisation',
+                      'professionnel', 'donnees_publiques', 'email', 'role'}
     payload = get_payload()
-    result = utilisateurs.update(user_id, payload, if_match)
+    result = utilisateurs.update(user_id, payload, get_if_match())
     return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))

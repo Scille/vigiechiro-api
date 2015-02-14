@@ -9,7 +9,7 @@ from common import db, observateur, validateur, administrateur, format_datetime,
 from vigiechiro import settings
 from vigiechiro.resources import utilisateurs as utilisateurs_resource
 from test_protocoles import protocoles_base
-from test_taxon import taxons_base
+from test_taxons import taxons_base
 
 
 @pytest.fixture(scope="module")
@@ -60,19 +60,19 @@ def test_dummy_user(administrateur):
 
 def test_dummy_role(administrateur):
     for dummy_role in ['Administrateur ', ' ', 'observateur']:
-        r = administrateur.patch('/utilisateurs/moi',
+        r = administrateur.patch('/moi',
                                  headers={'If-Match': administrateur.user['_etag']},
                                  json={'role': dummy_role})
         assert r.status_code == 422, r.text
 
 
 def test_user_route(observateur):
-    r = observateur.get('/utilisateurs/moi')
+    r = observateur.get('/moi')
     assert r.status_code == 200, r.text
     content = r.json()
     for key in ['nom', 'email']:
         assert observateur.user[key] == content[key]
-    r = observateur.patch('/utilisateurs/moi',
+    r = observateur.patch('/moi',
                           headers={'If-Match': content['_etag']},
                           json={'commentaire': 'New comment'})
     assert r.status_code == 200, r.text
@@ -83,7 +83,7 @@ def test_user_route(observateur):
 def test_rights_write(observateur, administrateur):
     # Change data for myself is allowed...
     payload = {'donnees_publiques': True}
-    r = observateur.patch('/utilisateurs/moi',
+    r = observateur.patch('/moi',
                           headers={'If-Match': observateur.user['_etag']},
                           json=payload)
     assert r.status_code == 200, r.text
@@ -95,12 +95,12 @@ def test_rights_write(observateur, administrateur):
                           json=payload)
     assert r.status_code == 403, r.text
     # Same thing, cannot change my own rights
-    r = observateur.patch('/utilisateurs/moi',
+    r = observateur.patch('/utilisateurs/{}'.format(observateur.user_id),
                           headers={'If-Match': observateur.user['_etag']},
                           json={'role': 'Administrateur'})
-    assert r.status_code == 422, r.text
+    assert r.status_code == 403, r.text
     # Of courses, admin can
-    r = administrateur.patch(observateur.url,
+    r = administrateur.patch('/utilisateurs/{}'.format(observateur.user_id),
                              headers={'If-Match': observateur.user['_etag']},
                              json={'role': 'Validateur'})
     assert r.status_code == 200, r.text
@@ -111,9 +111,7 @@ def test_rights_write(observateur, administrateur):
     for payload in [{'pseudo': 'my new pseudo !'},
                     {'email': 'new@email.com'},
                     {'nom': 'newLastName', 'prenom': 'newFirstName'}]:
-        r = observateur.patch('/utilisateurs/moi',
-                              headers={'If-Match': etag},
-                              json=payload)
+        r = observateur.patch('/moi', headers={'If-Match': etag}, json=payload)
         assert r.status_code == 200, r.text
         etag = r.json()['_etag']
 
@@ -136,7 +134,7 @@ def test_rigths_read(observateur, validateur):
     assert r.status_code == 200, r.text
     assert 'email' in r.json()
     # Of course, observateur has full access of it own profile
-    r = observateur.get('/utilisateurs/moi')
+    r = observateur.get('/moi')
     assert r.status_code == 200, r.text
     assert 'email' in r.json()
 
@@ -144,16 +142,13 @@ def test_rigths_read(observateur, validateur):
 def test_readonly_fields(observateur, administrateur):
     payloads = [{'role': 'Administrateur'}, {'protocoles': []}]
     for payload in payloads:
-        r = observateur.patch('/utilisateurs/moi',
+        r = observateur.patch('/moi',
                               headers={'If-Match': observateur.user['_etag']},
                               json=payload)
         assert r.status_code == 422, r.text
         # Admin can do everything !
-        r = administrateur.patch(
-            administrateur.url,
-            headers={
-                'If-Match': administrateur.user['_etag']},
-            json=payload)
+        r = administrateur.patch(administrateur.url,
+            headers={'If-Match': administrateur.user['_etag']}, json=payload)
         administrateur.update_user()
         assert r.status_code == 200, r.text
 
@@ -165,7 +160,7 @@ def test_internal_resource(observateur):
                 {'facebook_id': '1872655'},
                 {'google_id': '1872655'}]
     for payload in payloads:
-        r = observateur.patch('/utilisateurs/moi',
+        r = observateur.patch('/moi',
                               headers={'If-Match': observateur.user['_etag']},
                               json=payload)
         assert r.status_code == 422, r.text
@@ -205,11 +200,12 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     assert (protocoles[0].get('protocole', '') ==
             {'_id': protocole_id, 'titre': protocole['titre']}), protocoles[0]
     # Try to validate myself
-    validate_url = '/protocoles/{}/{}/valider'.format(protocole_id, observateur.user_id)
-    r = observateur.post(validate_url)
+    validate_url = '/protocoles/{}/observateurs/{}'.format(
+        protocole_id, observateur.user_id)
+    r = observateur.put(validate_url, json={'valide': True})
     assert r.status_code == 403, r.text
     # Admin validates me
-    r = administrateur.post(validate_url)
+    r = administrateur.put(validate_url, json={'valide': True})
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['protocoles'][0]['valide']
@@ -244,12 +240,10 @@ def test_multi_join(observateur, administrateur, protocoles_base):
     protocole2_titre = protocoles_base[2]['titre']
     protocole_url = '/protocoles/{}/join'
     # Make the observateur join a protocole and validate it
-    etag = observateur.user['_etag']
-    date_inscription = format_datetime(datetime.utcnow())
-    r = administrateur.patch(observateur.url, headers={'If-Match': etag},
-                             json={'protocoles': [{'protocole': protocole1_id,
-                                                   'date_inscription': date_inscription,
-                                                   'valide': True}]})
+    r = observateur.post(protocole_url.format(protocole1_id))
+    assert r.status_code == 200, r.text
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+        protocole1_id, observateur.user_id), json={'valide': True})
     assert r.status_code == 200, r.text
     observateur.update_user()
     # Now observateur join another protocole, must not interfere with the other
