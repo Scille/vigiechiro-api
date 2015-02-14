@@ -4,12 +4,12 @@ Api v2 whiteboard
 Introductions
 -------------
 
-### verbes HTTP :
+### verbes HTTP (draft) :
 
  - GET : récupération d'élément (retourne 200)
  - POST : création d'élément (retourne 201)
- - PATCH : modification unitaire (retourne 200)
- - PUT : modification non unitaire (par exemple d'une liste), if_match requis (retourne 200)
+ - PUT : modification unitaire (retourne 200)
+ - PATCH : modification non unitaire, if_match requis (retourne 200)
  - DELETE : destruction d'élément (retourn 204)
 
 Utilisateurs
@@ -110,19 +110,19 @@ Nom          |  type   | Requis | Description
 
 **Input**
 
-Nom               |  Type   | Description
-------------------|---------|-------------
-pseudo            | string  |
-email             | string  |
-email_publique    | boolean |
-nom               | string  |
-prenom            | string  |
-telephone         | string  |
-adresse           | string  |
-commentaire       | string  |
-organisation      | string  |
-professionnel     | boolean |
-donnees_publiques | boolean |
+Nom               |  Type   | Requis | Description
+------------------|---------|--------|-------------
+pseudo            | string  |  non   |
+email             | string  |  non   |
+email_publique    | boolean |  non   |
+nom               | string  |  non   |
+prenom            | string  |  non   |
+telephone         | string  |  non   |
+adresse           | string  |  non   |
+commentaire       | string  |  non   |
+organisation      | string  |  non   |
+professionnel     | boolean |  non   |
+donnees_publiques | boolean |  non   |
 
 
 ### Modifier un utilisateur
@@ -136,7 +136,7 @@ Administrateur seulement
 **Input**
 
 Nom               |  Type   | Requis | Description
-------------------|---------|-------------
+------------------|---------|--------|-------------
 role              | string  |  non   | nouveau role : `Administrateur`, `Validateur` ou `Observateur`
 pseudo            | string  |  non   |
 email             | string  |  non   |
