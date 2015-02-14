@@ -304,7 +304,7 @@ Nom          |  type   | Requis | Description
         {
             ...
         }
-    ]    
+    ]
 }
 ```
 

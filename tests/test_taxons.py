@@ -55,7 +55,7 @@ Cette espèce vit en Afrique. On a longtemps cru qu’elle se nourrissait de san
 """,
             'parents': [parent['_id']],
             'liens': ['http://fr.wikipedia.org/wiki/Megadermatidae'],
-            'tags': ['chiro', 'vigiechiro', 'ultrason']        
+            'tags': ['chiro', 'vigiechiro', 'ultrason']
         }
     ]
     @with_flask_context
