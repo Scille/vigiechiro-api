@@ -11,7 +11,7 @@ from test_taxons import taxons_base
 def obs_sites_base(request, protocoles_base, observateur, administrateur):
     protocole_id = str(protocoles_base[1]['_id'])
     # Register the observateur to a protocole
-    r = observateur.post('/protocoles/{}/join'.format(protocole_id))
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
     assert r.status_code == 200, r.text
     # Now validate the user
     r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
@@ -75,7 +75,7 @@ def test_non_register_create_site(protocoles_base, observateur, administrateur):
 def test_create_site_non_valide(observateur, protocoles_base):
     # Register the observateur to a protocole, but doesn't validate it
     protocole_id = str(protocoles_base[1]['_id'])
-    r = observateur.post('/protocoles/{}/join'.format(protocole_id))
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
     assert r.status_code == 200, r.text
     # Observateur is allowed to create multiple sites
     site_payload = {
@@ -123,7 +123,7 @@ def test_create_site_explicit_obs(administrateur, observateur, protocoles_base):
     # Create a new site for the observateur
     r = observateur.post('/sites', json={'protocole': protocole_id})
     assert r.status_code == 201, r.text
-    site_url = '/sites/{}/observateur'.format(r.json()['_id'])
+    site_url = '/sites/{}'.format(r.json()['_id'])
     # Observateur cannot give it site to someone else
     r = observateur.patch(site_url, json={'observateur': administrateur.user_id})
     assert r.status_code == 403, r.text
@@ -132,20 +132,20 @@ def test_create_site_explicit_obs(administrateur, observateur, protocoles_base):
     assert r.status_code == 200, r.text
     # Now observateur cannot use this site anymore
     # TODO : test participation
-    # r = observateur.post('/participations', json={...})
-    # assert r.status_code == 422, r.text
+    r = observateur.post('{}/participations'.format(site_url),
+                         json={'date_debut': format_datetime(datetime.utcnow())})
+    assert r.status_code == 422, r.text
 
 
 def test_lock_site(administrateur, obs_sites_base):
     # Make sure the observateur cannot lock it own site
     observateur, sites_base = obs_sites_base
     url = 'sites/{}'.format(sites_base[0]['_id'])
-    url_verrouille = url + '/verrouille'
     #  Observateur cannot lock site
-    r = observateur.patch(url_verrouille, json={'verrouille': True})
+    r = observateur.patch(url, json={'verrouille': True})
     assert r.status_code == 403, r.text
     #  And admin can of course
-    r = administrateur.patch(url_verrouille, json={'verrouille': True})
+    r = administrateur.patch(url, json={'verrouille': True})
     assert r.status_code == 200, r.text
     r = observateur.get(url)
     assert r.status_code == 200, r.text

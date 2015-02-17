@@ -372,51 +372,23 @@ Observateur enregistré et validé auprès du protocole spécifié
 ```
 
 
-### Changer l'observateur du site
-
-`PATCH /sites/#id/observateur`
-
-**Accès**
-
-Administrateur seulement
-
-**Input**
-
-Nom               |  Type   | Requis | Description
-------------------|---------|--------|----
-observateur       | objectid|  oui   |
-
-
 ### Modifier un site
 
 `PATCH /sites/#id`
 
 **Input**
 
-Nom               |  Type   | Description
-------------------|---------|-------------
-commentaire       | string  |
-grille_stoc       | objectid|
+Nom               |  Type   | Requis | Description
+------------------|---------|--------|-------------
+commentaire       | string  |  non   |
+grille_stoc       | objectid|  non   |
+observateur       | objectid|  non   | accès seulement pour administrateur
+verrouille        | boolean |  non   | accès seulement pour administrateur
 
 **Accès**
 
  - si non verrouillé : Administrateur et propriétaire
  - si verrouillé : Administrateur seulement
-
-
-### Verrouiller un site
-
-`PATCH /sites/#id/verrouille`
-
-**Input**
-
-Nom               |  Type   | Description
-------------------|---------|-------------
-verrouille        | boolean |
-
-**Accès**
-
-Administrateur
 
 
 ## Ajouter une localité

@@ -180,18 +180,18 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     macro_protocole_id = str(macro_protocole['_id'])
     protocole = protocoles_base[1]
     protocole_id = str(protocole['_id'])
-    protocole_url = '/protocoles/{}/join'
+    protocole_url = '/moi/protocoles/{}'
     # Try to join dummy protocoles
     for bad_protocole_id in ['dummy', observateur.user_id,
                              '549b444b13adf218427fb681']:
-        r = observateur.post(protocole_url.format(bad_protocole_id))
+        r = observateur.put(protocole_url.format(bad_protocole_id))
         assert r.status_code in [404, 422], r.text
     # Try to manualy add a protocole to myself
     etag = observateur.user['_etag']
     r = observateur.patch(observateur.url, headers={'If-Match': etag},
                           json={'protocoles': [{'protocole': protocole_id}]})
     # Join a protocole
-    r = observateur.post(protocole_url.format(protocole_id))
+    r = observateur.put(protocole_url.format(protocole_id))
     assert r.status_code == 200, r.text
     observateur.update_user()
     protocoles = observateur.user['protocoles']
@@ -210,7 +210,7 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     observateur.update_user()
     assert observateur.user['protocoles'][0]['valide']
     # Macro-protocoles are not subscriptable
-    r = observateur.post(protocole_url.format(macro_protocole_id))
+    r = observateur.put(protocole_url.format(macro_protocole_id))
     assert r.status_code == 422, r.text
 
 
@@ -238,16 +238,16 @@ def test_multi_join(observateur, administrateur, protocoles_base):
     protocole1_titre = protocoles_base[1]['titre']
     protocole2_id = str(protocoles_base[2]['_id'])
     protocole2_titre = protocoles_base[2]['titre']
-    protocole_url = '/protocoles/{}/join'
+    protocole_url = '/moi/protocoles/{}'
     # Make the observateur join a protocole and validate it
-    r = observateur.post(protocole_url.format(protocole1_id))
+    r = observateur.put(protocole_url.format(protocole1_id))
     assert r.status_code == 200, r.text
     r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
         protocole1_id, observateur.user_id), json={'valide': True})
     assert r.status_code == 200, r.text
     observateur.update_user()
     # Now observateur join another protocole, must not interfere with the other
-    r = observateur.post(protocole_url.format(protocole2_id))
+    r = observateur.put(protocole_url.format(protocole2_id))
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert len(observateur.user['protocoles']) == 2

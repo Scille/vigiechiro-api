@@ -12,9 +12,9 @@ from test_taxons import taxons_base
 def test_actualites(observateur, administrateur, protocoles_base):
     protocole = protocoles_base[1]
     protocole_id = str(protocole['_id'])
-    protocole_url = '/protocoles/{}/join'
+    protocole_url = '/moi/protocoles/{}'
     # Join a protocole
-    r = observateur.post(protocole_url.format(protocole_id))
+    r = observateur.put(protocole_url.format(protocole_id))
     assert r.status_code == 200, r.text
     observateur.update_user()
     # Now validate the user
@@ -28,7 +28,7 @@ def test_actualites(observateur, administrateur, protocoles_base):
     assert r.status_code == 201, r.text
     site_id = r.json()['_id']
     # Lock the site
-    r = administrateur.patch('/sites/{}/verrouille'.format(site_id),
+    r = administrateur.patch('/sites/{}'.format(site_id),
         json={'verrouille': True})
     assert r.status_code == 200, r.text
     # Create a participation

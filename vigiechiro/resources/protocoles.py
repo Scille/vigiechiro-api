@@ -117,7 +117,7 @@ def get_resume_list():
     return jsonify(_items=[i for i in items])
 
 
-@protocoles.route('/protocoles/<objectid:protocole_id>/join', methods=['POST'])
+@protocoles.route('/moi/protocoles/<objectid:protocole_id>', methods=['PUT'])
 @requires_auth(roles='Observateur')
 def user_join_protocole(protocole_id):
     """Register the request user to the given protocole"""

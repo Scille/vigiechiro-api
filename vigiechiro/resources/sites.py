@@ -122,15 +122,6 @@ def display_site(site_id):
     return jsonify(**sites.get_resource(site_id))
 
 
-@sites.route('/sites/<objectid:site_id>/verrouille', methods=['PATCH'])
-@requires_auth(roles='Administrateur')
-def lock_site(site_id):
-    payload = get_payload({'verrouille'})
-    if 'verrouille' not in payload:
-        abort(422, {'verrouille': 'missing field'})
-    return jsonify(**sites.update(site_id, {'verrouille': payload['verrouille']}))
-
-
 def _check_edit_acess(site_resource):
     """Access policy : administrateur or owner if site is not yet verrouille"""
     is_owner = site_resource['observateur'] == g.request_user['_id']
@@ -144,17 +135,11 @@ def _check_edit_acess(site_resource):
 def edit_site(site_id):
     site_resource = sites.get_resource(site_id)
     _check_edit_acess(site_resource)
-    payload = get_payload({'commentaire', 'grille_stoc'})
+    payload = get_payload({'commentaire', 'grille_stoc', 'observateur', 'verrouille'})
+    if (('observateur' in payload or 'verrouille' in payload)
+        and g.request_user['role'] != 'Administrateur'):
+        abort(403)
     check_configuration_participation(payload)
-    result = sites.update(site_id, payload, get_if_match())
-    return jsonify(**result)
-
-
-@sites.route('/sites/<objectid:site_id>/observateur', methods=['PATCH'])
-@requires_auth(roles='Administrateur')
-def change_observateur_site(site_id):
-    payload = get_payload({'observateur': True})
-    site_resource = sites.get_resource(site_id)
     result = sites.update(site_id, payload)
     return jsonify(**result)
 

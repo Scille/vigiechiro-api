@@ -36,7 +36,7 @@ def participation_ready(clean_participations, obs_sites_base, administrateur):
                                                    'valide': True}]})
     assert r.status_code == 200, r.text
     # Lock site
-    r = administrateur.patch('/sites/{}/verrouille'.format(site['_id']),
+    r = administrateur.patch('/sites/{}'.format(site['_id']),
                              json={'verrouille': True})
     assert r.status_code == 200, r.text
     observateur.update_user()
@@ -68,7 +68,7 @@ def test_non_valide_observateur(clean_participations, obs_sites_base, administra
     r = observateur.post('/sites/{}/participations'.format(site['_id']),
                          json={'date_debut': format_datetime(datetime.utcnow())})
     assert r.status_code == 422, r.text
-    r = administrateur.patch('/sites/{}/verrouille'.format(site['_id']),
+    r = administrateur.patch('/sites/{}'.format(site['_id']),
                              json={'verrouille': True})
     assert r.status_code == 200, r.text
     # Post participation is now ok
