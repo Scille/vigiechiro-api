@@ -18,3 +18,4 @@ gunicorn
 # uwsgi
 # waitress
 requests
+newrelic
