@@ -127,7 +127,7 @@ donnees_publiques | boolean |  non   |
 
 ### Modifier un utilisateur
 
-`PATCH /utilisateurs/#id/role`
+`PATCH /utilisateurs/#id`
 
 **Accès**
 
@@ -192,7 +192,7 @@ Nom          |  Type   | Description
 
 ### Rejoindre un protocole
 
-`POST /protocoles/#id/rejoindre`
+`PUT /moi/protocoles/#id`
 
 
 ### Valider un observateur dans un protocole

@@ -71,8 +71,8 @@ def check_configuration_participation(payload):
 @requires_auth(roles='Observateur')
 def list_protocoles():
     pagination = Paginator()
-    cursor = protocoles.find(skip=pagination.skip, limit=pagination.max_results)
-    return pagination.make_response(cursor)
+    found = protocoles.find(skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(*found)
 
 
 @protocoles.route('/moi/protocoles', methods=['GET'])
@@ -80,9 +80,9 @@ def list_protocoles():
 def list_user_protocoles():
     pagination = Paginator()
     joined_ids = [p['protocole'] for p in g.request_user.get('protocoles', [])]
-    cursor = protocoles.find({'_id': {'$in': joined_ids}},
+    found = protocoles.find({'_id': {'$in': joined_ids}},
                              skip=pagination.skip, limit=pagination.max_results)
-    return pagination.make_response(cursor)
+    return pagination.make_response(*found)
 
 
 @protocoles.route('/protocoles', methods=['POST'])

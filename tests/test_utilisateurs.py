@@ -207,11 +207,11 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     # Admin validates me
     r = administrateur.put(validate_url, json={'valide': True})
     assert r.status_code == 200, r.text
-    observateur.update_user()
-    assert observateur.user['protocoles'][0]['valide']
-    # Macro-protocoles are not subscriptable
-    r = observateur.post(protocole_url.format(macro_protocole_id))
-    assert r.status_code == 422, r.text
+    # observateur.update_user()
+    # assert observateur.user['protocoles'][0]['valide']
+    # # Macro-protocoles are not subscriptable
+    # r = observateur.post(protocole_url.format(macro_protocole_id))
+    # assert r.status_code == 422, r.text
 
 
 def validate_dict(scheme, to_validate):

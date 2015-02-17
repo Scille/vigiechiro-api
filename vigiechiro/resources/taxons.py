@@ -82,8 +82,8 @@ def expend_parents_libelles(document):
 @requires_auth(roles='Observateur')
 def list_taxons():
     pagination = Paginator()
-    cursor = taxons.find(skip=pagination.skip, limit=pagination.max_results)
-    return pagination.make_response(cursor)
+    found = taxons.find(skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(*found)
 
 
 @taxons.route('/taxons', methods=['POST'])
@@ -112,4 +112,4 @@ def edit_taxon(taxon_id):
 def get_resume_list():
     """Return a brief list of per taxon id and libelle"""
     items = taxons.find({}, {"libelle_long": 1})
-    return jsonify(_items=[i for i in items])
+    return jsonify(_items=[i for i in items[0]])

@@ -128,10 +128,10 @@ def non_macro_protocole(context):
 @requires_auth(roles='Observateur')
 def list_users():
     pagination = Paginator()
-    cursor = utilisateurs.find(None, _choose_utilisateur_projection(),
+    found = utilisateurs.find(None, _choose_utilisateur_projection(),
                                skip=pagination.skip,
                                limit=pagination.max_results)
-    return pagination.make_response(cursor)
+    return pagination.make_response(*found)
 
 
 @utilisateurs.route('/moi', methods=['GET'])

@@ -88,6 +88,6 @@ def get_user_actualites():
     pagination = Paginator()
     following = g.request_user.get('actualites_suivies', [])
     following.append(g.request_user['_id'])
-    cursor = actualites.find({'resources': {'$in': following}},
+    found = actualites.find({'resources': {'$in': following}},
         skip=pagination.skip, limit=pagination.max_results)
-    return pagination.make_response(cursor)
+    return pagination.make_response(*found)

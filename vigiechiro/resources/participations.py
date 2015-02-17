@@ -78,19 +78,19 @@ participations = Resource('participations', __name__, schema=SCHEMA)
 @requires_auth(roles='Observateur')
 def list_participations():
     pagination = Paginator()
-    cursor = participations.find(skip=pagination.skip,
+    found = participations.find(skip=pagination.skip,
                                  limit=pagination.max_results)
-    return pagination.make_response(cursor)
+    return pagination.make_response(*found)
 
 
 @participations.route('/moi/participations', methods=['GET'])
 @requires_auth(roles='Observateur')
 def list_user_participations():
     pagination = Paginator()
-    cursor = participations.find({'observateur': g.request_user['_id']},
+    found = participations.find({'observateur': g.request_user['_id']},
                                  skip=pagination.skip,
                                  limit=pagination.max_results)
-    return pagination.make_response(cursor)
+    return pagination.make_response(*found)
 
 
 @participations.route('/participations/<objectid:participation_id>', methods=['GET'])

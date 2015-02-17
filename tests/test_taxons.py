@@ -182,6 +182,7 @@ def test_get_resume_list(taxons_base, observateur):
     taxons_base = [t for t in taxons_base]
     r = observateur.get('/taxons/liste')
     assert r.status_code == 200, r.text
+    print(r.json())
     items = {item['_id']: item for item in  r.json()['_items']}
     for taxon in taxons_base:
         assert str(taxon['_id']) in items

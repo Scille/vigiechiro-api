@@ -1,4 +1,6 @@
 from flask import request, abort, current_app
+from pymongo.cursor import Cursor
+
 from .tools import jsonify, parse_id
 
 
@@ -18,16 +20,19 @@ class Paginator:
         except ValueError:
             abort(422, 'Invalid max_results and/or page params')
 
-    def make_response(self, cursor):
+    def make_response(self, items, total=None):
+        if isinstance(items, Cursor):
+            total = items.count(with_limit_and_skip=False)
+            items = list(items)
         return jsonify({
-            '_items': list(cursor),
+            '_items': items,
             '_meta': {'max_results': self.max_results,
-                      'total': cursor.count(with_limit_and_skip=False),
+                      'total': total,
                       'page': self.page}
         })
 
 
-def get_resource(resource, obj_id, auto_abort=True, projection=None):
+def get_resource(resource, obj_id, field='_id', auto_abort=True, projection=None):
     """Retrieve object from database with it ID and resource name"""
     obj_id = parse_id(obj_id)
     if not obj_id:
@@ -35,7 +40,7 @@ def get_resource(resource, obj_id, auto_abort=True, projection=None):
             abort(422, 'invalid ObjectId `{}`'.format(obj_id))
         else:
             return None
-    obj = current_app.data.db[resource].find_one({'_id': obj_id}, projection)
+    obj = current_app.data.db[resource].find_one({field: obj_id}, projection)
     if not obj:
         if auto_abort:
             abort(404, '`{}` is not a valid {} resource'.format(obj_id, resource))

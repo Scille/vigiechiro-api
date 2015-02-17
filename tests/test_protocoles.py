@@ -109,7 +109,7 @@ def test_macro_protocoles(protocoles_base, new_protocole_payload, administrateur
     for dummy_id in ['dummy', '5490237a1d41c81800d52c18', administrateur.user_id]:
         r = administrateur.patch(url, headers={'If-Match': etag},
                                  json={'parent': dummy_id})
-        assert r.status_code == 422, r.text
+        assert r.status_code in [422, 404], r.text
 
 
 def test_participation_configuration(protocoles_base, new_protocole_payload,

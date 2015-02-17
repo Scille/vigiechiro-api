@@ -79,17 +79,17 @@ sites = Resource('sites', __name__, schema=SCHEMA)
 @requires_auth(roles='Observateur')
 def list_sites():
     pagination = Paginator()
-    cursor = sites.find(skip=pagination.skip, limit=pagination.max_results)
-    return pagination.make_response(cursor)
+    found = sites.find(skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(*found)
 
 
 @sites.route('/moi/sites', methods=['GET'])
 @requires_auth(roles='Observateur')
 def list_user_sites():
     pagination = Paginator()
-    cursor = sites.find({'observateur': g.request_user['_id']},
+    found = sites.find({'observateur': g.request_user['_id']},
                         skip=pagination.skip, limit=pagination.max_results)
-    return pagination.make_response(cursor)
+    return pagination.make_response(*found)
 
 
 @sites.route('/sites', methods=['POST'])

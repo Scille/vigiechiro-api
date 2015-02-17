@@ -3,9 +3,10 @@ from functools import wraps
 from flask import Flask, Blueprint, current_app, abort
 from datetime import datetime
 from bson import ObjectId
+import logging
 
 from .cors import crossdomain
-from .schema import Validator
+from .schema import Validator, Unserializer
 from .tools import build_etag
 from .snippets import get_resource
 
@@ -38,6 +39,7 @@ class Resource(Blueprint):
         schema['_updated'] = {'type': 'string', 'readonly': True}
         schema['_etag'] = {'type': 'string', 'readonly': True}
         self.validator = Validator(schema)
+        self.unserializer = Unserializer(schema)
 
     def route(self, *args, **kwargs):
         """Decorator, register flask route with cors support"""
@@ -61,8 +63,8 @@ class Resource(Blueprint):
             'resource': self,
         }
         # Validate payload against resource schema
-        result = self.validator.validate(payload,
-                                         additional_context=additional_context)
+        result = self.validator.run(payload,
+                                    additional_context=additional_context)
         if result.errors:
             if auto_abort:
                 abort(422, result.errors)
@@ -79,7 +81,8 @@ class Resource(Blueprint):
         # Retrieve previous version of the document
         if not isinstance(obj_id, ObjectId):
             raise ValueError("obj_id must be ObjectId")
-        document = self.find_one({'_id': obj_id})
+        resource_db = current_app.data.db[self.name]
+        document = resource_db.find_one({'_id': obj_id})
         if not document:
             return (404, )
         old_etag = document['_etag']
@@ -92,8 +95,8 @@ class Resource(Blueprint):
             'old_document': document
         }
         # Validate payload against resource schema
-        result = self.validator.validate(payload, is_update=True,
-                                         additional_context=additional_context)
+        result = self.validator.run(payload, is_update=True,
+                                    additional_context=additional_context)
         if result.errors:
             return (422, result.errors)
         # Merge payload to update existing document
@@ -107,7 +110,7 @@ class Resource(Blueprint):
         document['_etag'] = build_etag(document)
         # Finally do the actual update in db using again the if_match
         # field in the lookup to prevent race condition
-        result = current_app.data.db[self.name].update(
+        result = resource_db.update(
             {'_id': obj_id, '_etag': old_etag}, document)
         if not result['updatedExisting']:
             return (412, 'If-Match condition has failed')
@@ -144,15 +147,41 @@ class Resource(Blueprint):
                 error(*result)
         return result[1]
 
-    def find(self, *args, **kwargs):
-        return current_app.data.db[self.name].find(*args, **kwargs)
+    def find(self, *args, expend=[], **kwargs):
+        # Provide to the validator additional data needed for some validatations
+        additional_context = {
+            'resource': self,
+            'expend_data_relation': expend
+        }
+        docs = []
+        cursor = current_app.data.db[self.name].find(*args, **kwargs)
+        for document in cursor:
+            result = self.unserializer.run(document)
+            if result.errors:
+                logging.error('Errors in document {} : {}'.format(
+                    result.document['_id'], result.errors))
+            docs.append(result.document)
+        return docs, cursor.count(with_limit_and_skip=False)
 
     def remove(self, *args, **kwargs):
         return current_app.data.db[self.name].remove(*args, **kwargs)
 
-    def find_one(self, *args, **kwargs):
-        return current_app.data.db[self.name].find_one(*args, **kwargs)
+    def find_one(self, *args, expend=[], **kwargs):
+        document = current_app.data.db[self.name].find_one(*args, **kwargs)
+        if document:
+            # Provide to the validator additional data needed for some validatations
+            additional_context = {
+                'resource': self,
+                'expend_data_relation': expend
+            }
+            result = self.unserializer.run(document)
+            if result.errors:
+                logging.error('Errors in document {} : {}'.format(
+                    result.document['_id'], result.errors))
+            document = result.document
+        return document
 
     def get_resource(self, obj_id, auto_abort=True, projection=None):
         """Retrieve object from database with it ID and resource name"""
-        return get_resource(self.name, obj_id, auto_abort, projection)
+        return get_resource(self.name, obj_id, auto_abort=auto_abort,
+                            projection=projection)
