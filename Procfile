@@ -1,4 +1,5 @@
-web: gunicorn vigiechiro:app --log-file -
+web: NEW_RELIC_CONFIG_FILE=newrelic.ini newrelic-admin run-program gunicorn vigiechiro:app --log-file -
+# web: gunicorn vigiechiro:app --log-file -
 # web: python3 run_tornado.py
 # web: uwsgi --http-socket localhost:$PORT -w vigiechiro:app
 # web: waitress-serve --port $PORT vigiechiro:app
