@@ -224,6 +224,13 @@ class Unserializer(SchemaRunner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, partial=True, **kwargs)
 
+    def run(self, *args, **kwargs):
+        # Given the retrieved document can retrieved with a projection
+        # (i.e. partial document), we should not check for missing fields
+        if 'is_update' not in kwargs:
+            kwargs['is_update'] = True
+        return super().run(*args, **kwargs)
+
     def _run_type_set(self, context):
         if isinstance(context.value, list):
             unserialized = set(context.value)
@@ -376,7 +383,6 @@ class GenericValidator(SchemaRunner):
         if isinstance(context.value, set):
             # Given set is not supported in mongodb, it is stored as a list
             serialized = list(context.value)
-            print('convert set to list', serialized)
             schema, field, _ = context.pop()
             context.value[field] = serialized
             context.push(schema, field, serialized)

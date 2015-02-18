@@ -44,13 +44,14 @@ def test_single_login():
     # Replace '#' in the location to let urllib parse correctly
     location = r.headers['Location'].replace('#', '!')
     qs = parse_qs(urlparse(location).query)
-    print(qs)
     assert 'token' in qs
     token = qs['token'][0]
     r = requests.get(PROTECTED_URL, auth=(token, None))
     assert r.status_code == 200, r.text
+    resource = r.json()
+    for field in ['_id', '_etag', '_created', '_updated']:
+        assert field in resource
     return token
-
 
 def test_multi_login():
     first_token = test_single_login()

@@ -164,6 +164,7 @@ def user_validate_protocole(protocole_id, user_id):
             user_id, protocole_id))
     # Finally update user's protocole status
     to_validate_protocole['valide'] = payload['valide']
+    # TODO : use custom_merge
     utilisateurs_resource.update(user_id, {'protocoles': joined_protocoles})
     # Finally create corresponding actuality
     create_actuality_validation_protocole({'_id': protocole_id}, g.request_user)

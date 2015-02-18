@@ -77,12 +77,14 @@ class Resource(Blueprint):
         payload['_id'] = current_app.data.db[self.name].insert(payload)
         return payload
 
-    def _atomic_update(self, obj_id, payload, if_match=False, custom_merge=None):
+    def _atomic_update(self, lookup, payload, if_match=False, custom_merge=None):
         # Retrieve previous version of the document
-        if not isinstance(obj_id, ObjectId):
-            raise ValueError("obj_id must be ObjectId")
+        if isinstance(lookup, ObjectId):
+            lookup = {'_id': lookup}
+        if not isinstance(lookup, dict):
+            raise ValueError("lookup must be ObjectId or dict")
         resource_db = current_app.data.db[self.name]
-        document = resource_db.find_one({'_id': obj_id})
+        document = resource_db.find_one(lookup)
         if not document:
             return (404, )
         old_etag = document['_etag']
@@ -111,12 +113,13 @@ class Resource(Blueprint):
         # Finally do the actual update in db using again the if_match
         # field in the lookup to prevent race condition
         result = resource_db.update(
-            {'_id': obj_id, '_etag': old_etag}, document)
+            {'_id': document['_id'], '_etag': old_etag}, document)
         if not result['updatedExisting']:
             return (412, 'If-Match condition has failed')
+        print('inserted document', document)
         return (200, document)
 
-    def update(self, obj_id, payload, if_match=False, auto_abort=True, custom_merge=None):
+    def update(self, lookup, payload, if_match=False, auto_abort=True, custom_merge=None):
         """
             Update in database a document of the resource
             :param if_match: race condition politic, if if_match is False the
@@ -135,13 +138,13 @@ class Resource(Blueprint):
         if not if_match:
             # No if_match, in case of race condition, repeatedly try the update
             while True:
-                result = self._atomic_update(obj_id, payload.copy(),
+                result = self._atomic_update(lookup, payload.copy(),
                                              custom_merge=custom_merge)
                 if result[0] != 412:
                     break
         else:
             # Else abort in case of race condition
-            result = self._atomic_update(obj_id, payload, if_match=if_match,
+            result = self._atomic_update(lookup, payload, if_match=if_match,
                                          custom_merge=custom_merge)
             if result[0] != 200:
                 error(*result)
@@ -158,6 +161,7 @@ class Resource(Blueprint):
         for document in cursor:
             result = self.unserializer.run(document)
             if result.errors:
+                import pdb; pdb.set_trace()
                 logging.error('Errors in document {} : {}'.format(
                     result.document['_id'], result.errors))
             docs.append(result.document)

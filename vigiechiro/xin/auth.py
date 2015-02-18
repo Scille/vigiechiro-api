@@ -137,25 +137,31 @@ def login(authomatic, provider_name):
                                               string.digits) for x in range(32))
             new_token_expire = (datetime.utcnow() +
                 timedelta(seconds=current_app.config['TOKEN_EXPIRE_TIME']))
-            users_db = current_app.data.db['utilisateurs']
+            # users_db = current_app.data.db['utilisateurs']
+            from vigiechiro.resources.utilisateurs import utilisateurs as users_db
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
             # Lookup for existing user by email and provider id
             user_db = users_db.find_one({'$or': [{'email': user.email},
                                                  {provider_id_name: user.id}]})
+            # Grant admin rights to be able to modify tokens field
+            g.request_user = {'role': 'Administrateur'}
             if user_db:
-                # Add the new token and check expire date for existing ones
-                tokens = {new_token: new_token_expire}
-                now = datetime.now(bson.utc)
-                for token, token_expire in user_db['tokens'].items():
-                    if now < token_expire:
-                        tokens[token] = token_expire
+                def custom_merge(document, payload):
+                    # Add the new token and check expire date for existing ones
+                    tokens = payload['tokens']
+                    now = datetime.now(bson.utc)
+                    for token, token_expire in document.get('tokens', {}).items():
+                        if now < token_expire:
+                            tokens[token] = token_expire
+                    document['tokens'] = tokens
+                    return document
                 users_db.update({'email': user.email},
-                                    {"$set": {provider_id_name: user.id,
-                                             'tokens': tokens}})
+                                {'tokens': {new_token: new_token_expire}},
+                                custom_merge=custom_merge, auto_abort=False)
+
             else:
-                # We must switch to admin mode to insert a new user
-                # g.request_user = {'role': 'Administrateur'}
+                # Creating a new utilisateur resource
                 user_payload = {
                     provider_id_name: user.id,
                     'pseudo': user.name,
@@ -164,7 +170,7 @@ def login(authomatic, provider_name):
                     'role': 'Observateur',
                     'donnees_publiques': True
                 }
-                user_id = users_db.insert(user_payload)
+                user_id = users_db.insert(user_payload, auto_abort=False)
                 if not user_id:
                     logging.error('Cannot create user {}'.format(
                                   user_payload))
