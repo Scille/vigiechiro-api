@@ -1,4 +1,5 @@
 from .celery import app
+from .hirefire import hirefire
 from .. import settings
 
 from pymongo import MongoClient

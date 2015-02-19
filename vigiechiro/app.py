@@ -10,6 +10,7 @@ from .resources import (utilisateurs, fichiers, taxons, sites, protocoles,
                         participations, grille_stoc, actualites)
 from .xin import Validator
 from .xin.auth import TokenAuth, auth_factory
+from .scripts.hirefire import hirefire
 
 
 def bootstrap():
@@ -35,6 +36,7 @@ def bootstrap():
                                         mock_provider=settings.DEV_FAKE_AUTH))
     for resource in resources:
         app.register_blueprint(resource)
+    app.register_blueprint(hirefire)
     return app
 
 app = bootstrap()
