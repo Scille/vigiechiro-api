@@ -19,3 +19,5 @@ gunicorn
 # waitress
 requests
 newrelic
+HireFire
+celery

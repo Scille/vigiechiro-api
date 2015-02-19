@@ -19,6 +19,7 @@ ROLE_RULES = {
     'Validateur': ['Lecteur', 'Observateur', 'Validateur'],
     'Administrateur': ['Lecteur', 'Observateur', 'Validateur',
                        'Administrateur']}
+CELERY_BROKER_URL = 'mongodb://localhost:27017/vigiechiro'
 
 # TODO : replace role by this enum system
 
