@@ -5,7 +5,7 @@ from .. import settings
 from pymongo import MongoClient
 
 
-db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
+db = MongoClient(host=settings.get_mongo_uri())[
     settings.MONGO_DBNAME]
 
 

@@ -6,6 +6,7 @@
 """
 
 from os import environ
+from urllib.parse import quote
 from authomatic.providers import oauth2
 from enum import Enum
 
@@ -19,10 +20,8 @@ ROLE_RULES = {
     'Validateur': ['Lecteur', 'Observateur', 'Validateur'],
     'Administrateur': ['Lecteur', 'Observateur', 'Validateur',
                        'Administrateur']}
-CELERY_BROKER_URL = 'mongodb://localhost:27017/vigiechiro'
 
 # TODO : replace role by this enum system
-
 class Roles(Enum):
     Lecteur = 0
     Observateur = 1
@@ -49,6 +48,15 @@ MONGO_PORT = int(environ.get('MONGO_PORT', 27017))
 MONGO_USERNAME = environ.get('MONGO_USERNAME', '')
 MONGO_PASSWORD = environ.get('MONGO_PASSWORD', '')
 MONGO_DBNAME = environ.get('MONGO_DBNAME', 'vigiechiro')
+def get_mongo_uri():
+    basepart = "{host}:{port}/{database}".format(
+        host=MONGO_HOST, port=MONGO_PORT, database=MONGO_DBNAME)
+    if not MONGO_USERNAME:
+        return 'mongodb://' + basepart
+    else:
+        return "mongodb://{username}:{password}@{basepart}".format(
+            username=quote(MONGO_USERNAME), password=quote(MONGO_PASSWORD),
+            basepart=basepart)
 
 ### Eve ###
 X_DOMAINS = FRONTEND_DOMAIN
@@ -83,3 +91,8 @@ AUTHOMATIC = {
 AWS_S3_BUCKET = environ.get('AWS_S3_BUCKET', '')
 AWS_ACCESS_KEY_ID = environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = environ.get('AWS_SECRET_ACCESS_KEY', '')
+
+### Celery broker ###
+CELERY_BROKER_URL = environ.get('CELERY_BROKER_URL',
+                                get_mongo_uri())
+
