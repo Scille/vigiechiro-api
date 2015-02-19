@@ -164,6 +164,7 @@ Nom          |  type   | Requis | Description
 -------------|---------|--------|-------------
  page        | integer |  non   | Page courante
  max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+ q           | string  |  non   | Filtre de recherche
 
 
 ### Lister les protocoles d'un utilisateur
@@ -241,6 +242,7 @@ Nom          |  type   | Requis | Description
 -------------|---------|--------|-------------
  page        | integer |  non   | Page courante
  max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+ q           | string  |  non   | Filtre de recherche
 
 **Response**
 ```
@@ -412,7 +414,7 @@ representatif     | boolean            |  non   |
 
 ## Ajouter un habitat à une localité
 
-`PUT /sites/#id/localite/#localite_nom/habitat`
+`PUT /sites/#id/localite/#localite_id/habitat`
 
 **Input**
 
@@ -823,48 +825,3 @@ Nom          |  Type   | Requis | Description
     '_meta': {'page': 1, 'total': 1, 'max_results': 20}
 }
 ```
-
-
-Recherche
----------
-
-### Rechercher un taxon
-
-`GET /recherche/taxon`
-
-**Parameters**
-
-Nom          |  type   | Requis | Description
--------------|---------|--------|----
- detail      | boolean |  non   | Renvoie le corps des résultats en plus de leur id (défaut: faux)
- max_results | integer |  non   | Nombre de résultats maximum (défaut 5, max 10)
- q           | string  |  oui   | élément à rechercher
-
-**Exemple**
-
-`GET /recherche/taxon?q=*chauve*`
-
-**Response**
-```
-[
-    {
-        "_id": "54ba464f1d41c83768e76fbf",
-        "_value": "Chauve-souris",
-        "_score": 89,
-    },
-    ...
-]
-```
-
-
-### Rechercher un protocole
-
-`GET /recherche/protocole`
-
-**Parameters**
-
-Nom          |  type   | Requis | Description
--------------|---------|--------|----
- detail      | boolean |  non   | Renvoie le corps des résultats en plus de leur id (défaut: faux)
- max_results | integer |  non   | Nombre de résultats maximum (défaut 5, max 10)
- q           | string  |  oui   | élément à rechercher
