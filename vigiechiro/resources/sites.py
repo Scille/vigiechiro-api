@@ -28,7 +28,7 @@ STOC_SCHEMA = {
 
 
 SCHEMA = {
-    # 'numero': {'type': 'integer', 'unique': True, 'readonly': True},
+    'titre': {'type': 'string', 'required': True},
     'protocole': relation('protocoles', required=True, postonly=True),
     'observateur': relation('utilisateurs', postonly=True),
     'commentaire': {'type': 'string'},
@@ -97,10 +97,19 @@ def list_user_sites():
 def create_site():
     payload = get_payload({'protocole', 'commentaire', 'grille_stoc'})
     payload['observateur'] = g.request_user['_id']
+    # Get protocole resource
     protocole_resource = get_resource('protocoles',
         payload.get('protocole', None), auto_abort=False)
     if not protocole_resource:
         abort(422, {'protocole': 'invalid or missing field'})
+    payload['titre'] = protocole_resource['titre'] + '-'
+    # Get grille stoc resource
+    grille_stoc_resource = get_resource('grille_stoc',
+        payload.get('grille_stoc', None), auto_abort=False)
+    if grille_stoc_resource:
+        payload['titre'] += grille_stoc_resource['numero']
+    # else:
+    #     abort(422, {'protocole': 'invalid or missing field'})
     # TODO select type_site according to protocole
     protocole_id = protocole_resource['_id']
     # Make sure observateur has joined protocole and is validated
@@ -135,7 +144,7 @@ def _check_edit_acess(site_resource):
 def edit_site(site_id):
     site_resource = sites.get_resource(site_id)
     _check_edit_acess(site_resource)
-    payload = get_payload({'commentaire', 'grille_stoc', 'observateur', 'verrouille'})
+    payload = get_payload({'commentaire', 'observateur', 'verrouille'})
     if (('observateur' in payload or 'verrouille' in payload)
         and g.request_user['role'] != 'Administrateur'):
         abort(403)

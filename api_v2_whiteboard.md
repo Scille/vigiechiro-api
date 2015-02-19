@@ -343,6 +343,7 @@ Nom          |  type   | Requis | Description
 
 Nom               |  Type   | Requis | Description
 ------------------|---------|--------|-------------
+titre             | string  |  oui   |
 protocole         | objectid|  oui   |
 commentaire       | string  |  non   |
 grille_stoc       | objectid|  non   |
@@ -383,7 +384,6 @@ Observateur enregistré et validé auprès du protocole spécifié
 Nom               |  Type   | Requis | Description
 ------------------|---------|--------|-------------
 commentaire       | string  |  non   |
-grille_stoc       | objectid|  non   |
 observateur       | objectid|  non   | accès seulement pour administrateur
 verrouille        | boolean |  non   | accès seulement pour administrateur
 
@@ -823,5 +823,24 @@ Nom          |  Type   | Requis | Description
         'centre': {'type': 'Point', 'coordinates': [2.181529126, 51.0245531]}}
     ],
     '_meta': {'page': 1, 'total': 1, 'max_results': 20}
+}
+```
+
+
+### Retrouver la grille STOC contenant un point donné
+
+`GET /grille_stoc/nearest`
+
+**Parameters**
+
+Nom          |  Type   | Requis | Description
+-------------|---------|--------|-------------
+ lat         |  float  |  oui   | latitude du point
+ lng         |  float  |  oui   | longitude du point
+
+**Response**
+```
+{
+    ...
 }
 ```
