@@ -93,6 +93,5 @@ AWS_ACCESS_KEY_ID = environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = environ.get('AWS_SECRET_ACCESS_KEY', '')
 
 ### Celery broker ###
-CELERY_BROKER_URL = environ.get('CELERY_BROKER_URL',
-                                get_mongo_uri())
-
+CELERY_BROKER_URL = environ.get('CELERY_BROKER_URL', get_mongo_uri())
+HIREFIRE_TOKEN = environ.get('HIREFIRE_TOKEN', 'development')
