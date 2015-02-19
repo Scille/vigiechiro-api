@@ -53,12 +53,18 @@ def info(id):
                          ensure_ascii=False)
     return jsonify(payload)
 
+
 from flask import request
-from .test import add
+from . import test
+from ..xin import jsonify as xin_jsonify
 
 @hirefire.route('/hirefire/add')
 def add_route():
     x = int(request.args.get('x', 0))
     y = int(request.args.get('y', 0))
-    add.delay(x, y)
+    test.add.delay(x, y)
     return 'wait for it...'
+
+@hirefire.route('/hirefire/add_results')
+def get_add_results_route():
+    return xin_jsonify(_items=list(test.db['add'].find()))
