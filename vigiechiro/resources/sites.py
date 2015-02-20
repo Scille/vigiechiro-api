@@ -79,7 +79,11 @@ sites = Resource('sites', __name__, schema=SCHEMA)
 @requires_auth(roles='Observateur')
 def list_sites():
     pagination = Paginator()
-    found = sites.find(skip=pagination.skip, limit=pagination.max_results)
+    lookup = None
+    if 'q' in request.args:
+        lookup = {'$text': {'$search': request.args['q']}}
+    found = sites.find(lookup, None, skip=pagination.skip,
+                       limit=pagination.max_results)
     return pagination.make_response(*found)
 
 
