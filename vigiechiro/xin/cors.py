@@ -43,6 +43,7 @@ def crossdomain(origin=None, methods=None, headers=None, max_age=21600,
 
             h = resp.headers
 
+            h['Access-Control-Allow-Credentials'] = 'true'
             h['Access-Control-Allow-Origin'] = origin
             h['Access-Control-Allow-Methods'] = get_methods()
             h['Access-Control-Max-Age'] = str(max_age)
