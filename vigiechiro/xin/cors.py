@@ -13,25 +13,24 @@ from .. import settings
 
 
 def crossdomain(origin=None, methods=None, headers=None, max_age=21600,
-                attach_to_all=True, automatic_options=True):
+                attach_to_all=True, automatic_options=True, get_methods=None):
     """A decorator to provide cors support for a flask route"""
     origin = origin or settings.X_DOMAINS
     headers = headers or settings.X_HEADERS
-    if methods is not None:
-        methods = ', '.join(sorted(x.upper() for x in methods))
     if headers is not None and not isinstance(headers, str):
         headers = ', '.join(x.upper() for x in headers)
     if not isinstance(origin, str):
         origin = ', '.join(origin)
     if isinstance(max_age, timedelta):
         max_age = max_age.total_seconds()
-
-    def get_methods():
-        if methods is not None:
-            return methods
-
-        options_resp = current_app.make_default_options_response()
-        return options_resp.headers['allow']
+    if not get_methods:
+        if isinstance(methods, list):
+            methods = ', '.join(sorted(x.upper() for x in methods))
+        def get_methods():
+            if methods != None:
+                return methods
+            options_resp = current_app.make_default_options_response()
+            return options_resp.headers['allow']
 
     def decorator(f):
         def wrapped_function(*args, **kwargs):

@@ -40,18 +40,30 @@ class Resource(Blueprint):
         schema['_etag'] = {'type': 'string', 'readonly': True}
         self.validator = Validator(schema)
         self.unserializer = Unserializer(schema)
+        # Need to keep trace to provide consistent OPTIONS response in case
+        # a route is registered more than one time with different methods
+        self.methods_per_route = {}
 
-    def route(self, *args, **kwargs):
+    def route(self, route, *args, **kwargs):
         """Decorator, register flask route with cors support"""
         cors_kwargs = {}
-        if 'methods' in kwargs:
-            cors_kwargs['methods'] = kwargs['methods']
         for field in ['origin', 'headers', 'max_age',
                       'attach_to_all', 'authomatics_options']:
             if field in kwargs:
                 cors_kwargs[field] = kwargs.pop(field)
+        if not route in self.methods_per_route:
+            self.methods_per_route[route] = []
+        if 'methods' in kwargs:
+            methods = kwargs['methods']
+            if isinstance(methods, str):
+                self.methods_per_route.append(methods)
+            elif isinstance(methods, list):
+                self.methods_per_route[route] += methods
+        cors_kwargs['get_methods'] = lambda: ', '.join(sorted(x.upper()
+            for x in self.methods_per_route[route]))
         cors_decorator = crossdomain(**cors_kwargs)
-        route_decorator = Blueprint.route(self, *args, **kwargs)
+        route_decorator = Blueprint.route(self, route, *args, **kwargs)
+
         def decorator(f):
             return route_decorator(cors_decorator(f))
         return decorator
@@ -161,7 +173,6 @@ class Resource(Blueprint):
         for document in cursor:
             result = self.unserializer.run(document)
             if result.errors:
-                import pdb; pdb.set_trace()
                 logging.error('Errors in document {} : {}'.format(
                     result.document['_id'], result.errors))
             docs.append(result.document)

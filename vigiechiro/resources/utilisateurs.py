@@ -134,21 +134,24 @@ def list_users():
     return pagination.make_response(*found)
 
 
-@utilisateurs.route('/moi', methods=['GET', 'PATCH'])
+@utilisateurs.route('/moi', methods=['GET'])
 @requires_auth(roles='Observateur')
-def moi_dispatcher():
-    if request.method == 'GET':
-        return get_request_user_profile()
-    elif request.method == 'PATCH':
-        return patch_request_user_profile()
-
-
 def get_request_user_profile():
     user = utilisateurs.get_resource(g.request_user['_id'],
                                      projection=RESTRICTED_USER_PROJECTION)
     return jsonify(**_expend_joined_protocoles(user))
 
 
+@utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['GET'])
+@requires_auth(roles='Observateur')
+def get_user_profile(user_id):
+    user = utilisateurs.get_resource(user_id,
+        projection=_choose_utilisateur_projection())
+    return jsonify(**_expend_joined_protocoles(user))
+
+
+@utilisateurs.route('/moi', methods=['PATCH'])
+@requires_auth(roles='Observateur')
 def patch_request_user_profile():
     allowed_fields = {'pseudo', 'email_publique', 'nom', 'prenom',
                       'telephone', 'adresse', 'commentaire', 'organisation',
@@ -158,21 +161,7 @@ def patch_request_user_profile():
     return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))
 
 
-@utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['GET', 'PATCH'])
-def utilisateurs_dispatcher(user_id):
-    if request.method == 'GET':
-        return get_user_profile(user_id)
-    elif request.method == 'PATCH':
-        return patch_user(user_id)
-
-
-@requires_auth(roles='Observateur')
-def get_user_profile(user_id):
-    user = utilisateurs.get_resource(user_id,
-        projection=_choose_utilisateur_projection())
-    return jsonify(**_expend_joined_protocoles(user))
-
-
+@utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['PATCH'])
 @requires_auth(roles='Administrateur')
 def patch_user(user_id):
     allowed_fields = {'pseudo', 'email_publique', 'nom', 'prenom',

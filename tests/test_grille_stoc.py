@@ -32,6 +32,7 @@ def test_grille_lookup(observateur, grille_stoc):
     assert '_created' not in cell
     assert '_etag' not in cell
 
+
 def test_bad_request(observateur, grille_stoc):
     # Missing params
     r = observateur.get('/grille_stoc/rectangle', params={
