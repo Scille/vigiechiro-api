@@ -99,7 +99,11 @@ class Resource(Blueprint):
         document = resource_db.find_one(lookup)
         if not document:
             return (404, )
-        old_etag = document['_etag']
+        old_etag = document.get('_etag', None)
+        if not old_etag:
+            logging.error('Errors in document {} : missing field _etag'.format(
+                document['_id'], ))
+            abort(500)
         # Check for race condition
         if if_match and old_etag != if_match:
             return (412, 'If-Match condition has failed')
