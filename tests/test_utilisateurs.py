@@ -60,9 +60,7 @@ def test_dummy_user(administrateur):
 
 def test_dummy_role(administrateur):
     for dummy_role in ['Administrateur ', ' ', 'observateur']:
-        r = administrateur.patch('/moi',
-                                 headers={'If-Match': administrateur.user['_etag']},
-                                 json={'role': dummy_role})
+        r = administrateur.patch('/moi', json={'role': dummy_role})
         assert r.status_code == 422, r.text
 
 
@@ -72,9 +70,7 @@ def test_user_route(observateur):
     content = r.json()
     for key in ['nom', 'email']:
         assert observateur.user[key] == content[key]
-    r = observateur.patch('/moi',
-                          headers={'If-Match': content['_etag']},
-                          json={'commentaire': 'New comment'})
+    r = observateur.patch('/moi', json={'commentaire': 'New comment'})
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['commentaire'] == 'New comment'
@@ -83,37 +79,29 @@ def test_user_route(observateur):
 def test_rights_write(observateur, administrateur):
     # Change data for myself is allowed...
     payload = {'donnees_publiques': True}
-    r = observateur.patch('/moi',
-                          headers={'If-Match': observateur.user['_etag']},
-                          json=payload)
+    r = observateur.patch('/moi', json=payload)
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['donnees_publiques']
     # ...but I can't change for others !
-    r = observateur.patch(administrateur.url,
-                          headers={'If-Match': administrateur.user['_etag']},
-                          json=payload)
+    r = observateur.patch(administrateur.url, json=payload)
     assert r.status_code == 403, r.text
     # Same thing, cannot change my own rights
     r = observateur.patch('/utilisateurs/{}'.format(observateur.user_id),
-                          headers={'If-Match': observateur.user['_etag']},
                           json={'role': 'Administrateur'})
     assert r.status_code == 403, r.text
     # Of courses, admin can
     r = administrateur.patch('/utilisateurs/{}'.format(observateur.user_id),
-                             headers={'If-Match': observateur.user['_etag']},
                              json={'role': 'Validateur'})
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['role'] == 'Validateur'
     # Finally, try to change various allowed stuffs
-    etag = observateur.user['_etag']
     for payload in [{'pseudo': 'my new pseudo !'},
                     {'email': 'new@email.com'},
                     {'nom': 'newLastName', 'prenom': 'newFirstName'}]:
-        r = observateur.patch('/moi', headers={'If-Match': etag}, json=payload)
+        r = observateur.patch('/moi', json=payload)
         assert r.status_code == 200, r.text
-        etag = r.json()['_etag']
 
 
 def test_rigths_read(observateur, validateur):
@@ -142,13 +130,10 @@ def test_rigths_read(observateur, validateur):
 def test_readonly_fields(observateur, administrateur):
     payloads = [{'role': 'Administrateur'}, {'protocoles': []}]
     for payload in payloads:
-        r = observateur.patch('/moi',
-                              headers={'If-Match': observateur.user['_etag']},
-                              json=payload)
+        r = observateur.patch('/moi', json=payload)
         assert r.status_code == 422, r.text
         # Admin can do everything !
-        r = administrateur.patch(administrateur.url,
-            headers={'If-Match': administrateur.user['_etag']}, json=payload)
+        r = administrateur.patch(administrateur.url, json=payload)
         administrateur.update_user()
         assert r.status_code == 200, r.text
 
@@ -160,9 +145,7 @@ def test_internal_resource(observateur):
                 {'facebook_id': '1872655'},
                 {'google_id': '1872655'}]
     for payload in payloads:
-        r = observateur.patch('/moi',
-                              headers={'If-Match': observateur.user['_etag']},
-                              json=payload)
+        r = observateur.patch('/moi', json=payload)
         assert r.status_code == 422, r.text
     # Also make sure we can't access internal resources
     internal_data = {'github_id': '1872655', 'facebook_id': '1872656',
@@ -187,8 +170,7 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
         r = observateur.put(protocole_url.format(bad_protocole_id))
         assert r.status_code in [404, 422], r.text
     # Try to manualy add a protocole to myself
-    etag = observateur.user['_etag']
-    r = observateur.patch(observateur.url, headers={'If-Match': etag},
+    r = observateur.patch(observateur.url,
                           json={'protocoles': [{'protocole': protocole_id}]})
     # Join a protocole
     r = observateur.put(protocole_url.format(protocole_id))

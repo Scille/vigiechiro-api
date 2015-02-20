@@ -13,7 +13,7 @@ from ..xin import Resource
 from ..xin.tools import jsonify, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-from ..xin.snippets import get_resource, Paginator, get_if_match, get_payload
+from ..xin.snippets import get_resource, Paginator, get_payload
 from .protocoles import protocoles as protocoles_resource
 
 
@@ -157,7 +157,7 @@ def patch_request_user_profile():
                       'telephone', 'adresse', 'commentaire', 'organisation',
                       'professionnel', 'donnees_publiques', 'email'}
     payload = get_payload(allowed_fields)
-    result = utilisateurs.update(g.request_user['_id'], payload, get_if_match())
+    result = utilisateurs.update(g.request_user['_id'], payload)
     return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))
 
 
@@ -168,5 +168,5 @@ def patch_user(user_id):
                       'telephone', 'adresse', 'commentaire', 'organisation',
                       'professionnel', 'donnees_publiques', 'email', 'role'}
     payload = get_payload()
-    result = utilisateurs.update(user_id, payload, get_if_match())
+    result = utilisateurs.update(user_id, payload)
     return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))
