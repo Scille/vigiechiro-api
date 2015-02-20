@@ -331,7 +331,7 @@ Nom          |  type   | Requis | Description
         {
             ...
         }
-    ]    
+    ]
 }
 ```
 

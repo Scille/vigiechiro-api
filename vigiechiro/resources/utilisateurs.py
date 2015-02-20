@@ -13,7 +13,7 @@ from ..xin import Resource
 from ..xin.tools import jsonify, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-from ..xin.snippets import get_resource, Paginator, get_payload
+from ..xin.snippets import Paginator, get_resource, get_payload, get_lookup_from_q
 from .protocoles import protocoles as protocoles_resource
 
 
@@ -128,7 +128,7 @@ def non_macro_protocole(context):
 @requires_auth(roles='Observateur')
 def list_users():
     pagination = Paginator()
-    found = utilisateurs.find(None, _choose_utilisateur_projection(),
+    found = utilisateurs.find(get_lookup_from_q(), _choose_utilisateur_projection(),
                                skip=pagination.skip,
                                limit=pagination.max_results)
     return pagination.make_response(*found)

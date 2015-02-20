@@ -12,7 +12,7 @@ from ..xin import Resource
 from ..xin.tools import jsonify, abort, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-from ..xin.snippets import get_payload, get_if_match, Paginator
+from ..xin.snippets import Paginator, get_lookup_from_q, get_payload, get_if_match
 
 from .actualites import create_actuality_validation_protocole, create_actuality_inscription_protocole
 
@@ -71,7 +71,8 @@ def check_configuration_participation(payload):
 @requires_auth(roles='Observateur')
 def list_protocoles():
     pagination = Paginator()
-    found = protocoles.find(skip=pagination.skip, limit=pagination.max_results)
+    found = protocoles.find(get_lookup_from_q(), skip=pagination.skip,
+                            limit=pagination.max_results)
     return pagination.make_response(*found)
 
 

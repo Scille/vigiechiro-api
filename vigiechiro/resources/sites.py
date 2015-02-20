@@ -12,10 +12,11 @@ from ..xin import Resource
 from ..xin.tools import jsonify, abort
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-from ..xin.snippets import get_payload, get_if_match, Paginator, get_resource
+from ..xin.snippets import Paginator, get_payload, get_resource, get_lookup_from_q
 
 from .actualites import create_actuality_nouveau_site
 from .protocoles import check_configuration_participation
+
 
 STOC_SCHEMA = {
     'subdivision1': {'type': 'string', 'regex': r'^()$'},
@@ -79,10 +80,7 @@ sites = Resource('sites', __name__, schema=SCHEMA)
 @requires_auth(roles='Observateur')
 def list_sites():
     pagination = Paginator()
-    lookup = None
-    if 'q' in request.args:
-        lookup = {'$text': {'$search': request.args['q']}}
-    found = sites.find(lookup, None, skip=pagination.skip,
+    found = sites.find(get_lookup_from_q(), skip=pagination.skip,
                        limit=pagination.max_results)
     return pagination.make_response(*found)
 
@@ -91,8 +89,9 @@ def list_sites():
 @requires_auth(roles='Observateur')
 def list_user_sites():
     pagination = Paginator()
-    found = sites.find({'observateur': g.request_user['_id']},
-                        skip=pagination.skip, limit=pagination.max_results)
+    lookup = {'observateur': g.request_user['_id']}
+    lookup.update(get_lookup_from_q() or {})
+    found = sites.find(lookup, skip=pagination.skip, limit=pagination.max_results)
     return pagination.make_response(*found)
 
 

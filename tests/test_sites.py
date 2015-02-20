@@ -59,6 +59,16 @@ def test_list_own_sites(obs_sites_base):
     assert len(r.json()['_items']) == 2, r.json()
 
 
+@pytest.mark.xfail
+def test_list_with_search(obs_sites_base):
+    observateur, sites_base = obs_sites_base
+    url = 'sites/{}'.format(sites_base[0]['_id'])
+    r = observateur.get('/sites', params={'q': 'Chauve'})
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 1, r.json()
+    assert r.json()['_items'][0]['libelle_long'] == 'Chauve-Souris'
+
+
 def test_non_register_create_site(protocoles_base, observateur, administrateur):
     # Cannot create site if not register to a protocole
     site_payload = {

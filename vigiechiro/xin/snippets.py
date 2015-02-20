@@ -99,3 +99,11 @@ def get_if_match():
     if not if_match:
         abort(412, 'missing header If-Match')
     return if_match
+
+
+def get_lookup_from_q():
+    """Create a mongodb lookup dict from q param present in url's arguments"""
+    if 'q' in request.args:
+        return {'$text': {'$search': request.args['q']}}
+    else:
+        return None
