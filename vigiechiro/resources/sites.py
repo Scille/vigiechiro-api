@@ -5,7 +5,7 @@
     see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893712
 """
 
-from flask import current_app, abort, jsonify, g
+from flask import request, current_app, abort, jsonify, g
 from datetime import datetime
 
 from ..xin import Resource
