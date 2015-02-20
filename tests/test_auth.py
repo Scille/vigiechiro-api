@@ -68,3 +68,17 @@ def test_logout(observateur):
     r = observateur.get('/moi')
     assert r.status_code == 401
 
+
+def test_cors(observateur):
+    for method in ['GET', 'PATCH']:
+        r = observateur.options('/moi', headers={
+            'Access-Control-Request-Headers': 'accept, cache-control, authorization, content-type',
+            'Access-Control-Request-Method': method
+        })
+        assert r.status_code == 200, r.text
+        assert 'Access-Control-Allow-Headers' in r.headers
+        assert r.headers['Access-Control-Allow-Headers'] == 'ACCEPT, CONTENT-TYPE, AUTHORIZATION, IF-MATCH, CACHE-CONTROL'
+        assert 'Access-Control-Allow-Methods' in r.headers
+        assert r.headers['Access-Control-Allow-Methods'] == 'GET, PATCH'
+        assert 'Access-Control-Allow-Origin' in r.headers
+        assert r.headers['Access-Control-Allow-Origin'] == settings.FRONTEND_DOMAIN

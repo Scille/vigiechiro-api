@@ -10,7 +10,8 @@ from flask import request, current_app
 from ..xin import Resource
 from ..xin.tools import jsonify, abort
 from ..xin.auth import requires_auth
-from ..xin.snippets import Paginator
+from ..xin.snippets import Paginator, get_url_params
+
 
 # Indicative schema given we won't do any insert
 SCHEMA = {
@@ -22,32 +23,22 @@ SCHEMA = {
 grille_stoc = Resource('grille_stoc', __name__, schema=SCHEMA)
 
 
-@grille_stoc.route('/grille_stoc', methods=['GET'])
+@grille_stoc.route('/grille_stoc/rectangle', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_grille_stoc():
-    args_names = ['sw_lng', 'sw_lat', 'ne_lng', 'ne_lat']
+    params = get_url_params({
+        'sw_lng': {'required': True, 'type': float},
+        'sw_lat': {'required': True, 'type': float},
+        'ne_lng': {'required': True, 'type': float},
+        'ne_lat': {'required': True, 'type': float}
+    })
     pagination = Paginator()
-    missing = [arg for arg in args_names if arg not in request.args]
-    if missing:
-        abort(422, {f: 'missing param' for f in missing})
-    float_args = {}
-    errors = {}
-    for arg in args_names:
-        if arg not in request.args:
-            errors[arg] = 'missing param'
-        else:
-            try:
-                float_args[arg] = float(request.args[arg])
-            except ValueError:
-                errors[arg] = 'bad value, should be float'
-    if errors:
-        abort(422, errors)
     lookup = {
         'centre': {
             '$geoWithin': {
                 '$box': [
-                    [float_args['sw_lng'], float_args['sw_lat']],
-                    [float_args['ne_lng'], float_args['ne_lat']]
+                    [params['sw_lng'], params['sw_lat']],
+                    [params['ne_lng'], params['ne_lat']]
                 ]
             }
         }
@@ -55,7 +46,8 @@ def get_grille_stoc():
     cursor = current_app.data.db[grille_stoc.name].find(lookup, limit=40)
     return pagination.make_response(cursor)
 
-@grille_stoc.route('/grille_stoc/nearest', methods=['GET'])
+
+@grille_stoc.route('/grille_stoc/proximite', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_nearest_grille_stoc():
     args_names = ['lng', 'lat']

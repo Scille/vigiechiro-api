@@ -800,9 +800,9 @@ Nom          |  Type   | Requis | Description
 Grille STOC
 -----------
 
-### Retrouver une grille STOC
+### Retrouver les grille STOC contenues dans un rectangle
 
-`GET /grille_stoc`
+`GET /grille_stoc/rectangle`
 
 **Parameters**
 
@@ -829,7 +829,7 @@ Nom          |  Type   | Requis | Description
 
 ### Retrouver la grille STOC contenant un point donné
 
-`GET /grille_stoc/nearest`
+`GET /grille_stoc/proximite`
 
 **Parameters**
 

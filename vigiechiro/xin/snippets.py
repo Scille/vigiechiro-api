@@ -67,6 +67,32 @@ def get_payload(allowed_fields=None):
     return payload
 
 
+def get_url_params(params=None):
+    """
+        Retrieve the given params in url or abort request
+        :param params: list of required arguments or dict of params/config
+        (i.g. `{'a': {'required': True, 'type': int}, 'b': {}}`)
+    """
+    if not params:
+        return
+    result = {}
+    errors = {}
+    if isinstance(params, list):
+        params = {a: {} for a in params}
+    for param, config in params.items():
+        if config.get('required', False) and param not in request.args:
+            errors[param] = 'missing required param'
+            continue
+        param_type = config.get('type', str)
+        try:
+            result[param] = param_type(request.args[param])
+        except ValueError:
+            errors[param] = 'bad value, should be {}'.format(param_type)
+    if errors:
+        abort(422, errors)
+    return result
+
+
 def get_if_match():
     """Return the If-Match header if present or abort request"""
     if_match = request.headers.get('If-Match', None)
