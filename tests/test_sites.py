@@ -3,12 +3,15 @@ from bson import ObjectId
 from datetime import datetime
 
 from common import db, administrateur, observateur, format_datetime
+from test_grille_stoc import grille_stoc
 from test_protocoles import protocoles_base
 from test_taxons import taxons_base
 
 
 @pytest.fixture
 def obs_sites_base(request, protocoles_base, observateur, administrateur):
+    # Who knows why, cannot use grille_stoc as fixture...
+    grilles = grille_stoc(request)
     protocole_id = str(protocoles_base[1]['_id'])
     # Register the observateur to a protocole
     r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
@@ -21,12 +24,14 @@ def obs_sites_base(request, protocoles_base, observateur, administrateur):
     # Create sites for the observateur
     site1_payload = {
         'protocole': protocole_id,
+        'grille_stoc': str(grilles[0]['_id']),
         'commentaire': 'My little site'
     }
     r = observateur.post('/sites', json=site1_payload)
     assert r.status_code == 201, r.text
     site2_payload = {
         'protocole': protocole_id,
+        'grille_stoc': str(grilles[1]['_id']),
         'commentaire': 'Another site'
     }
     r = observateur.post('/sites', json=site2_payload)
@@ -56,7 +61,14 @@ def test_list_own_sites(obs_sites_base):
     url = 'sites/{}'.format(sites_base[0]['_id'])
     r = observateur.get('/moi/sites')
     assert r.status_code == 200, r.text
-    assert len(r.json()['_items']) == 2, r.json()
+    items = r.json()['_items']
+    assert len(items) == 2, r.json()
+    # Resource contains expended version of fields protocole and grille_stoc
+    for item in items:
+        for field in ['protocole', 'grille_stoc']:
+            assert field in item
+            assert isinstance(item[field], dict), item
+            assert '_id' in item[field], item
 
 
 @pytest.mark.xfail

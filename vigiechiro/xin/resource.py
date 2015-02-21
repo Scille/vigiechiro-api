@@ -162,8 +162,8 @@ class Resource(Blueprint):
             # Else abort in case of race condition
             result = self._atomic_update(lookup, payload, if_match=if_match,
                                          custom_merge=custom_merge)
-            if result[0] != 200:
-                error(*result)
+        if result[0] != 200:
+            error(*result)
         return result[1]
 
     def find(self, *args, expend=[], **kwargs):
@@ -172,10 +172,12 @@ class Resource(Blueprint):
             'resource': self,
             'expend_data_relation': expend
         }
+        print('context', additional_context)
         docs = []
         cursor = current_app.data.db[self.name].find(*args, **kwargs)
         for document in cursor:
-            result = self.unserializer.run(document)
+            result = self.unserializer.run(document,
+                                           additional_context=additional_context)
             if result.errors:
                 logging.error('Errors in document {} : {}'.format(
                     result.document['_id'], result.errors))
@@ -193,7 +195,8 @@ class Resource(Blueprint):
                 'resource': self,
                 'expend_data_relation': expend
             }
-            result = self.unserializer.run(document)
+            result = self.unserializer.run(document,
+                                           additional_context=additional_context)
             if result.errors:
                 logging.error('Errors in document {} : {}'.format(
                     result.document['_id'], result.errors))

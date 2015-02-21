@@ -107,6 +107,8 @@ class MongoJsonEncoder(json.JSONEncoder):
             return obj.isoformat()
         elif isinstance(obj, bson.ObjectId):
             return str(obj)
+        elif isinstance(obj, set):
+            return list(obj)
         return json.JSONEncoder.default(self, obj)
 
 

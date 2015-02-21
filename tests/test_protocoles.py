@@ -124,3 +124,44 @@ def test_participation_configuration(protocoles_base, new_protocole_payload,
     payload = {'configuration_participation': ['dummy']}
     r = administrateur.patch(url, headers={'If-Match': etag}, json=payload)
     assert r.status_code == 422, r.text
+
+
+def test_list_protocole_users(protocoles_base, observateur, administrateur):
+    protocole = protocoles_base[1]
+    protocole_id = str(protocole['_id'])
+    another_protocole = protocoles_base[2]
+    another_protocole_id = str(another_protocole['_id'])
+    # Join a protocole
+    r = observateur.put('/moi/protocoles/' + protocole_id)
+    assert r.status_code == 200, r.text
+    r = administrateur.put('/moi/protocoles/' + protocole_id)
+    assert r.status_code == 200, r.text
+    # Join another protocole
+    r = observateur.put('/moi/protocoles/' + another_protocole_id)
+    assert r.status_code == 200, r.text
+    # Validate protocole only for the admin
+    validate_url = '/protocoles/{}/observateurs/{}'.format(
+        protocole_id, administrateur.user_id)
+    r = administrateur.put(validate_url, json={'valide': True})
+    assert r.status_code == 200, r.text
+    administrateur.update_user()
+    observateur.update_user()
+    # Now try to get back the list of user registered to the protocole
+    users_protocole_url = '/protocoles/{}/observateurs'.format(protocole_id)
+    r = observateur.get(users_protocole_url)
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 2
+    # Same thing with filter : TOUS
+    r = observateur.get(users_protocole_url, params={'type': 'TOUS'})
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 2
+    # VALIDES
+    r = observateur.get(users_protocole_url, params={'type': 'VALIDES'})
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 1
+    assert r.json()['_items'][0]['_id'] == administrateur.user['_id']
+    # A_VALIDER
+    r = observateur.get(users_protocole_url, params={'type': 'A_VALIDER'})
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 1
+    assert r.json()['_items'][0]['_id'] == observateur.user['_id']

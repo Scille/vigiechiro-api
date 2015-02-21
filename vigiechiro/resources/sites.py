@@ -91,7 +91,8 @@ def list_user_sites():
     pagination = Paginator()
     lookup = {'observateur': g.request_user['_id']}
     lookup.update(get_lookup_from_q() or {})
-    found = sites.find(lookup, skip=pagination.skip, limit=pagination.max_results)
+    found = sites.find(lookup, expend=['protocole', 'grille_stoc'],
+                       skip=pagination.skip, limit=pagination.max_results)
     return pagination.make_response(*found)
 
 

@@ -5,7 +5,7 @@
     see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893673
 """
 
-from flask import g
+from flask import g, request
 from datetime import datetime
 
 from ..xin import Resource
@@ -15,6 +15,8 @@ from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator, get_lookup_from_q, get_payload, get_if_match
 
 from .actualites import create_actuality_validation_protocole, create_actuality_inscription_protocole
+from .utilisateurs import (utilisateurs as utilisateurs_resource,
+                           get_payload_add_following, DEFAULT_USER_PROJECTION)
 
 
 SCHEMA = {
@@ -82,7 +84,7 @@ def list_user_protocoles():
     pagination = Paginator()
     joined_ids = [p['protocole'] for p in g.request_user.get('protocoles', [])]
     found = protocoles.find({'_id': {'$in': joined_ids}},
-                             skip=pagination.skip, limit=pagination.max_results)
+                            skip=pagination.skip, limit=pagination.max_results)
     return pagination.make_response(*found)
 
 
@@ -110,6 +112,24 @@ def edit_protocole(protocole_id):
     return jsonify(result)
 
 
+@protocoles.route('/protocoles/<objectid:protocole_id>/observateurs', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_protocole_users(protocole_id):
+    lookup = {'protocoles.protocole': protocole_id}
+    pagination = Paginator()
+    if 'type' in request.args and request.args['type'] != 'TOUS':
+        if request.args['type'] == 'A_VALIDER':
+            lookup['protocoles.valide'] = {'$ne': True}
+        elif request.args['type'] == 'VALIDES':
+            lookup['protocoles.valide'] = True
+        else:
+            abort(422, 'bad url param type')
+    found = utilisateurs_resource.find(lookup or None,
+                                       skip=pagination.skip,
+                                       limit=pagination.max_results)
+    return pagination.make_response(*found)
+
+
 @protocoles.route('/protocoles/liste', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_resume_list():
@@ -122,7 +142,6 @@ def get_resume_list():
 @requires_auth(roles='Observateur')
 def user_join_protocole(protocole_id):
     """Register the request user to the given protocole"""
-    from .utilisateurs import utilisateurs as utilisateurs_resource, get_payload_add_following
     # Check if the user already joined the protocole
     joined_protocoles = g.request_user.get('protocoles', [])
     if next((p for p in joined_protocoles
@@ -150,7 +169,6 @@ def user_join_protocole(protocole_id):
 @requires_auth(roles='Administrateur')
 def user_validate_protocole(protocole_id, user_id):
     """Validate a user into a protocole"""
-    from .utilisateurs import utilisateurs as utilisateurs_resource
     payload = get_payload({'valide'})
     user_resource = utilisateurs_resource.get_resource(user_id)
     # Make sure the user has joined the protocole and is not valid yet

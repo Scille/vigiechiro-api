@@ -196,6 +196,19 @@ Nom          |  Type   | Description
 `PUT /moi/protocoles/#id`
 
 
+### Lister les observateur d'un protocole
+
+`GET /protocoles/#protocole_id/observateurs`
+
+**Input**
+
+Nom               |  Type   | Description
+------------------|---------|-------------
+type              | string  | 'TOUS' (défaut), 'VALIDES', 'A_VALIDER'
+
+Note : si #protocole_id est mis à 'tous', la liste se fera sur tous les protocoles
+
+
 ### Valider un observateur dans un protocole
 
 `PUT /protocoles/#protocole_id/observateurs/#observateur_id`

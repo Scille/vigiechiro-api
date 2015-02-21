@@ -17,7 +17,7 @@ def grille_stoc(request):
     def finalizer():
         db.grille_stoc.remove()
     request.addfinalizer(finalizer)
-
+    return grille
 
 def test_grille_lookup(observateur, grille_stoc):
     r = observateur.get('/grille_stoc/rectangle', params={

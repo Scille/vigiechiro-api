@@ -14,7 +14,6 @@ from ..xin.tools import jsonify, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator, get_resource, get_payload, get_lookup_from_q
-from .protocoles import protocoles as protocoles_resource
 
 
 SCHEMA = {
@@ -96,6 +95,7 @@ def get_payload_add_following(ids):
 def _expend_joined_protocoles(document):
     if 'protocoles' not in document:
         return document
+    from .protocoles import protocoles as protocoles_resource
     for join in document['protocoles']:
         protocole_id = join['protocole']
         protocole = protocoles_resource.find_one(
