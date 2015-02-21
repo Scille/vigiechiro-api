@@ -798,6 +798,8 @@ Nom          |  Type   | Requis | Description
  page        | integer |  non   | Page courante
  max_results | integer |  non   | Nombre de résultats (défaut 20, max 100)
 
+Note: les actualités sont retournées en commençant par les plus récentes
+
 **Response**
 ```
 {
@@ -808,6 +810,20 @@ Nom          |  Type   | Requis | Description
     ]
 }
 ```
+
+### Lister les actualités de validation
+
+`GET /actualites/validations`
+
+**Parameters**
+
+Nom          |  Type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats (défaut 20, max 100)
+ type        | string  |  non   | `TOUS` (défaut), `VALIDES` ou `A_VALIDER`
+
+Note: les actualités sont retournées en commençant par les plus récentes
 
 
 Grille STOC
