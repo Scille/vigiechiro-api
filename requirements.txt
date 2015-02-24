@@ -1,15 +1,10 @@
 redis
-# Eve's dependancies
-Cerberus==0.8
-Events==0.2.1
-Flask-PyMongo==0.3.0
-Flask==0.10.1
-itsdangerous==0.24
-Jinja2==2.7.3
-MarkupSafe==0.23
-pymongo==2.7.2
-simplejson==3.6.5
-Werkzeug==0.9.6
+requests
+newrelic
+HireFire
+celery
+Flask-PyMongo
+Flask
 # authomatic's dependancies
 six
 # Application server
@@ -17,7 +12,3 @@ gunicorn
 # tornado
 # uwsgi
 # waitress
-requests
-newrelic
-HireFire
-celery

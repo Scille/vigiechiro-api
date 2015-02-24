@@ -8,22 +8,26 @@ import types
 from functools import wraps
 from datetime import datetime, timedelta
 import bson
+from uuid import uuid4
 
-from flask import Blueprint, redirect
-from flask import app, current_app, abort, request
-import eve.auth
-import eve.render
-from eve.methods.post import post_internal
+from flask import Blueprint, redirect, g, Response
+from flask import app, current_app, request, abort
 from authomatic.extras.flask import FlaskAuthomatic
 
+from .tools import jsonify
 from .. import settings
+
+
+def get_request_user():
+    """Return the current user or an empty dict if anonymous user"""
+    return g.request_user if hasattr(g, request_user) else {}
 
 
 def check_auth(token, allowed_roles):
     """
-        Token-based authentification with role filtering
+        Token-based authentication with role filtering
         Once user profile has been retrieved from the given token,
-        it is stored in application context as **current_app.g.request_user**::
+        it is stored in application context as **g.request_user**::
 
             from flask import app, request, jsonify
             @app.route('/my_profile')
@@ -31,23 +35,23 @@ def check_auth(token, allowed_roles):
                 # Token-based auth is provided as username and empty password
                 check_auth(request.authorization.username, ['admin'])
                 # Return the user profile
-                return jsonify(current_app.g.request_user)
+                return jsonify(g.request_user)
     """
-    accounts = current_app.data.driver.db['utilisateurs']
+    accounts = current_app.data.db['utilisateurs']
     account = accounts.find_one({'tokens.{}'.format(token): {'$exists': True}})
     if account:
         if account['tokens'][token] < datetime.now(bson.utc):
             # Out of date token
             return False
         if allowed_roles:
-            # Role are handled using least priviledge, thus a higher
-            # priviledged role also include it lower roles.
+            # Role are handled using least privilege, thus a higher
+            # privileged role also include it lower roles.
             role = account['role']
             if not next((True for r in current_app.config['ROLE_RULES'][role]
                          if r in allowed_roles), False):
                 abort(403)
         # Keep request user account in local context, could be useful later
-        current_app.g.request_user = account
+        g.request_user = account
         return True
     return False
 
@@ -64,23 +68,12 @@ def requires_auth(roles=[]):
         def decorated(*args, **kwargs):
             auth = request.authorization
             if not auth or not check_auth(auth.username, roles):
-                return current_app.auth.authenticate()
+                # Returns a 401 that enables basic auth
+                resp = Response(None, 401, {'WWW-Authenticate': 'Basic realm:"%s"' % __package__})
+                abort(401, description='Please provide proper credentials', response=resp)
             return f(*args, **kwargs)
         return decorated
     return decorator
-
-
-class TokenAuth(eve.auth.TokenAuth):
-
-    """Custom token & roles authentification for Eve"""
-
-    def check_auth(self, token, allowed_roles, resource, method):
-        if check_auth(token, allowed_roles):
-            current_app.set_request_auth_value(
-                current_app.g.request_user['_id'])
-            return True
-        else:
-            return False
 
 
 def auth_factory(services, mock_provider=False):
@@ -125,14 +118,14 @@ def auth_factory(services, mock_provider=False):
     def logout():
         if request.authorization:
             token = request.authorization['username']
-            users = current_app.data.driver.db['utilisateurs']
+            users = current_app.data.db['utilisateurs']
             token_field = 'tokens.{}'.format(token)
             lookup = {token_field: {'$exists': True}}
             result = users.update(lookup, {'$unset': {token_field: ""}})
             if not result['n']:
                 abort(404)
             logging.info('Destroying token {}'.format(token))
-        return eve.render.send_response(None, [])
+        return jsonify({'_status': 'Disconnected'})
     return auth_blueprint
 
 
@@ -150,40 +143,44 @@ def login(authomatic, provider_name):
                                               string.digits) for x in range(32))
             new_token_expire = (datetime.utcnow() +
                 timedelta(seconds=current_app.config['TOKEN_EXPIRE_TIME']))
-            users_db = current_app.data.driver.db['utilisateurs']
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
             # Lookup for existing user by email and provider id
-            user_db = users_db.find_one({'$or': [{'email': user.email},
-                                                 {provider_id_name: user.id}]})
-            if user_db:
+            users_db = current_app.data.db['utilisateurs']
+            document = users_db.find_one(
+                {'$or': [{'email': user.email}, {provider_id_name: user.id}]})
+            new_etag = uuid4().hex
+            new_updated = datetime.utcnow().replace(microsecond=0)
+            if document:
                 # Add the new token and check expire date for existing ones
-                tokens = {new_token: new_token_expire}
+                mongo_update = {'$set': {
+                                    'tokens.{}'.format(new_token): new_token_expire,
+                                    provider_id_name: user.id,
+                                    '_etag': new_etag,
+                                    '_updated': new_updated}
+                               }
                 now = datetime.now(bson.utc)
-                for token, token_expire in user_db['tokens'].items():
-                    if now < token_expire:
-                        tokens[token] = token_expire
-                users_db.update({'email': user.email},
-                                {"$set": {provider_id_name: user.id,
-                                          'tokens': tokens}})
+                unset = []
+                for token, token_expire in document.get('tokens', {}).items():
+                    if now > token_expire:
+                        unset.append(token)
+                if unset:
+                    mongo_update['$unset'] = {'tokens.{}'.format(t): True for t in unset}
+                users_db.update({'_id': document['_id']}, mongo_update)
             else:
-                # We must switch to admin mode to insert a new user
-                current_app.g.request_user = {'role': 'Administrateur'}
+                # Creating a new utilisateur resource
                 user_payload = {
                     provider_id_name: user.id,
+                    '_created': new_updated,
+                    '_updated': new_updated,
+                    '_etag': new_etag,
                     'pseudo': user.name,
                     'email': user.email,
                     'tokens': {new_token: new_token_expire},
                     'role': 'Observateur',
                     'donnees_publiques': True
                 }
-                result = post_internal('utilisateurs', user_payload)
-                # Drop admin right for security
-                del current_app.g.request_user
-                if result[-1] != 201:
-                    logging.error('Cannot create user {} : {}'.format(
-                                  user_payload, result))
-                    abort(500)
+                users_db.insert(user_payload)
                 logging.info('Create new user : {}'.format(user.email))
             return redirect('{}/#/?token={}'.format(
                 current_app.config['FRONTEND_DOMAIN'], new_token), code=302)

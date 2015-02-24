@@ -6,14 +6,18 @@ import string
 import pytest
 from pymongo import MongoClient
 from bson import ObjectId
-from eve.methods.post import post_internal
-from flask import current_app
+from flask import g
 from datetime import datetime, timedelta
 
 from vigiechiro import settings, app
+from vigiechiro.resources import utilisateurs as utilisateurs_resource
 
 from wsgiref.handlers import format_date_time
 from time import mktime
+
+
+db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
+    settings.MONGO_DBNAME]
 
 
 def format_datetime(dt):
@@ -21,21 +25,24 @@ def format_datetime(dt):
     return format_date_time(stamp)
 
 
-db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
-    settings.MONGO_DBNAME]
-
-
-def eve_post_internal(resource, payload):
-    with app.test_request_context() as c:
-        # Some inserts check the user's role
-        current_app.g.request_user = {'role': 'Administrateur'}
-        result = post_internal(resource, payload)
-        assert result[-1] == 201, result
+def with_flask_context(f):
+    def decorator(*args, **kwargs):
+        with app.test_request_context():
+            g.request_user = {'role': 'Administrateur'}
+            return f(*args, **kwargs)
+    return decorator
 
 
 @pytest.fixture
 def administrateur(request):
     auth = AuthRequests(role='Administrateur')
+    request.addfinalizer(auth.finalizer)
+    return auth
+
+
+@pytest.fixture
+def validateur(request):
+    auth = AuthRequests(role='Validateur')
     request.addfinalizer(auth.finalizer)
     return auth
 
@@ -48,8 +55,9 @@ def observateur(request):
 
 
 @pytest.fixture
-def validateur(request):
-    auth = AuthRequests(role='Validateur')
+def observateur_other(request):
+    # It can be useful to have a friend to play with...
+    auth = AuthRequests(role='Observateur')
     request.addfinalizer(auth.finalizer)
     return auth
 
@@ -74,10 +82,16 @@ class AuthRequests:
         }
         for key, value in fields:
             self.user[key] = value
-        eve_post_internal('utilisateurs', payload)
-        self.user_id = str(
-            db.utilisateurs.find_one({'pseudo': payload['pseudo']})['_id'])
-        self.update_user()
+        @with_flask_context
+        def insert_user():
+            # Add additional_context to be allowed to modify tokens
+            inserted = utilisateurs_resource.insert(payload, auto_abort=False,
+                additional_context={'internal': True})
+            assert inserted
+            return inserted
+        self.user = insert_user()
+        self.user_id = str(self.user['_id'])
+        # self.update_user()
         self.url = '/utilisateurs/' + self.user_id
 
     def finalizer(self):
@@ -118,6 +132,4 @@ class AuthRequests:
         return requests.request('options', url, **kwargs)
 
     def update_user(self):
-        r = self.get('/utilisateurs/' + self.user_id)
-        assert r.status_code == 200, r.text
-        self.user = r.json()
+        self.user = db.utilisateurs.find_one({'_id': self.user['_id']})
