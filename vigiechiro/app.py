@@ -54,6 +54,7 @@ def init_app():
     app.register_blueprint(resources.actualites)
     app.register_blueprint(resources.sites)
     app.register_blueprint(resources.participations)
+    app.register_blueprint(resources.donnees)
     make_json_app(app)
     return app
 
