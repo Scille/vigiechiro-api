@@ -866,9 +866,9 @@ Nom          |  Type   | Requis | Description
 ```
 
 
-### Retrouver la grille STOC contenant un point donné
+### Retrouver la grille STOC contenues dans un cercle
 
-`GET /grille_stoc/proximite`
+`GET /grille_stoc/cercle`
 
 **Parameters**
 
@@ -876,6 +876,7 @@ Nom          |  Type   | Requis | Description
 -------------|---------|--------|-------------
  lat         |  float  |  oui   | latitude du point
  lng         |  float  |  oui   | longitude du point
+ r           |  float  |  oui   | rayon en mètres
 
 **Response**
 ```
