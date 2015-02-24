@@ -43,19 +43,19 @@ def build_hirefire_blueprint(token, procs):
         return Response(json.dumps(data, cls=TimeAwareJSONEncoder, ensure_ascii=False),
                         mimetype='application/json')
 
-    # TODO : for test purpose, remove me
-    from flask import request
-    from . import test
-    from ..xin import jsonify as xin_jsonify
-    @bp.route('/hirefire/add')
-    def add_route():
-        x = int(request.args.get('x', 0))
-        y = int(request.args.get('y', 0))
-        test.add.delay(x, y)
-        return 'wait for it...'
+    # # TODO : for test purpose, remove me
+    # from flask import request
+    # from . import test
+    # from ..xin import jsonify as xin_jsonify
+    # @bp.route('/hirefire/add')
+    # def add_route():
+    #     x = int(request.args.get('x', 0))
+    #     y = int(request.args.get('y', 0))
+    #     test.add.delay(x, y)
+    #     return 'wait for it...'
 
-    @bp.route('/hirefire/add_results')
-    def get_add_results_route():
-        return xin_jsonify(_items=list(test.db['add'].find()))
+    # @bp.route('/hirefire/add_results')
+    # def get_add_results_route():
+    #     return xin_jsonify(_items=list(test.db['add'].find()))
 
     return bp

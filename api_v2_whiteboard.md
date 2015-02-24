@@ -418,7 +418,7 @@ verrouille        | boolean |  non   | accès seulement pour administrateur
 
 ## Ajouter une localité
 
-`PUT /sites/#id/localite`
+`PUT /sites/#id/localites`
 
 **Input**
 
@@ -437,7 +437,7 @@ representatif     | boolean            |  non   |
 
 ## Ajouter un habitat à une localité
 
-`PUT /sites/#id/localite/#localite_id/habitat`
+`PUT /sites/#id/localites/#localite_id/habitat`
 
 **Input**
 
@@ -579,7 +579,7 @@ Administrateur et observateur ayant créé la participation
 
 ### Ajouter des pièce jointes à la participation
 
-`POST /participations/#id/pieces_jointes`
+`PUT /participations/#id/pieces_jointes`
 
 **Input**
 
@@ -595,9 +595,9 @@ Note : seuls les fichiers de mime type `image/*`, `application/ta`, `application
 Administrateur et observateur ayant créé la participation
 
 
-### Poster un message dans la participation
+### Ajouter un message dans la participation
 
-`POST /participation/#id/messages`
+`PUT /participation/#id/messages`
 
 **Input**
 

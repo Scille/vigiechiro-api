@@ -12,7 +12,8 @@ from vigiechiro.resources import utilisateurs as utilisateurs_resource
 from test_protocoles import protocoles_base
 from test_taxons import taxons_base
 from test_sites import obs_sites_base
-
+from test_fichiers import (file_uploaded, custom_upload_file, clean_fichiers,
+                           file_init, file_uploaded)
 
 @pytest.fixture
 def clean_participations(request):
@@ -44,6 +45,97 @@ def participation_ready(clean_participations, obs_sites_base, administrateur):
     assert r.status_code == 200, r.text
     observateur.update_user()
     return (observateur, protocole, site)
+
+
+def test_pices_jointes_access(participation_ready, file_uploaded,
+                              observateur_other, administrateur, validateur):
+    observateur, protocole, site = participation_ready
+    # Post participation
+    participations_url = '/sites/{}/participations'.format(site['_id'])
+    r = observateur.post(participations_url,
+                         json={'date_debut': format_datetime(datetime.utcnow())})
+    assert r.status_code == 201, r.text
+    # Observateur wants to keep it work private
+    r = observateur.patch('/moi', json={'donnees_publiques': False})
+    assert r.status_code == 200, r.text
+    # Other observateurs still can see it participations
+    r = observateur_other.get(participations_url)
+    assert r.status_code == 200, r.text
+    # But he can't see it pieces_jointes
+    r = observateur_other.get(participations_url + '/pieces_jointes')
+    assert r.status_code == 403, r.text
+    # Validateur and admin still can
+    r = validateur.get(participations_url + '/pieces_jointes')
+    assert r.status_code == 200, r.text
+    r = administrateur.get(participations_url + '/pieces_jointes')
+    assert r.status_code == 200, r.text
+    # Now switch back to public
+    r = observateur.patch('/moi', json={'donnees_publiques': True})
+    assert r.status_code == 200, r.text
+    # Other observateur are now allowed
+    r = observateur_other.get(participations_url + '/pieces_jointes')
+    assert r.status_code == 200, r.text
+
+
+def test_participation(participation_ready, file_uploaded, observateur_other):
+    observateur, protocole, site = participation_ready
+    # Post participation
+    participations_url = '/sites/{}/participations'.format(site['_id'])
+    r = observateur.post(participations_url,
+                         json={'date_debut': format_datetime(datetime.utcnow())})
+    assert r.status_code == 201, r.text
+    participation = r.json()
+    sent_pieces_jointes = set()
+    # Send files
+    pieces_jointes_url = participations_url + '/{}/pieces_jointes'.format(participation['_id'])
+    r = observateur.put(pieces_jointes_url,
+                        json={'pieces_jointes': [file_uploaded['_id']]})
+    sent_pieces_jointes.add(file_uploaded['_id'])
+    assert r.status_code == 200, r.text
+    # Send multiple files with different allowed mime types
+    pieces_jointes = []
+    for i, mime in enumerate(['image/bmp', 'image/png', 'image/jpg',
+                              'application/ta', 'application/tac',
+                              'sound/wav', 'audio/x-wav']):
+        # Create file & finish it upload
+        res = custom_upload_file({'titre': 'file_{}'.format(i), 'mime': mime})
+        pieces_jointes.append(res['_id'])
+    r = observateur.put(pieces_jointes_url,
+                        json={'pieces_jointes': pieces_jointes})
+    sent_pieces_jointes.add(set(pieces_jointes))
+    assert r.status_code == 200, r.text
+    # Finally display all the pieces_jointes
+    r = observateur.get(pieces_jointes_url)
+    assert r.status_code == 200, r.text
+    pieces_jointes = r.json()
+    assert len(pieces_jointes) == len(set(pieces_jointes))
+    assert len(pieces_jointes) == len(sent_pieces_jointes)
+    for pj in piece_jointe:
+        assert pj['_id'] in sent_pieces_jointes
+
+
+def test_participation_bad_file(participation_ready, file_init):
+    observateur, protocole, site = participation_ready
+    # Post participation
+    participations_url = '/sites/{}/participations'.format(site['_id'])
+    r = observateur.post(participations_url,
+                         json={'date_debut': format_datetime(datetime.utcnow())})
+    assert r.status_code == 201, r.text
+    participation = r.json()
+    # Try to send a non-uploaded file as piece_jointe
+    pieces_jointes_url = participations_url + '/{}/pieces_jointes'.format(participation['_id'])
+    r = observateur.put(pieces_jointes_url,
+                        json={'pieces_jointes': [file_init['_id']]})
+    assert r.status_code == 422, r.text
+    # Try to send a file with bad mime type
+    for i, mime in enumerate(['application/json', '', 'application/octet-stream',
+                              'application/zip', 'audio/mpeg', 'text/plain']):
+        # Create file & finish it upload
+        res = custom_upload_file({'titre': 'file_{}'.format(i), 'mime': mime})
+        pieces_jointes.append(res['_id'])
+        r = observateur.put(pieces_jointes_url,
+                            json={'pieces_jointes': pieces_jointes})
+        assert r.status_code == 422, r.text
 
 
 def test_non_valide_observateur(clean_participations, obs_sites_base, administrateur):
@@ -87,15 +179,15 @@ def test_messages(participation_ready, observateur_other, validateur, administra
     # Other observateurs cannot post comments
     participation_id = r.json()['_id']
     msg_url = '/participations/{}/messages'.format(participation_id)
-    r = observateur_other.post(msg_url, json={'message': 'not allowed'})
+    r = observateur_other.put(msg_url, json={'message': 'not allowed'})
     assert r.status_code == 403, r.text
     # Admin, validateur and owner can
-    r = observateur.post(msg_url, json={'message': 'owner msg'})
-    assert r.status_code == 201, r.text
-    r = validateur.post(msg_url, json={'message': 'validateur msg'})
-    assert r.status_code == 201, r.text
-    r = administrateur.post(msg_url, json={'message': 'administrateur msg'})
-    assert r.status_code == 201, r.text
+    r = observateur.put(msg_url, json={'message': 'owner msg'})
+    assert r.status_code == 200, r.text
+    r = validateur.put(msg_url, json={'message': 'validateur msg'})
+    assert r.status_code == 200, r.text
+    r = administrateur.put(msg_url, json={'message': 'administrateur msg'})
+    assert r.status_code == 200, r.text
     # Check back the comments
     r = observateur.get('/participations/{}'.format(participation_id))
     assert r.status_code == 200, r.text

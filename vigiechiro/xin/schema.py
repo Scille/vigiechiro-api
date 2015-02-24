@@ -13,6 +13,8 @@ from collections import Mapping, Sequence
 
 from .tools import str_to_date, parse_id
 from .snippets import get_resource
+from .geo import (Point, MultiPoint, LineString, Polygon,
+                  MultiLineString, MultiPolygon, GeometryCollection)
 
 
 ERROR_SCHEMA_MISSING = "validation schema missing"
@@ -435,6 +437,48 @@ class GenericValidator(SchemaRunner):
         else:
             # No other convertion possible...
             return error()
+
+    def _run_type_geometrycollection(self, context):
+        try:
+            GeometryCollection(context.value)
+        except TypeError:
+            context.add_error("GeometryCollection not correct" % context.value)
+
+    def _run_type_point(self, context):
+        try:
+            Point(value)
+        except TypeError as e:
+            context.add_error("Point not correct %s: %s" % (value, e))
+
+    def _run_type_linestring(self, field, value):
+        try:
+            LineString(value)
+        except TypeError:
+            context.add_error("LineString not correct %s " % value)
+
+    def _run_type_polygon(self, field, value):
+        try:
+            Polygon(value)
+        except TypeError:
+            context.add_error("LineString not correct %s " % value)
+
+    def _run_type_multipoint(self, field, value):
+        try:
+            MultiPoint(value)
+        except TypeError:
+            context.add_error("MultiPoint not correct" % value)
+
+    def _run_type_multilinestring(self, field, value):
+        try:
+            MultiLineString(value)
+        except TypeError:
+            context.add_error("MultiLineString not  correct" % value)
+
+    def _run_type_multipolygon(self, field, value):
+        try:
+            MultiPolygon(value)
+        except TypeError:
+            context.add_error("MultiPolygon not  correct" % value)
 
 
 class Validator(GenericValidator):

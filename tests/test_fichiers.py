@@ -30,6 +30,15 @@ def file_uploaded(clean_fichiers, observateur):
     return r.json()
 
 
+def custom_upload_file(payload, user, upload_done=True):
+    r = user.post('/fichiers', json=payload)
+    assert r.status_code == 201, r.text
+    if upload_done:
+        r = user.post('/fichiers/' + r.json()['_id'])
+        assert r.status_code == 200, r.text
+    return r.json()
+
+
 def test_singlepart_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url
     r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
@@ -43,22 +52,21 @@ def test_singlepart_upload(clean_fichiers, observateur):
     assert 's3_upload_done' in r.json()
     assert r.json()['s3_upload_done']
 
-
-# def test_multipart_upload(clean_fichiers, observateur):
-#     # First declare the file to get a signed request url
-#     r = observateur.post('/fichiers',
-#         json={'titre': 'test', 'mime': 'image/png', 'multipart': True})
-#     assert r.status_code == 201, r.text
-#     response = r.json()
-#     assert 's3_multipart_upload_id' in response
-#     assert 's3_signed_url' in response
-#     # Ask for 
-#     # We should be uploading to S3 here...
-#     # Once the upload is done, we have to signify it to the server
-#     r = observateur.post('/fichiers/' + response['_id'])
-#     assert r.status_code == 200, r.text
-#     assert 's3_upload_done' in r.json()
-#     assert r.json()['s3_upload_done']
+@pytest.mark.xfail
+def test_multipart_upload(clean_fichiers, observateur):
+    # First declare the file to get a signed request url
+    r = observateur.post('/fichiers',
+        json={'titre': 'test', 'mime': 'image/png', 'multipart': True})
+    assert r.status_code == 201, r.text
+    response = r.json()
+    assert 's3_multipart_upload_id' in response
+    assert 's3_signed_url' in response
+    # We should be uploading to S3 here...
+    # Once the upload is done, we have to signify it to the server
+    r = observateur.post('/fichiers/' + response['_id'])
+    assert r.status_code == 200, r.text
+    assert 's3_upload_done' in r.json()
+    assert r.json()['s3_upload_done']
 
 
 def test_access(file_init, observateur):

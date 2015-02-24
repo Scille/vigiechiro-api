@@ -11,7 +11,7 @@ from . import resources
 from .xin.auth import auth_factory
 from .xin.tools import ObjectIdConverter
 from .scripts.celery import celery_app
-
+from .scripts.hirefire import build_hirefire_blueprint
 
 def make_json_app(app):
     from flask import Flask, jsonify

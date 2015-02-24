@@ -98,7 +98,12 @@ def list_user_participations():
 @participations.route('/participations/<objectid:participation_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def display_participation(participation_id):
-    return jsonify(**participations.get_resource(participation_id))
+    document = participations.find_one(participation_id)
+    # Remove pieces_jointes elements
+    # TODO: optimize this
+    if 'pieces_jointes' in document:
+        del document['pieces_jointes']
+    return document
 
 
 @participations.route('/sites/<objectid:site_id>/participations', methods=['POST'])
@@ -125,10 +130,12 @@ def create_participation(site_id):
                    if p['protocole'] == protocole_id), None)
     if not joined:
         abort(422, {'site': 'not registered to corresponding protocole'})
-    inserted_payload = participations.insert(payload)
+    document = participations.insert(payload)
     # Finally create corresponding actuality
-    create_actuality_nouvelle_participation(inserted_payload)
-    return jsonify(**inserted_payload), 201
+    create_actuality_nouvelle_participation(document)
+    if 'pieces_jointes' in document:
+        del document['pieces_jointes']
+    return document, 201
 
 
 def _check_edit_access(participation_resource):
@@ -153,28 +160,32 @@ def edit_participation(participation_id):
     payload = get_payload({'date_debut': False, 'date_fin': False,
                            'commentaire': False, 'meteo': False,
                            'configuration': False})
-    inserted_payload = participations.update(participation_id, payload)
-    return jsonify(**inserted_payload), 200
+    document = participations.update(participation_id, payload)
+    if 'pieces_jointes' in document:
+        del document['pieces_jointes']
+    return document
 
 
-@participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['POST'])
+@participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['PUT'])
 @requires_auth(roles='Observateur')
 def add_pieces_jointes(participation_id):
     participation_resource = participations.get_resource(participation_id)
     _check_edit_access(participation_resource)
     payload = get_payload({'pieces_jointes': True})
-    # TODO check files data type
-    def custom_merge(document, payload):
-        # Append data at the end of the list
-        pieces = document.get('pieces_jointes', [])
-        document['pieces_jointes'] = pieces + payload['pieces_jointes']
-        return document
-    inserted_payload = participations.update(participation_id, payload,
-                                             custom_merge=custom_merge)
-    return jsonify(**inserted_payload), 201
+    mongodb_update = {'$push': {'pieces_jointes': {'$each': payload['pieces_jointes']}}}
+    return participations.update(participation_id, payload=payload,
+                                 mongo_update=mongo_update)
 
 
-@participations.route('/participations/<objectid:participation_id>/messages', methods=['POST'])
+@participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['GET'])
+@requires_auth(roles='Observateur')
+def get_pieces_jointes(participation_id):
+    participation_resource = participations.find(participation_id)
+    _check_edit_access(participation_resource)
+    return {'pieces_jointes': participation_resource['pieces_jointes']}
+
+
+@participations.route('/participations/<objectid:participation_id>/messages', methods=['PUT'])
 @requires_auth(roles='Observateur')
 def add_post(participation_id):
     participation_resource = participations.get_resource(participation_id)
@@ -186,7 +197,5 @@ def add_post(participation_id):
                         '$each': payload['messages'],
                         '$position': 0
                     }}}
-    inserted_payload = participations.update(participation_id,
-                                             payload=payload,
-                                             mongo_update=mongo_update)
-    return jsonify(**inserted_payload), 201
+    return participations.update(participation_id, payload=payload,
+                                 mongo_update=mongo_update)

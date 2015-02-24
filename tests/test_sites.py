@@ -202,18 +202,51 @@ def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
     r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
                            protocole_id, observateur.user_id))
     assert r.status_code == 200, r.text
-    # Site payload's geojson doesn't match expected geojson schema
-    site_payload = {
-        "protocole": protocole_id,
-        "localites": [
-            {"type":"Point", "coordinates":[48.862004474432936,2.338886260986328]},
-            {"type":"Point", "coordinates":[48.877812415009195,2.3639488220214844]},
-            {"type":"LineString", "coordinates":[
-                [48.86539231071163,2.353992462158203],
-                [48.87239311228893,2.353649139404297],
-                [48.87736082887189,2.344379425048828]]
-            }
-        ]
-    }
+    # First create a site
+    site_payload = {"protocole": protocole_id}
     r = observateur.post('/sites', json=site_payload)
-    assert r.status_code == 422, r.text
+    assert r.status_code == 201, r.text
+    # Site payload's geojson doesn't match expected geojson schema
+    localite_url = '/sites/{}/localites'.format(r.json()['_id'])
+    for bad_geometrie in [
+        {"type":"Point", "coordinates":[48.862004474432936,2.338886260986328]},
+        {"type":"Point", "coordinates":[48.877812415009195,2.3639488220214844]},
+        {"type":"LineString", "coordinates":[
+            [48.86539231071163,2.353992462158203],
+            [48.87239311228893,2.353649139404297],
+            [48.87736082887189,2.344379425048828]]
+        }]:
+        r = observateur.put(localite_url, json={'nom': 'bad_localite',
+                                                'geometries': bad_geometrie})
+        assert r.status_code == 422, r.text
+
+
+def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
+    # Register the observateur to a protocole
+    protocole_id = str(protocoles_base[1]['_id'])
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, observateur.user_id))
+    assert r.status_code == 200, r.text
+    # First create a site
+    site_payload = {"protocole": protocole_id}
+    r = observateur.post('/sites', json=site_payload)
+    assert r.status_code == 201, r.text
+    localite_url = '/sites/{}/localites'.format(r.json()['_id'])
+    geometries = {'type': 'GeometryCollection',
+                  'geometries': [
+                      {"type":"Point", "coordinates":[48.862004474432936,2.338886260986328]},
+                      {"type":"Point", "coordinates":[48.877812415009195,2.3639488220214844]},
+                      {"type":"LineString", "coordinates":[
+                          [48.86539231071163,2.353992462158203],
+                          [48.87239311228893,2.353649139404297],
+                          [48.87736082887189,2.344379425048828]]
+                      }
+                    ]
+                }
+    # Add localite
+    r = observateur.put(localite_url, json={'nom': 'bad_localite',
+                                            'geometries': geometries})
+    assert r.status_code == 200, r.text

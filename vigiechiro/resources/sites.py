@@ -165,26 +165,25 @@ def get_resume_list():
     return jsonify(_items=[i for i in items])
 
 
-@sites.route('/sites/<objectid:site_id>/localite', methods=['PUT'])
+@sites.route('/sites/<objectid:site_id>/localites', methods=['PUT'])
 @requires_auth(roles='Observateur')
 def add_localite(site_id):
     site_resource = sites.get_resource(site_id)
     _check_edit_acess(site_resource)
-    payload = get_payload({'nom', 'coordonnee', 'geometries', 'representatif'})
+    payload = {'localites': [get_payload({'nom': True, 'coordonnee': False,
+        'geometries': False, 'representatif': False})]}
     # Make sure given nom is unique
-    nom = payload.get('nom', None)
-    if not nom:
-        abort(422, {'nom': 'required field'})
+    nom = payload['localites'][0]['nom']
     localites = site_resource.get('localites', [])
     existing_nom = next((l for l in localites if l['nom'] == nom), None)
     if existing_nom:
         abort(422, {'nom': 'another localite has already this name'})
-    localites.append(payload)
-    result = sites.update(site_id, localites)
-    return jsonify(**result)
+    mongo_update = {'$push': {'localites': payload['localites'][0]}}
+    result = sites.update(site_id, payload=payload, mongo_update=mongo_update)
+    return result
 
 
-@sites.route('/sites/<objectid:site_id>/localite/<localite_nom>/habitat', methods=['PUT'])
+@sites.route('/sites/<objectid:site_id>/localites/<localite_nom>/habitat', methods=['PUT'])
 @requires_auth(roles='Observateur')
 def add_site_habitat(site_id):
     site_resource = sites.get_resource(site_id)
