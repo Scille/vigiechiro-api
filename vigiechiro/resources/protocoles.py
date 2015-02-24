@@ -16,7 +16,7 @@ from ..xin.snippets import Paginator, get_lookup_from_q, get_payload, get_if_mat
 
 from .actualites import create_actuality_validation_protocole, create_actuality_inscription_protocole
 from .utilisateurs import (utilisateurs as utilisateurs_resource,
-                           get_payload_add_following, DEFAULT_USER_PROJECTION)
+                           get_payload_add_following)
 
 
 SCHEMA = {
@@ -108,7 +108,7 @@ def display_protocole(protocole_id):
 def edit_protocole(protocole_id):
     payload = get_payload()
     check_configuration_participation(payload)
-    result = protocoles.update(protocole_id, payload, get_if_match())
+    result = protocoles.update(protocole_id, payload, if_match=get_if_match())
     return jsonify(result)
 
 
@@ -155,11 +155,12 @@ def user_join_protocole(protocole_id):
     inscription = {'protocole': protocole_id,
                    'date_inscription': datetime.utcnow(),
                    'valide': False}
-    joined_protocoles.append(inscription)
-    payload = {'protocoles': joined_protocoles}
+    payload = {'protocoles': [inscription]}
     # User automatically follow the protocole
-    payload.update(get_payload_add_following(protocole_id))
-    utilisateurs_resource.update(g.request_user['_id'], payload)
+    mongo_update = {'$push': {'protocoles': inscription},
+                    '$addToSet': {'actualites_suivies': protocole_id}}
+    utilisateurs_resource.update(g.request_user['_id'],
+        mongo_update=mongo_update, payload=payload)
     # Finally create corresponding actuality
     create_actuality_inscription_protocole(protocole_resource, g.request_user)
     return jsonify(**inscription)
@@ -169,7 +170,6 @@ def user_join_protocole(protocole_id):
 @requires_auth(roles='Administrateur')
 def user_validate_protocole(protocole_id, user_id):
     """Validate a user into a protocole"""
-    payload = get_payload({'valide'})
     user_resource = utilisateurs_resource.get_resource(user_id)
     # Make sure the user has joined the protocole and is not valid yet
     joined_protocoles = user_resource.get('protocoles', [])
@@ -182,9 +182,11 @@ def user_validate_protocole(protocole_id, user_id):
         abort(422, 'user {} has already been validated into protocole {}'.format(
             user_id, protocole_id))
     # Finally update user's protocole status
-    to_validate_protocole['valide'] = payload['valide']
-    # TODO : use custom_merge
-    utilisateurs_resource.update(user_id, {'protocoles': joined_protocoles})
+    lookup = {'_id': user_id, 'protocoles.protocole': protocole_id}
+    mongo_update = {'$set': {'protocoles.$.valide': True}}
+    to_validate_protocole['valide'] = True
+    payload = {'protocoles': [to_validate_protocole]}
+    utilisateurs_resource.update(lookup, mongo_update=mongo_update, payload=payload)
     # Finally create corresponding actuality
     create_actuality_validation_protocole({'_id': protocole_id}, g.request_user)
     return jsonify(**to_validate_protocole)

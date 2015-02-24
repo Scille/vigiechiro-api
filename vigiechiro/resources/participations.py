@@ -179,15 +179,14 @@ def add_pieces_jointes(participation_id):
 def add_post(participation_id):
     participation_resource = participations.get_resource(participation_id)
     _check_add_message_access(participation_resource)
-    payload = {'messages': [
-        {'auteur': g.request_user['_id'], 'date': datetime.utcnow(),
-         'message': get_payload({'message': True})['message']}
-    ]}
-    def custom_merge(document, payload):
-        # Append data at the beginning of the list
-        previous_messages = document.get('messages', [])
-        document['messages'] = [payload['messages']] + previous_messages
-        return document
-    inserted_payload = participations.update(participation_id, payload,
-                                             custom_merge=custom_merge)
+    new_message = {'auteur': g.request_user['_id'], 'date': datetime.utcnow(),
+                   'message': get_payload({'message': True})['message']}
+    payload = {'messages': [new_message]}
+    mongo_update = {'$push': {'messages': {
+                        '$each': payload['messages'],
+                        '$position': 0
+                    }}}
+    inserted_payload = participations.update(participation_id,
+                                             payload=payload,
+                                             mongo_update=mongo_update)
     return jsonify(**inserted_payload), 201

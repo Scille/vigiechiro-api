@@ -11,6 +11,7 @@
     to be allowed to upload the file to S3. Once done, a PATCH is requested to
     notify that the file is complete.
 """
+
 import base64
 import urllib
 import time

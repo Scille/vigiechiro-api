@@ -17,14 +17,13 @@ from ..xin.snippets import Paginator, get_resource, get_payload, get_lookup_from
 
 
 SCHEMA = {
-    'github_id': {'type': 'string', 'writerights': 'Administrateur',
-                  'unique': True},
-    'google_id': {'type': 'string', 'writerights': 'Administrateur',
-                  'unique': True},
-    'facebook_id': {'type': 'string', 'writerights': 'Administrateur',
-                  'unique': True},
+    'github_id': {'type': 'string', 'hidden': True, 'unique': True},
+    'google_id': {'type': 'string', 'hidden': True, 'unique': True},
+    'facebook_id': {'type': 'string', 'hidden': True, 'unique': True},
     'pseudo': {'type': 'string', 'required': True},
-    'email': {'type': 'string', 'required': True, 'unique': True},
+    'email': {'type': 'string', 'required': True, 'unique': True,
+        'hidden': True
+    },
     'email_public': {'type': 'string', 'unique': True},
     'nom': {'type': 'string'},
     'prenom': {'type': 'string'},
@@ -46,8 +45,8 @@ SCHEMA = {
     },
     'tokens': {
         'type': 'dict',
-        'writerights': 'Administrateur',
-        'keyschema': {'type': 'datetime', 'writerights': 'Administrateur'}
+        'hidden': True,
+        'keyschema': {'type': 'datetime'}
     },
     'protocoles': {
         'type': 'list',
@@ -65,17 +64,6 @@ SCHEMA = {
         'type': 'set',
         'schema': {'type': 'objectid'}
     }
-}
-
-DEFAULT_USER_PROJECTION = {
-    'tokens': 0, 'github_id': 0,
-    'google_id': 0, 'facebook_id': 0,
-    'email': 0
-}
-
-RESTRICTED_USER_PROJECTION = {
-    'tokens': 0, 'github_id': 0,
-    'google_id': 0, 'facebook_id': 0
 }
 
 
@@ -105,11 +93,13 @@ def _expend_joined_protocoles(document):
     return document
 
 
-def _choose_utilisateur_projection():
-    if g.request_user['role'] == 'Observateur':
-        return DEFAULT_USER_PROJECTION
+def _hide_email(overwrite=None):
+    """Hide email to everyone but current owner, administrateur and validateur"""
+    if (overwrite == False or
+        g.request_user.get('role', '') in ['Administrateur', 'Validateur']):
+        return {'hidden': {'email': False}}
     else:
-        return RESTRICTED_USER_PROJECTION
+        return None
 
 
 @utilisateurs.validator.attribute
@@ -128,45 +118,45 @@ def non_macro_protocole(context):
 @requires_auth(roles='Observateur')
 def list_users():
     pagination = Paginator()
-    found = utilisateurs.find(get_lookup_from_q(), _choose_utilisateur_projection(),
+    found = utilisateurs.find(get_lookup_from_q(),
                                skip=pagination.skip,
-                               limit=pagination.max_results)
+                               limit=pagination.max_results,
+                               additional_context=_hide_email())
     return pagination.make_response(*found)
 
 
 @utilisateurs.route('/moi', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_request_user_profile():
-    user = utilisateurs.get_resource(g.request_user['_id'],
-                                     projection=RESTRICTED_USER_PROJECTION)
-    return jsonify(**_expend_joined_protocoles(user))
+    return utilisateurs.find_one(g.request_user['_id'],
+                                 additional_context=_hide_email(False))
 
 
 @utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_user_profile(user_id):
-    user = utilisateurs.get_resource(user_id,
-        projection=_choose_utilisateur_projection())
-    return jsonify(**_expend_joined_protocoles(user))
+    return utilisateurs.find_one(user_id, additional_context=_hide_email())
+
+
+def _utilisateur_patch(user_id, additional_context=None):
+    allowed_fields = {'pseudo', 'email_publique', 'nom', 'prenom',
+                      'telephone', 'adresse', 'commentaire', 'organisation',
+                      'professionnel', 'donnees_publiques', 'email', 'role'}
+    payload = get_payload(allowed_fields)
+    result = utilisateurs.update(user_id, payload,
+                                 additional_context=additional_context)
+    return result
 
 
 @utilisateurs.route('/moi', methods=['PATCH'])
 @requires_auth(roles='Observateur')
-def patch_request_user_profile():
-    allowed_fields = {'pseudo', 'email_publique', 'nom', 'prenom',
-                      'telephone', 'adresse', 'commentaire', 'organisation',
-                      'professionnel', 'donnees_publiques', 'email'}
-    payload = get_payload(allowed_fields)
-    result = utilisateurs.update(g.request_user['_id'], payload)
-    return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))
+def route_moi_patch():
+    return _utilisateur_patch(g.request_user['_id'],
+                              additional_context=_hide_email(False))
 
 
 @utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['PATCH'])
 @requires_auth(roles='Administrateur')
-def patch_user(user_id):
-    allowed_fields = {'pseudo', 'email_publique', 'nom', 'prenom',
-                      'telephone', 'adresse', 'commentaire', 'organisation',
-                      'professionnel', 'donnees_publiques', 'email', 'role'}
-    payload = get_payload()
-    result = utilisateurs.update(user_id, payload)
-    return jsonify(dict_projection(result, RESTRICTED_USER_PROJECTION))
+def route_utilisateur_patch(user_id):
+    return _utilisateur_patch(user_id,
+                              additional_context=_hide_email())

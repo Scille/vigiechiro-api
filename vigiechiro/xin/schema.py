@@ -42,13 +42,13 @@ ERROR_STORAGE_TYPE = "'%s' must be stored as '%s' in database"
 ERROR_UNIQUE_FIELD = "value '%s' is not unique"
 
 
-def relation(resource, embeddable=True, field='_id', **kwargs):
+def relation(resource, field='_id', expend=True, **kwargs):
     """Data model template for a resource relation"""
     kwargs.update({'type': 'objectid',
                    'data_relation': {
                        'resource': resource,
                        'field': field,
-                       'embeddable': embeddable
+                       'expend': expend
                    }
                    })
     return kwargs
@@ -198,6 +198,14 @@ class SchemaRunner:
                 context.push(dict_schema[field], field, value)
                 self._run_schema(context)
                 context.pop()
+            # If a field containe None as value, it should be skipped
+            no_none_dict = {k: v for k, v in context.value.items() if v != None}
+            if len(context._stack) > 0:
+                s, f, v = context.pop()
+                context.value[f] = no_none_dict
+                context.push(s, f, no_none_dict)
+            else:
+                context.value = context.document = no_none_dict
         if dict_keyschema:
             # Just recursively validate each sub item
             for field, value in context.value.items():
@@ -240,16 +248,31 @@ class Unserializer(SchemaRunner):
         else:
             context.add_error(ERROR_STORAGE_TYPE % ('set', 'list'))
 
+    def _run_attribute_hidden(self, context):
+        """Remove current element from the unserialized document"""
+        # Don't hide the element if we are in internal mode or if the
+        # field is explicitly specified in the additional_context
+        if context.additional_context.get('internal', False):
+            return
+        hidden_additional = context.additional_context.get('hidden', {})
+        if not hidden_additional.get(context.get_current_path(), True):
+            return
+        if context.schema['hidden']:
+            schema, field, _ = context.pop()
+            context.value[field] = None
+            context.push(schema, field, None)
+
+    def _run_attribute_expend(self, context):
+        # Stub, handled in `_run_attribute_data_relation`
+        pass
+
     def _run_attribute_data_relation(self, context):
         if not isinstance(context.value, ObjectId):
             context.add_error(ERROR_STORAGE_TYPE % ('data_relation', 'objectid'))
             return
+        data_relation = context.schema['data_relation']
         # Expend relation if asked for
-        expend = context.additional_context.get('expend_data_relation', [])
-        expend = expend if isinstance(expend, list) else [expend]
-        print('expending ? ', context.get_current_path(), expend)
-        if context.get_current_path() in expend:
-            data_relation = context.schema['data_relation']
+        if data_relation.get('expend', False):
             resource_name = data_relation.get('resource', None)
             field = data_relation.get('field', None)
             projection = data_relation.get('projection', None)
@@ -257,7 +280,7 @@ class Unserializer(SchemaRunner):
                 raise SchemaRunnerException("`data_relation` requires"
                                             " `field` and `resource` fiels")
             data_relation = get_resource(resource_name, context.value, field=field,
-                                         projection=projection)
+                                         projection=projection, auto_abort=False)
             if not data_relation:
                 context.add_error("value '%s' must exist in resource"
                                   " '%s', field '%s'." %
@@ -288,6 +311,18 @@ class GenericValidator(SchemaRunner):
     def _run_attribute_readonly(self, context):
         if context.schema['read_only']:
             context.add_error(ERROR_READONLY_FIELD)
+
+    def _run_attribute_hidden(self, context):
+        """Consider the current element as unknown"""
+        # Don't hide the element if we are in internal mode or if the
+        # field is explicitly specified in the additional_context
+        if context.additional_context.get('internal', False):
+            return
+        hidden_additional = context.additional_context.get('hidden', {})
+        if not hidden_additional.get(context.get_current_path(), True):
+            return
+        if context.schema['hidden']:
+            context.add_error(ERROR_UNKNOWN_FIELD)
 
     def _run_attribute_regex(self, context):
         regex = context.schema['regex']
@@ -435,6 +470,10 @@ class Validator(GenericValidator):
         if not isinstance(context.value, ObjectId):
             context.add_error(ERROR_BAD_TYPE % 'ObjectId')
 
+    def _run_attribute_expend(self, context):
+        # Stub, handled in `_run_attribute_data_relation`
+        pass
+
     def _run_attribute_data_relation(self, context):
         # Relation should be stored as an objectid pointing on a valid resource
         if context.schema['type'] != 'objectid':
@@ -443,7 +482,6 @@ class Validator(GenericValidator):
         data_relation = context.schema['data_relation']
         resource_name = data_relation.get('resource', None)
         field = data_relation.get('field', None)
-        projection = data_relation.get('projection', {})
         if not resource_name or not field:
             raise SchemaRunnerException("data_relation requires"
                                         " `field` and `resource` fiels")
@@ -458,8 +496,8 @@ class Validator(GenericValidator):
             context.value[field] = serialized
             context.push(schema, field, serialized)
         else:
-            data_relation = get_resource(resource_name, context.value, field=field,
-                                         projection=projection)
+            data_relation = get_resource(resource_name, context.value,
+                                         field=field, auto_abort=False)
             if not data_relation:
                 context.add_error("value '%s' must exist in resource"
                                   " '%s', field '%s'." %

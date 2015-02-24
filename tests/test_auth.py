@@ -49,6 +49,7 @@ def test_single_login():
     r = requests.get(PROTECTED_URL, auth=(token, None))
     assert r.status_code == 200, r.text
     resource = r.json()
+    print(resource)
     for field in ['_id', '_etag', '_created', '_updated']:
         assert field in resource
     return token

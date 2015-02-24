@@ -112,12 +112,11 @@ def test_create_site_non_valide(observateur, protocoles_base):
 def test_create_site(administrateur, observateur, protocoles_base):
     # Register the observateur to a protocole
     protocole_id = str(protocoles_base[1]['_id'])
-    etag = observateur.user['_etag']
-    r = administrateur.patch(observateur.url,
-                             headers={'If-Match': etag},
-                             json={'protocoles': [{'protocole': protocole_id,
-                                                   'date_inscription': format_datetime(datetime.utcnow()),
-                                                   'valide': True}]})
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, observateur.user_id))
     assert r.status_code == 200, r.text
     # Create site for the observateur
     site_payload = {
@@ -135,12 +134,11 @@ def test_create_site(administrateur, observateur, protocoles_base):
 def test_create_site_explicit_obs(administrateur, observateur, protocoles_base):
     # Register the observateur to a protocole
     protocole_id = str(protocoles_base[1]['_id'])
-    etag = observateur.user['_etag']
-    r = administrateur.patch(observateur.url,
-                             headers={'If-Match': etag},
-                             json={'protocoles': [{'protocole': protocole_id,
-                                                   'date_inscription': format_datetime(datetime.utcnow()),
-                                                   'valide': True}]})
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, observateur.user_id))
     assert r.status_code == 200, r.text
     # Create a new site for the observateur
     r = observateur.post('/sites', json={'protocole': protocole_id})
@@ -198,12 +196,11 @@ def test_increment_numero(administrateur, new_site_payload):
 def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
     # Register the observateur to a protocole
     protocole_id = str(protocoles_base[1]['_id'])
-    etag = observateur.user['_etag']
-    r = administrateur.patch(observateur.url,
-                             headers={'If-Match': etag},
-                             json={'protocoles': [{'protocole': protocole_id,
-                                                   'date_inscription': format_datetime(datetime.utcnow()),
-                                                   'valide': True}]})
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, observateur.user_id))
     assert r.status_code == 200, r.text
     # Site payload's geojson doesn't match expected geojson schema
     site_payload = {

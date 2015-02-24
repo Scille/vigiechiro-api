@@ -29,12 +29,15 @@ def participation_ready(clean_participations, obs_sites_base, administrateur):
     protocole = site['protocole']
     protocole = db.protocoles.find_one({'_id': site['protocole']})
     # Make sure observateur is validate
-    r = administrateur.patch(observateur.url,
-                             headers={'If-Match': observateur.user['_etag']},
-                             json={'protocoles': [{'protocole': str(protocole['_id']),
-                                                   'date_inscription': format_datetime(datetime.utcnow()),
-                                                   'valide': True}]})
-    assert r.status_code == 200, r.text
+    db.utilisateurs.update({'_id': observateur.user['_id']},
+        {'$push': {
+            'protocoles': {
+                'protocole': str(protocole['_id']),
+                'date_inscription': format_datetime(datetime.utcnow()),
+                'valide': True
+            }
+        }
+    })
     # Lock site
     r = administrateur.patch('/sites/{}'.format(site['_id']),
                              json={'verrouille': True})
@@ -50,12 +53,10 @@ def test_non_valide_observateur(clean_participations, obs_sites_base, administra
     site = sites_base[0]
     protocole_id = str(site['protocole'])
     # Make sure observateur is not validate in the protocole
-    r = administrateur.patch(observateur.url,
-                             headers={'If-Match': observateur.user['_etag']},
-                             json={'protocoles': [{'protocole': protocole_id,
-                                                   'date_inscription': format_datetime(datetime.utcnow()),
-                                                   'valide': False}]})
-    assert r.status_code == 200, r.text
+    db.utilisateurs.update(
+        {'_id': observateur.user['_id'], 'protocoles.protocole': site['protocole']},
+        {'$set': {'protocoles.$.valide': False}})
+    observateur.update_user()
     # Cannot post any participation
     r = observateur.post('/sites/{}/participations'.format(site['_id']),
                          json={'date_debut': format_datetime(datetime.utcnow())})

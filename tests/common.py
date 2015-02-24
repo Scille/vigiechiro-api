@@ -84,7 +84,9 @@ class AuthRequests:
             self.user[key] = value
         @with_flask_context
         def insert_user():
-            inserted = utilisateurs_resource.insert(payload, auto_abort=False)
+            # Add additional_context to be allowed to modify tokens
+            inserted = utilisateurs_resource.insert(payload, auto_abort=False,
+                additional_context={'internal': True})
             assert inserted
             return inserted
         self.user = insert_user()
@@ -130,6 +132,4 @@ class AuthRequests:
         return requests.request('options', url, **kwargs)
 
     def update_user(self):
-        r = self.get('/utilisateurs/' + self.user_id)
-        assert r.status_code == 200, r.text
-        self.user = r.json()
+        self.user = db.utilisateurs.find_one({'_id': self.user['_id']})

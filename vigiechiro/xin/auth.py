@@ -8,6 +8,7 @@ import types
 from functools import wraps
 from datetime import datetime, timedelta
 import bson
+from uuid import uuid4
 
 from flask import Blueprint, redirect, g, Response
 from flask import app, current_app, request, abort
@@ -17,9 +18,14 @@ from .tools import jsonify
 from .. import settings
 
 
+def get_request_user():
+    """Return the current user or an empty dict if anonymous user"""
+    return g.request_user if hasattr(g, request_user) else {}
+
+
 def check_auth(token, allowed_roles):
     """
-        Token-based authentification with role filtering
+        Token-based authentication with role filtering
         Once user profile has been retrieved from the given token,
         it is stored in application context as **g.request_user**::
 
@@ -38,8 +44,8 @@ def check_auth(token, allowed_roles):
             # Out of date token
             return False
         if allowed_roles:
-            # Role are handled using least priviledge, thus a higher
-            # priviledged role also include it lower roles.
+            # Role are handled using least privilege, thus a higher
+            # privileged role also include it lower roles.
             role = account['role']
             if not next((True for r in current_app.config['ROLE_RULES'][role]
                          if r in allowed_roles), False):
@@ -137,44 +143,44 @@ def login(authomatic, provider_name):
                                               string.digits) for x in range(32))
             new_token_expire = (datetime.utcnow() +
                 timedelta(seconds=current_app.config['TOKEN_EXPIRE_TIME']))
-            # users_db = current_app.data.db['utilisateurs']
-            from vigiechiro.resources.utilisateurs import utilisateurs as users_db
             user = authomatic.result.user
             provider_id_name = provider_name + '_id'
             # Lookup for existing user by email and provider id
-            user_db = users_db.find_one({'$or': [{'email': user.email},
-                                                 {provider_id_name: user.id}]})
-            # Grant admin rights to be able to modify tokens field
-            g.request_user = {'role': 'Administrateur'}
-            if user_db:
-                def custom_merge(document, payload):
-                    # Add the new token and check expire date for existing ones
-                    tokens = payload['tokens']
-                    now = datetime.now(bson.utc)
-                    for token, token_expire in document.get('tokens', {}).items():
-                        if now < token_expire:
-                            tokens[token] = token_expire
-                    document['tokens'] = tokens
-                    return document
-                users_db.update({'email': user.email},
-                                {'tokens': {new_token: new_token_expire}},
-                                custom_merge=custom_merge, auto_abort=False)
-
+            users_db = current_app.data.db['utilisateurs']
+            document = users_db.find_one(
+                {'$or': [{'email': user.email}, {provider_id_name: user.id}]})
+            new_etag = uuid4().hex
+            new_updated = datetime.utcnow().replace(microsecond=0)
+            if document:
+                # Add the new token and check expire date for existing ones
+                mongo_update = {'$set': {
+                                    'tokens.{}'.format(new_token): new_token_expire,
+                                    provider_id_name: user.id,
+                                    '_etag': new_etag,
+                                    '_updated': new_updated}
+                               }
+                now = datetime.now(bson.utc)
+                unset = []
+                for token, token_expire in document.get('tokens', {}).items():
+                    if now > token_expire:
+                        unset.append(token)
+                if unset:
+                    mongo_update['$unset'] = {'tokens.{}'.format(t): True for t in unset}
+                users_db.update({'_id': document['_id']}, mongo_update)
             else:
                 # Creating a new utilisateur resource
                 user_payload = {
                     provider_id_name: user.id,
+                    '_created': new_updated,
+                    '_updated': new_updated,
+                    '_etag': new_etag,
                     'pseudo': user.name,
                     'email': user.email,
                     'tokens': {new_token: new_token_expire},
                     'role': 'Observateur',
                     'donnees_publiques': True
                 }
-                user_id = users_db.insert(user_payload, auto_abort=False)
-                if not user_id:
-                    logging.error('Cannot create user {}'.format(
-                                  user_payload))
-                    abort(500)
+                users_db.insert(user_payload)
                 logging.info('Create new user : {}'.format(user.email))
             return redirect('{}/#/?token={}'.format(
                 current_app.config['FRONTEND_DOMAIN'], new_token), code=302)

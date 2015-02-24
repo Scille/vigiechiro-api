@@ -33,7 +33,7 @@ SCHEMA = {
     'protocole': relation('protocoles', required=True, postonly=True),
     'observateur': relation('utilisateurs', postonly=True),
     'commentaire': {'type': 'string'},
-    'grille_stoc': relation('grille_stoc', embeddable=True),
+    'grille_stoc': relation('grille_stoc'),
     'verrouille': {'type': 'boolean', 'writerights': 'Administrateur'},
     'coordonnee': {'type': 'point'},
     'url_cartographie': {'type': 'url'},

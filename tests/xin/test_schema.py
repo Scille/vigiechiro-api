@@ -161,13 +161,14 @@ def test_data_relation(clean_db):
         result = u.run(deepcopy(doc))
         assert result.is_valid, result.errors
         # Same but ask for data_relation expension
-        result = u.run(deepcopy(doc), additional_context={'expend_data_relation': 'r'})
+        schema['r']['data_relation']['expend'] = True
+        result = u.run(deepcopy(doc))
         assert result.is_valid, result.errors
         assert result.document['r'] == vigiechiro_db.find_one({'_id': relation_to_id})
         # Test with projection
         projection = {'b': 1}
         schema['r']['data_relation']['projection'] = projection
-        result = u.run(deepcopy(doc), additional_context={'expend_data_relation': 'r'})
+        result = u.run(deepcopy(doc))
         assert result.is_valid, result.errors
         assert (result.document['r'] ==
                 vigiechiro_db.find_one({'_id': relation_to_id}, projection))
@@ -215,21 +216,26 @@ def test_nested_data_relation(clean_db):
         result = v.run(deepcopy(doc))
         assert result.is_valid, result.errors
         # Same but ask for dict data_relation expension
-        result = v.run(deepcopy(doc), additional_context={'expend_data_relation': 'n.nested_dict.r'})
+        schema['n']['schema']['nested_dict']['schema']['r']['data_relation']['expend'] = True
+        result = v.run(deepcopy(doc))
         expected_dict = {'r': relation_data}
         expected = deepcopy(doc)
         expected['n']['nested_dict'] = expected_dict
         assert result.is_valid, result.errors
         assert result.document == expected
         # Same but ask for list data_relation expension
-        result = v.run(deepcopy(doc), additional_context={'expend_data_relation': 'n.nested_list'})
+        del schema['n']['schema']['nested_dict']['schema']['r']['data_relation']['expend']
+        schema['n']['schema']['nested_list']['schema']['data_relation']['expend'] = True
+        result = v.run(deepcopy(doc))
         expected_list = [relation_data, relation_data]
         expected = deepcopy(doc)
         expected['n']['nested_list'] = expected_list
         assert result.is_valid, result.errors
         assert result.document == expected
         # Test both at the same time
-        result = v.run(deepcopy(doc), additional_context={'expend_data_relation': ['n.nested_list', 'n.nested_dict.r']})
+        schema['n']['schema']['nested_dict']['schema']['r']['data_relation']['expend'] = True
+        schema['n']['schema']['nested_list']['schema']['data_relation']['expend'] = True
+        result = v.run(deepcopy(doc))
         assert result.is_valid, result.errors
         expected = deepcopy(doc)
         expected['n'] = {'nested_dict': expected_dict, 'nested_list': expected_list}
@@ -252,13 +258,16 @@ def test_bijection_set():
 def test_bijection_data_relation(clean_db):
     vigiechiro_db = db[TEST_RESOURCE]
     relation_to_id = vigiechiro_db.insert({'a': 1, 'b': 'b'})
+    assert relation_to_id
     doc_id = vigiechiro_db.insert({'r': relation_to_id})
+    assert doc_id
     # Test bijection for data relation
     schema = {
             '_id': {'type': 'objectid'},
             'r': {
                     'type': 'objectid',
-                    'data_relation': {'resource': TEST_RESOURCE, 'field': '_id'}
+                    'data_relation': {'resource': TEST_RESOURCE, 'field': '_id',
+                                      'expend': True}
                 }
             }
     @with_flask_context
@@ -266,7 +275,7 @@ def test_bijection_data_relation(clean_db):
         u = Unserializer(schema)
         v = Validator(schema)
         doc = vigiechiro_db.find_one({'_id': doc_id})
-        result = u.run(deepcopy(doc), additional_context={'expend_data_relation': 'r'})
+        result = u.run(deepcopy(doc))
         print(result.document)
         assert result.is_valid, result.errors
         expected = deepcopy(doc)

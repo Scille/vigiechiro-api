@@ -40,7 +40,8 @@ def users_base(request):
     def insert_users():
         inserted_users = []
         for user in users:
-            inserted_user = utilisateurs_resource.insert(user, auto_abort=False)
+            inserted_user = utilisateurs_resource.insert(user, auto_abort=False,
+                additional_context={'internal': True})
             assert inserted_user
             inserted_users.append(inserted_user)
         return inserted_users
@@ -69,7 +70,7 @@ def test_user_route(observateur):
     assert r.status_code == 200, r.text
     content = r.json()
     for key in ['nom', 'email']:
-        assert observateur.user[key] == content[key]
+        assert observateur.user[key] == content[key], content
     r = observateur.patch('/moi', json={'commentaire': 'New comment'})
     assert r.status_code == 200, r.text
     observateur.update_user()
@@ -108,8 +109,10 @@ def test_rigths_read(observateur, validateur):
     # Observateur has limited view on others user's profile
     r = observateur.get('/utilisateurs')
     assert r.status_code == 200, r.text
-    utilisateur = r.json()['_items'][0]
-    assert 'email' not in utilisateur, utilisateur
+    for item in r.json()['_items']:
+        # if item['_id'] == observateur.user_id:
+        #     continue
+        assert 'email' not in item
     r = observateur.get(validateur.url)
     assert r.status_code == 200, r.text
     assert 'email' not in r.json()
@@ -128,19 +131,24 @@ def test_rigths_read(observateur, validateur):
 
 
 def test_readonly_fields(observateur, administrateur):
-    payloads = [{'role': 'Administrateur'}, {'protocoles': []}]
-    for payload in payloads:
-        r = observateur.patch('/moi', json=payload)
-        assert r.status_code == 422, r.text
-        # Admin can do everything !
-        r = administrateur.patch(administrateur.url, json=payload)
-        administrateur.update_user()
-        assert r.status_code == 200, r.text
+    payload = {'role': 'Administrateur'}
+    r = observateur.patch('/moi', json=payload)
+    assert r.status_code == 422, r.text
+    r = observateur.patch(administrateur.url, json=payload)
+    assert r.status_code == 403, r.text
+    # Admin can do everything !
+    r = administrateur.patch(observateur.url, json=payload)
+    administrateur.update_user()
+    assert r.status_code == 200, r.text
+    # Try to change for itself
+    r = administrateur.patch('/moi', json=payload)
+    administrateur.update_user()
+    assert r.status_code == 200, r.text
 
 
 def test_internal_resource(observateur):
     # Try to post internal resources
-    payloads = [{'tokens': ['7U5L5J8B7BEDH5MFOHZ8D2834AUNTPXI']},
+    payloads = [{"tokens": {"26GLD0MWB2ISABOQN2F5K1JNKVZNLOOT": "2025-01-18T13:07:03.051Z"}},
                 {'github_id': '1872655'},
                 {'facebook_id': '1872655'},
                 {'google_id': '1872655'}]
@@ -152,10 +160,12 @@ def test_internal_resource(observateur):
                      'google_id': '1872657'}
     db.utilisateurs.update({'_id': ObjectId(observateur.user_id)},
                            {'$set': internal_data})
-    r = observateur.get(observateur.url)
+    r = observateur.get('/moi')
     assert r.status_code == 200, r.text
+    user_data = r.json()
+    assert 'tokens' not in user_data
     for key in internal_data.keys():
-        assert key not in r.json()
+        assert key not in user_data
 
 
 def test_join_protocole(observateur, administrateur, protocoles_base):
@@ -170,17 +180,23 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
         r = observateur.put(protocole_url.format(bad_protocole_id))
         assert r.status_code in [404, 422], r.text
     # Try to manualy add a protocole to myself
-    r = observateur.patch(observateur.url,
+    r = observateur.patch('/moi',
                           json={'protocoles': [{'protocole': protocole_id}]})
+    assert r.status_code == 422, r.text
     # Join a protocole
     r = observateur.put(protocole_url.format(protocole_id))
     assert r.status_code == 200, r.text
-    observateur.update_user()
-    protocoles = observateur.user['protocoles']
+    # Get back user profile and check protocoles expended field
+    r = observateur.get('/moi')
+    assert r.status_code == 200, r.text
+    protocoles = r.json()['protocoles']
     assert len(protocoles) == 1, protocoles
     assert 'date_inscription' in protocoles[0], protocoles[0]
-    assert (protocoles[0].get('protocole', '') ==
-            {'_id': protocole_id, 'titre': protocole['titre']}), protocoles[0]
+    protocole_expended = protocoles[0].get('protocole', '')
+    # Make sure the protocole is an expended resource
+    assert isinstance(protocole_expended, dict)
+    assert protocole_expended.get('_id', None) == protocole_id
+    assert protocole_expended.get('titre', None) == protocole['titre']
     # Try to validate myself
     validate_url = '/protocoles/{}/observateurs/{}'.format(
         protocole_id, observateur.user_id)
@@ -215,6 +231,7 @@ def validate_dict(scheme, to_validate):
 
 
 def test_multi_join(observateur, administrateur, protocoles_base):
+    # import pdb; pdb.set_trace()
     macro_protocole = protocoles_base[0]
     protocole1_id = str(protocoles_base[1]['_id'])
     protocole1_titre = protocoles_base[1]['titre']
@@ -231,14 +248,24 @@ def test_multi_join(observateur, administrateur, protocoles_base):
     # Now observateur join another protocole, must not interfere with the other
     r = observateur.put(protocole_url.format(protocole2_id))
     assert r.status_code == 200, r.text
-    observateur.update_user()
-    assert len(observateur.user['protocoles']) == 2
-    assert (observateur.user['protocoles'][0]['protocole'] ==
-            {'_id': protocole1_id, 'titre': protocole1_titre})
-    assert observateur.user['protocoles'][0]['valide'] == True
-    assert (observateur.user['protocoles'][1]['protocole'] ==
-            {'_id': protocole2_id, 'titre': protocole2_titre})
-    assert observateur.user['protocoles'][1].get('valide', False) == False
+    r = observateur.get('/moi')
+    assert r.status_code == 200, r.text
+    protocoles = r.json()['protocoles']
+    assert len(protocoles) == 2
+    # Make sure the given protocoles are expended
+    protocole1 = protocoles[0]
+    protocole1_expended = protocoles[0]['protocole']
+    protocole2 = protocoles[1]
+    protocole2_expended = protocoles[1]['protocole']
+    print(protocole1_expended)
+    assert isinstance(protocole1_expended, dict)
+    assert protocole1_expended.get('_id', None) == protocole1_id
+    assert protocole1_expended.get('titre', None) == protocole1_titre
+    assert protocole1.get('valide', False) == True
+    assert isinstance(protocole2_expended, dict)
+    assert protocole2_expended.get('_id', None) == protocole2_id
+    assert protocole2_expended.get('titre', None) == protocole2_titre
+    assert protocole2.get('valide', False) == False
     # List observateur's protocoles
     r = observateur.get('/moi/protocoles')
     assert r.status_code == 200, r.text

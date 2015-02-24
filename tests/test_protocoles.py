@@ -159,9 +159,9 @@ def test_list_protocole_users(protocoles_base, observateur, administrateur):
     r = observateur.get(users_protocole_url, params={'type': 'VALIDES'})
     assert r.status_code == 200, r.text
     assert len(r.json()['_items']) == 1
-    assert r.json()['_items'][0]['_id'] == administrateur.user['_id']
+    assert r.json()['_items'][0]['_id'] == administrateur.user_id
     # A_VALIDER
     r = observateur.get(users_protocole_url, params={'type': 'A_VALIDER'})
     assert r.status_code == 200, r.text
     assert len(r.json()['_items']) == 1
-    assert r.json()['_items'][0]['_id'] == observateur.user['_id']
+    assert r.json()['_items'][0]['_id'] == observateur.user_id

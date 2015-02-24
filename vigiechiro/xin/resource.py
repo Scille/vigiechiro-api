@@ -1,13 +1,14 @@
 from functools import wraps
 
-from flask import Flask, Blueprint, current_app, abort
+from flask import Flask, Blueprint, current_app, abort, make_response
 from datetime import datetime
 from bson import ObjectId
 import logging
+from uuid import uuid4
 
 from .cors import crossdomain
 from .schema import Validator, Unserializer
-from .tools import build_etag
+from .tools import build_etag, jsonify
 from .snippets import get_resource
 
 
@@ -65,15 +66,33 @@ class Resource(Blueprint):
         route_decorator = Blueprint.route(self, route, *args, **kwargs)
 
         def decorator(f):
-            return route_decorator(cors_decorator(f))
+            @route_decorator
+            @cors_decorator
+            @wraps(f)
+            def wrapper(*args, **kwargs):
+                result = f(*args, **kwargs)
+                # if result contains a dict, assume the response is json
+                if isinstance(result, dict):
+                    payload = result
+                    return jsonify(**result)
+                elif isinstance(result, tuple) and isinstance(result[0], dict):
+                    response = jsonify(**result[0])
+                    if len(result) >= 2:
+                        response.status_code = result[1]
+                    if len(result) == 3:
+                        for field, value in result[3]:
+                            response.headers[field] = value
+
+                    return response
+                else:
+                    return result
         return decorator
 
-    def insert(self, payload, auto_abort=True):
+    def insert(self, payload, auto_abort=True, additional_context=None):
         """Insert in database a new document of the resource"""
         # Provide to the validator additional data needed for some validatations
-        additional_context = {
-            'resource': self,
-        }
+        additional_context = additional_context or {}
+        additional_context['resource'] = self
         # Validate payload against resource schema
         result = self.validator.run(payload,
                                     additional_context=additional_context)
@@ -84,12 +103,13 @@ class Resource(Blueprint):
                 raise DocumentException(result.errors)
         # Complete the payload with metada
         payload['_created'] = payload['_updated'] = datetime.utcnow().replace(microsecond=0)
-        payload['_etag'] = build_etag(payload)
+        payload['_etag'] = uuid4().hex
         # Finally do the actual insert in db
         payload['_id'] = current_app.data.db[self.name].insert(payload)
         return payload
 
-    def _atomic_update(self, lookup, payload, if_match=False, custom_merge=None):
+    def _atomic_update(self, lookup, payload, mongo_update=None,
+                       if_match=False, additional_context=None):
         # Retrieve previous version of the document
         if isinstance(lookup, ObjectId):
             lookup = {'_id': lookup}
@@ -108,36 +128,41 @@ class Resource(Blueprint):
         if if_match and old_etag != if_match:
             return (412, 'If-Match condition has failed')
         # Provide to the validator additional data needed for some validatations
-        additional_context = {
-            'resource': self,
-            'old_document': document
-        }
+        additional_context = additional_context or {}
+        additional_context['resource'] = self
+        additional_context['old_document'] = document
         # Validate payload against resource schema
         result = self.validator.run(payload, is_update=True,
                                     additional_context=additional_context)
         if result.errors:
             return (422, result.errors)
-        # Merge payload to update existing document
-        if custom_merge:
-            document = custom_merge(document, payload)
-        else:
-            document.update(payload)
-        # Complete the payload with metada
-        document['_updated'] = datetime.utcnow().replace(microsecond=0)
-        del document['_etag']
-        document['_etag'] = build_etag(document)
-        # Finally do the actual update in db using again the if_match
+        # Fill metada and update the resource in db
+        if not mongo_update:
+            mongo_update = {'$set': payload}
+        if '$set' not in mongo_update:
+            mongo_update['$set'] = {}
+        mongo_update['$set']['_updated'] = datetime.utcnow().replace(microsecond=0)
+        mongo_update['$set']['_etag'] = uuid4().hex
+        # Finally do the actual update in db using again the _etag
         # field in the lookup to prevent race condition
-        result = resource_db.update(
-            {'_id': document['_id'], '_etag': old_etag}, document)
-        if not result['updatedExisting']:
+        lookup = lookup.copy()
+        if '_etag' not in lookup:
+            lookup['_etag'] = old_etag
+        new_document = resource_db.find_and_modify(
+            query=lookup,
+            update=mongo_update, new=True)
+        if not new_document:
             return (412, 'If-Match condition has failed')
-        print('inserted document', document)
-        return (200, document)
+        return (200, new_document)
 
-    def update(self, lookup, payload, if_match=False, auto_abort=True, custom_merge=None):
+    def update(self, lookup, payload, mongo_update=None, if_match=False,
+               auto_abort=True, additional_context=None):
         """
             Update in database a document of the resource
+            :param payload: data dict to run the validator against
+            :param mongo_update: mongodb commands (i.g. "$set", "$inc" etc...),
+                                 to use to update in database instead of using
+                                 {'$set': payload}
             :param if_match: race condition politic, if if_match is False the
                              update will be repeatedly tried until accepted,
                              if if_match is an etag, the update will be rejected
@@ -155,55 +180,58 @@ class Resource(Blueprint):
             # No if_match, in case of race condition, repeatedly try the update
             while True:
                 result = self._atomic_update(lookup, payload.copy(),
-                                             custom_merge=custom_merge)
+                                             mongo_update=mongo_update,
+                                             additional_context=additional_context)
                 if result[0] != 412:
                     break
         else:
             # Else abort in case of race condition
             result = self._atomic_update(lookup, payload, if_match=if_match,
-                                         custom_merge=custom_merge)
+                                         mongo_update=mongo_update)
         if result[0] != 200:
             error(*result)
-        return result[1]
+        # Unserialize and return our new document
+        return self._unserialize_document(result[1]).document
 
-    def find(self, *args, expend=[], **kwargs):
-        # Provide to the validator additional data needed for some validatations
-        additional_context = {
-            'resource': self,
-            'expend_data_relation': expend
-        }
-        print('context', additional_context)
+    def find(self, *args, additional_context=None, **kwargs):
         docs = []
         cursor = current_app.data.db[self.name].find(*args, **kwargs)
         for document in cursor:
-            result = self.unserializer.run(document,
-                                           additional_context=additional_context)
-            if result.errors:
-                logging.error('Errors in document {} : {}'.format(
-                    result.document['_id'], result.errors))
+            result = self._unserialize_document(document,
+                additional_context=additional_context)
             docs.append(result.document)
         return docs, cursor.count(with_limit_and_skip=False)
 
     def remove(self, *args, **kwargs):
         return current_app.data.db[self.name].remove(*args, **kwargs)
 
-    def find_one(self, *args, expend=[], **kwargs):
+    def find_one(self, *args, additional_context=None, auto_abort=True, **kwargs):
         document = current_app.data.db[self.name].find_one(*args, **kwargs)
         if document:
             # Provide to the validator additional data needed for some validatations
-            additional_context = {
-                'resource': self,
-                'expend_data_relation': expend
-            }
-            result = self.unserializer.run(document,
-                                           additional_context=additional_context)
-            if result.errors:
-                logging.error('Errors in document {} : {}'.format(
-                    result.document['_id'], result.errors))
+            result = self._unserialize_document(document,
+                additional_context=additional_context)
             document = result.document
+        elif auto_abort:
+            abort(404)
         return document
+
+    def _unserialize_document(self, document, additional_context=None):
+        # Provide to the validator additional data needed for some validatations
+        additional_context = additional_context or {}
+        additional_context['resource'] = self
+        result = self.unserializer.run(document,
+                                       additional_context=additional_context)
+        if result.errors:
+            logging.error('Errors in document {} : {}'.format(
+                result.document['_id'], result.errors))
+        return result
 
     def get_resource(self, obj_id, auto_abort=True, projection=None):
         """Retrieve object from database with it ID and resource name"""
         return get_resource(self.name, obj_id, auto_abort=auto_abort,
                             projection=projection)
+
+    def build_db_indexes(clean=False):
+        """Initialize the database with the given indexes"""
+        pass

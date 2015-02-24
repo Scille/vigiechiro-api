@@ -8,9 +8,19 @@ Introductions
 
  - GET : récupération d'élément (retourne 200)
  - POST : création d'élément (retourne 201)
- - PUT : modification unitaire (retourne 200)
- - PATCH : modification non unitaire, if_match requis (retourne 200)
+ - PATCH : modification unitaire (retourne 200)
+ - PUT : modification non unitaire unitaire (retourne 200)
  - DELETE : destruction d'élément (retourn 204)
+
+### Réponses HTTP
+
+ - 200 : ok
+ - 201 : ressource créée
+ - 204 : la ressource n'est plus disponible
+ - 404 : la ressource n'existe pas
+ - 422 : paramêtres de la requête invalides
+ - 500 : erreur interne au serveur
+
 
 Utilisateurs
 ------------

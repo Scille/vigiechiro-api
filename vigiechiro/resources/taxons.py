@@ -104,7 +104,7 @@ def display_taxon(taxon_id):
 @taxons.route('/taxons/<objectid:taxon_id>', methods=['PATCH'])
 @requires_auth(roles='Administrateur')
 def edit_taxon(taxon_id):
-    result = taxons.update(taxon_id, get_payload(), get_if_match())
+    result = taxons.update(taxon_id, get_payload(), if_match=get_if_match())
     return jsonify(result)
 
 
