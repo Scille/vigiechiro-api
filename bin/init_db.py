@@ -49,8 +49,13 @@ def create_indexes():
 		('tags', pymongo.TEXT)
 	], default_language='french', name='protocolesTextIndex')
 
-
 def main():
+	db_name = '{}:{}/{}'.format(settings.MONGO_HOST, settings.MONGO_PORT, settings.MONGO_DBNAME)
+	print('You are about to fully ERASE the database {green}{name}{endc}'.format(
+		green='\033[92m', name=db_name, endc='\033[0m'))
+	print('To continue, type YES')
+	if input() != 'YES':
+		raise SystemExit('You changed your mind, exiting...')
 	print('Cleaning database...', flush=True, end='')
 	clean_db()
 	print(' Done !')
