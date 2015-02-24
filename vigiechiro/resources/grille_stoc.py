@@ -67,5 +67,5 @@ def get_circle_grille_stoc():
             }
         }
     }
-    cursor = current_app.data.db[grille_stoc.name].find(lookup, limit=26)
+    cursor = current_app.data.db[grille_stoc.name].find(lookup, limit=80)
     return pagination.make_response(cursor)
