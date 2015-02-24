@@ -53,10 +53,7 @@ py.test tests
 
 Création des indexes
 ```
-db.grille_stoc.ensureIndex({centre : "2dsphere"})
-db.utilisateurs.ensureIndex({email: "text", pseudo: "text", nom: "text", prenom: "text", organisation: "text", tag: "text"}, {default_language: "french", name: "utilisateursTextIndex"})
-db.taxons.ensureIndex({libelle_long: "text", libelle_court: "text", tags: "text"}, {default_language: "french", name: "taxonsTextIndex"})
-db.protocoles.ensureIndex({titre: "text", tags: "text"}, {default_language: "french", name: "protocolesTextIndex"})
+./bin/init_bdd.py
 ```
 
 
