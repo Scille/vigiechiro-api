@@ -48,6 +48,10 @@ def create_indexes():
 		('titre', pymongo.TEXT),
 		('tags', pymongo.TEXT)
 	], default_language='french', name='protocolesTextIndex')
+	db.sites.ensure_index([
+		('titre', pymongo.TEXT),
+	], default_language='french', name='sitesTextIndex')
+
 
 def main():
 	db_name = '{}:{}/{}'.format(settings.MONGO_HOST, settings.MONGO_PORT, settings.MONGO_DBNAME)
