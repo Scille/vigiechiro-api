@@ -47,35 +47,25 @@ def get_grille_stoc():
     return pagination.make_response(cursor)
 
 
-@grille_stoc.route('/grille_stoc/proximite', methods=['GET'])
+@grille_stoc.route('/grille_stoc/cercle', methods=['GET'])
 @requires_auth(roles='Observateur')
-def get_nearest_grille_stoc():
-    args_names = ['lng', 'lat']
-    missing = [arg for arg in args_names if arg not in request.args]
-    if missing:
-        abort(422, {f: 'missing param' for f in missing})
-    float_args = {}
-    errors = {}
-    for arg in args_names:
-        if arg not in request.args:
-            errors[arg] = 'missing param'
-        else:
-            try:
-                float_args[arg] = float(request.args[arg])
-            except ValueError:
-                errors[arg] = 'bad value, should be float'
-    if errors:
-        abort(422, errors)
+def get_circle_grille_stoc():
+    params = get_url_params({
+        'lng': {'required': True, 'type': float},
+        'lat': {'required': True, 'type': float},
+        'r': {'required': True, 'type': float}
+    })
+    pagination = Paginator()
     lookup = {
         'centre': {
             '$near': {
                 '$geometry': {
                     'type': "Point",
-                    'coordinates': [float_args['lng'], float_args['lat']]
+                    'coordinates': [params['lng'], params['lat']]
                 },
-                '$maxDistance': 3000
+                '$maxDistance': params['r']
             }
         }
     }
-    obj = current_app.data.db[grille_stoc.name].find_one(lookup)
-    return jsonify(**obj)
+    cursor = current_app.data.db[grille_stoc.name].find(lookup, limit=26)
+    return pagination.make_response(cursor)
