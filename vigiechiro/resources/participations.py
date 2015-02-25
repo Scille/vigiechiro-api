@@ -15,6 +15,8 @@ from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator, get_payload, get_resource, get_lookup_from_q
 
 from .actualites import create_actuality_nouvelle_participation
+from .fichiers import fichiers as fichiers_resource
+from .utilisateurs import utilisateurs as utilisateurs_resource
 
 
 SCHEMA = {
@@ -70,6 +72,9 @@ SCHEMA = {
     }
 }
 
+ALLOWED_MIMES = ['image/bmp', 'image/png', 'image/jpg',
+                 'application/ta', 'application/tac',
+                 'sound/wav', 'audio/x-wav']
 
 participations = Resource('participations', __name__, schema=SCHEMA)
 
@@ -145,6 +150,18 @@ def _check_edit_access(participation_resource):
         abort(403)
 
 
+def _check_read_access(participation_resource):
+    owner = participation_resource['observateur']
+    # If donnees_publiques, anyone can see
+    # If not, only admin, validateur and owner can
+    if (g.request_user['role'] == 'Administrateur' or
+        g.request_user['role'] == 'Validateur' or
+        g.request_user['_id'] == owner['_id']):
+        return
+    if not owner.get('donnees_publiques', False):
+        abort(403)
+
+
 def _check_add_message_access(participation_resource):
     # Administrateur, Validateur and owner are allowed
     if (g.request_user['role'] == 'Observateur' and
@@ -172,7 +189,20 @@ def add_pieces_jointes(participation_id):
     participation_resource = participations.get_resource(participation_id)
     _check_edit_access(participation_resource)
     payload = get_payload({'pieces_jointes': True})
-    mongodb_update = {'$push': {'pieces_jointes': {'$each': payload['pieces_jointes']}}}
+    errors = {'pieces_jointes': []}
+    if isinstance(payload['pieces_jointes'], list):
+        for pj_id in payload['pieces_jointes']:
+            pj = fichiers_resource.get_resource(pj_id, auto_abort=False)
+            if not pj:
+                errors['pieces_jointes'].append('bad id ' + pj_id)
+            elif pj['mime'] not in ALLOWED_MIMES:
+                errors['pieces_jointes'].append('file {} bad mime type '.format(pj_id))
+            elif not pj.get('s3_upload_done', False):
+                errors['pieces_jointes'].append('file {} upload is not done'.format(pj_id))
+    if errors['pieces_jointes']:
+        abort(422, errors)
+    # If pieces_jointes is not a list, update's validation will throw error
+    mongo_update = {'$push': {'pieces_jointes': {'$each': payload['pieces_jointes']}}}
     return participations.update(participation_id, payload=payload,
                                  mongo_update=mongo_update)
 
@@ -180,9 +210,10 @@ def add_pieces_jointes(participation_id):
 @participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_pieces_jointes(participation_id):
-    participation_resource = participations.find(participation_id)
-    _check_edit_access(participation_resource)
-    return {'pieces_jointes': participation_resource['pieces_jointes']}
+    participation_resource = participations.find_one(participation_id)
+    _check_read_access(participation_resource)
+    pieces_jointes = participation_resource.get('pieces_jointes', [])
+    return {'_items': pieces_jointes, '_meta': {'total': len(pieces_jointes)}}
 
 
 @participations.route('/participations/<objectid:participation_id>/messages', methods=['PUT'])

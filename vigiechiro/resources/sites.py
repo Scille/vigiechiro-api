@@ -198,4 +198,4 @@ def add_site_habitat(site_id):
     habitats.append(payload)
     check_configuration_participation(payload)
     result = sites.update(site_id, {'localites': localites})
-    return jsonify(**result)
+    return result

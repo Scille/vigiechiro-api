@@ -51,10 +51,10 @@ def test_pices_jointes_access(participation_ready, file_uploaded,
                               observateur_other, administrateur, validateur):
     observateur, protocole, site = participation_ready
     # Post participation
-    participations_url = '/sites/{}/participations'.format(site['_id'])
-    r = observateur.post(participations_url,
+    r = observateur.post('/sites/{}/participations'.format(site['_id']),
                          json={'date_debut': format_datetime(datetime.utcnow())})
     assert r.status_code == 201, r.text
+    participations_url = '/participations/{}'.format(r.json()['_id'])
     # Observateur wants to keep it work private
     r = observateur.patch('/moi', json={'donnees_publiques': False})
     assert r.status_code == 200, r.text
@@ -87,30 +87,33 @@ def test_participation(participation_ready, file_uploaded, observateur_other):
     participation = r.json()
     sent_pieces_jointes = set()
     # Send files
-    pieces_jointes_url = participations_url + '/{}/pieces_jointes'.format(participation['_id'])
+    r = observateur.get('/participations/{}'.format(participation['_id']))
+    assert r.status_code == 200, r.text
+    pieces_jointes_url = '/participations/{}/pieces_jointes'.format(participation['_id'])
     r = observateur.put(pieces_jointes_url,
                         json={'pieces_jointes': [file_uploaded['_id']]})
-    sent_pieces_jointes.add(file_uploaded['_id'])
     assert r.status_code == 200, r.text
+    sent_pieces_jointes.add(file_uploaded['_id'])
     # Send multiple files with different allowed mime types
     pieces_jointes = []
     for i, mime in enumerate(['image/bmp', 'image/png', 'image/jpg',
                               'application/ta', 'application/tac',
                               'sound/wav', 'audio/x-wav']):
         # Create file & finish it upload
-        res = custom_upload_file({'titre': 'file_{}'.format(i), 'mime': mime})
+        res = custom_upload_file({'titre': 'file_{}'.format(i), 'mime': mime}, observateur)
         pieces_jointes.append(res['_id'])
     r = observateur.put(pieces_jointes_url,
                         json={'pieces_jointes': pieces_jointes})
-    sent_pieces_jointes.add(set(pieces_jointes))
+    sent_pieces_jointes |= set(pieces_jointes)
     assert r.status_code == 200, r.text
     # Finally display all the pieces_jointes
     r = observateur.get(pieces_jointes_url)
     assert r.status_code == 200, r.text
-    pieces_jointes = r.json()
-    assert len(pieces_jointes) == len(set(pieces_jointes))
-    assert len(pieces_jointes) == len(sent_pieces_jointes)
-    for pj in piece_jointe:
+    got_pieces_jointes = r.json()['_items']
+    no_dup = {pj['_id'] for pj in got_pieces_jointes}
+    assert len(got_pieces_jointes) == len(no_dup)
+    assert len(got_pieces_jointes) == len(sent_pieces_jointes)
+    for pj in got_pieces_jointes:
         assert pj['_id'] in sent_pieces_jointes
 
 
@@ -122,8 +125,12 @@ def test_participation_bad_file(participation_ready, file_init):
                          json={'date_debut': format_datetime(datetime.utcnow())})
     assert r.status_code == 201, r.text
     participation = r.json()
+    # Try to send a dummy file id as piece_jointe
+    pieces_jointes_url = '/participations/{}/pieces_jointes'.format(participation['_id'])
+    r = observateur.put(pieces_jointes_url,
+                        json={'pieces_jointes': ["54ecaa5e13adf24668712f76"]})
     # Try to send a non-uploaded file as piece_jointe
-    pieces_jointes_url = participations_url + '/{}/pieces_jointes'.format(participation['_id'])
+    pieces_jointes_url = '/participations/{}/pieces_jointes'.format(participation['_id'])
     r = observateur.put(pieces_jointes_url,
                         json={'pieces_jointes': [file_init['_id']]})
     assert r.status_code == 422, r.text
@@ -131,10 +138,9 @@ def test_participation_bad_file(participation_ready, file_init):
     for i, mime in enumerate(['application/json', '', 'application/octet-stream',
                               'application/zip', 'audio/mpeg', 'text/plain']):
         # Create file & finish it upload
-        res = custom_upload_file({'titre': 'file_{}'.format(i), 'mime': mime})
-        pieces_jointes.append(res['_id'])
+        res = custom_upload_file({'titre': 'file_{}'.format(i), 'mime': mime}, observateur)
         r = observateur.put(pieces_jointes_url,
-                            json={'pieces_jointes': pieces_jointes})
+                            json={'pieces_jointes': [res['_id']]})
         assert r.status_code == 422, r.text
 
 
