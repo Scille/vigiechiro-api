@@ -14,10 +14,11 @@ from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator, get_payload, get_resource, get_lookup_from_q
 
+from ..scripts.tadaridaD_on_participation import run_tadaridaD_on_participation
+
 from .actualites import create_actuality_nouvelle_participation
 from .fichiers import fichiers as fichiers_resource
 from .utilisateurs import utilisateurs as utilisateurs_resource
-
 
 SCHEMA = {
     'observateur': relation('utilisateurs', required=True),
@@ -203,8 +204,10 @@ def add_pieces_jointes(participation_id):
         abort(422, errors)
     # If pieces_jointes is not a list, update's validation will throw error
     mongo_update = {'$push': {'pieces_jointes': {'$each': payload['pieces_jointes']}}}
-    return participations.update(participation_id, payload=payload,
-                                 mongo_update=mongo_update)
+    result = participations.update(participation_id, payload=payload,
+                                   mongo_update=mongo_update)
+    run_tadaridaD_on_participation.delay(result['_id'])
+    return result
 
 
 @participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['GET'])

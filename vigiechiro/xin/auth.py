@@ -37,6 +37,10 @@ def check_auth(token, allowed_roles):
                 # Return the user profile
                 return jsonify(g.request_user)
     """
+    if token == settings.SECRET_KEY:
+        # Internal token is used to authorize scripts
+        current_app.g.request_user = {'_id': 'internal', 'role': 'Administrateur'}
+        return True
     accounts = current_app.data.db['utilisateurs']
     account = accounts.find_one({'tokens.{}'.format(token): {'$exists': True}})
     if account:
