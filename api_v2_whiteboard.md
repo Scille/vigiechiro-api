@@ -345,6 +345,7 @@ Nom          |  type   | Requis | Description
  page        | integer |  non   | Page courante
  max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
  q           | string  |  non   | Filtre de recherche
+ protocole   | objectid|  non   | N'afficher les site que d'un seul protocole
 
 **Response**
 ```
@@ -357,6 +358,20 @@ Nom          |  type   | Requis | Description
     ]
 }
 ```
+
+
+### Lister les sites d'un protocole
+
+`GET /protocole/#id/sites`
+
+**Parameters**
+
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+ q           | string  |  non   | Filtre de recherche
+
 
 ### Créer un site
 

@@ -56,9 +56,8 @@ def new_site_payload(request, protocoles_base):
     return payload
 
 
-def test_list_own_sites(obs_sites_base):
+def test_list_own_sites(obs_sites_base, protocoles_base):
     observateur, sites_base = obs_sites_base
-    url = 'sites/{}'.format(sites_base[0]['_id'])
     r = observateur.get('/moi/sites')
     assert r.status_code == 200, r.text
     items = r.json()['_items']
@@ -69,6 +68,33 @@ def test_list_own_sites(obs_sites_base):
             assert field in item
             assert isinstance(item[field], dict), item
             assert '_id' in item[field], item
+    # Only list the site of a single protocole
+    r = observateur.get('/moi/sites',
+                        params={'protocole': protocoles_base[2]['_id']})
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 0, r.json()
+
+
+def test_list_protocole_sites(obs_sites_base, protocoles_base):
+    observateur, sites_base = obs_sites_base
+    protocole_id = sites_base[0]['protocole']
+    url = 'protocoles/{}/sites'.format(protocole_id)
+    r = observateur.get(url)
+    assert r.status_code == 200, r.text
+    items = r.json()['_items']
+    assert len(items) == 2, r.json()
+    # Resource contains expended version of fields protocole and grille_stoc
+    for item in items:
+        for field in ['protocole', 'grille_stoc']:
+            assert field in item
+            assert isinstance(item[field], dict), item
+            assert '_id' in item[field], item
+    # List another protocole with no sites
+    url = 'protocoles/{}/sites'.format(protocoles_base[2]['_id'])
+    r = observateur.get(url)
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 0, r.json()
+
 
 
 @pytest.mark.xfail

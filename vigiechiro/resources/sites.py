@@ -5,11 +5,11 @@
     see: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893712
 """
 
-from flask import current_app, abort, jsonify, g
+from flask import current_app, abort, jsonify, g, request
 from datetime import datetime
 
 from ..xin import Resource
-from ..xin.tools import jsonify, abort
+from ..xin.tools import jsonify, abort, parse_id
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator, get_payload, get_resource, get_lookup_from_q
@@ -89,10 +89,26 @@ def list_sites():
 @requires_auth(roles='Observateur')
 def list_user_sites():
     pagination = Paginator()
+    protocole_id = request.args.get('protocole', None)
+    if protocole_id:
+        protocole_id = parse_id(protocole_id)
+        if not protocole_id:
+            abort(422, {'protocole': 'must be an objectid'})
     lookup = {'observateur': g.request_user['_id']}
+    if protocole_id:
+        lookup['protocole'] = protocole_id
     lookup.update(get_lookup_from_q() or {})
-    found = sites.find(lookup, expend=['protocole', 'grille_stoc'],
-                       skip=pagination.skip, limit=pagination.max_results)
+    found = sites.find(lookup, skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(*found)
+
+
+@sites.route('/protocoles/<objectid:protocole_id>/sites', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_protocole_sites(protocole_id):
+    pagination = Paginator()
+    lookup = {'protocole': protocole_id}
+    lookup.update(get_lookup_from_q() or {})
+    found = sites.find(lookup, skip=pagination.skip, limit=pagination.max_results)
     return pagination.make_response(*found)
 
 
