@@ -26,7 +26,8 @@ SCHEMA = {
     'site': relation('sites'),
     'protocole': relation('protocoles'),
     'participation': relation('participations'),
-    'date_validation': {'type': 'datetime'}
+    'date_validation': {'type': 'datetime'},
+    'date_refus': {'type': 'datetime'}
 }
 
 
@@ -99,6 +100,23 @@ def create_actuality_validation_protocole(protocole, utilisateur):
     try:
         result = actualites.update(lookup,
                                    {'date_validation': datetime.utcnow()},
+                                   auto_abort=False)
+    except DocumentException as e:
+        logging.error('error updating actuality with lookup {} : {}'.format(
+            lookup, e))
+        return None
+    return result
+
+
+def create_actuality_reject_protocole(protocole, utilisateur):
+    # Update previously created INSCRIPTION_PROTOCOLE actuality to
+    # notify the rejection date
+    lookup = {'action': 'INSCRIPTION_PROTOCOLE',
+              'sujet': utilisateur['_id'],
+              'protocole': protocole['_id']}
+    try:
+        result = actualites.update(lookup,
+                                   {'date_refus': datetime.utcnow()},
                                    auto_abort=False)
     except DocumentException as e:
         logging.error('error updating actuality with lookup {} : {}'.format(

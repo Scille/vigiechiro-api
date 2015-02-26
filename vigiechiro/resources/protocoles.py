@@ -12,9 +12,12 @@ from ..xin import Resource
 from ..xin.tools import jsonify, abort, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-from ..xin.snippets import Paginator, get_lookup_from_q, get_payload, get_if_match
+from ..xin.snippets import (Paginator, get_lookup_from_q, get_payload,
+                            get_if_match, get_url_params)
 
-from .actualites import create_actuality_validation_protocole, create_actuality_inscription_protocole
+from .actualites import (create_actuality_validation_protocole,
+                         create_actuality_inscription_protocole,
+                         create_actuality_reject_protocole)
 from .utilisateurs import (utilisateurs as utilisateurs_resource,
                            get_payload_add_following)
 
@@ -181,12 +184,36 @@ def user_validate_protocole(protocole_id, user_id):
     if to_validate_protocole.get('valide', False):
         abort(422, 'user {} has already been validated into protocole {}'.format(
             user_id, protocole_id))
-    # Finally update user's protocole status
     lookup = {'_id': user_id, 'protocoles.protocole': protocole_id}
+    # Validate observateur
     mongo_update = {'$set': {'protocoles.$.valide': True}}
     to_validate_protocole['valide'] = True
     payload = {'protocoles': [to_validate_protocole]}
+    # Finally update user's protocole status
     utilisateurs_resource.update(lookup, mongo_update=mongo_update, payload=payload)
     # Finally create corresponding actuality
-    create_actuality_validation_protocole({'_id': protocole_id}, g.request_user)
-    return jsonify(**to_validate_protocole)
+    create_actuality_validation_protocole({'_id': protocole_id}, user_resource)
+    return to_validate_protocole
+
+
+@protocoles.route('/protocoles/<objectid:protocole_id>/observateurs/<objectid:user_id>', methods=['DELETE'])
+@requires_auth(roles='Administrateur')
+def user_reject_protocole(protocole_id, user_id):
+    """Remove a user from a protocole"""
+    user_resource = utilisateurs_resource.get_resource(user_id)
+    # Make sure the user has joined the protocole and is not valid yet
+    joined_protocoles = user_resource.get('protocoles', [])
+    to_validate_protocole = next((p for p in joined_protocoles
+                                  if p['protocole'] == protocole_id), None)
+    if not to_validate_protocole:
+        abort(422, 'user {} has not joined protocole {}'.format(
+            user_id, protocole_id))
+    lookup = {'_id': user_id}
+    # Remove protocle from observateur
+    mongo_update = {'$pull': {'protocoles': {'protocole': protocole_id}}}
+    payload = {'protocoles': []}
+    # Finally update user's protocole status
+    utilisateurs_resource.update(lookup, mongo_update=mongo_update, payload=payload)
+    # Finally create corresponding actuality
+    create_actuality_reject_protocole({'_id': protocole_id}, user_resource)
+    return to_validate_protocole

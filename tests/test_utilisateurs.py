@@ -200,13 +200,18 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     # Try to validate myself
     validate_url = '/protocoles/{}/observateurs/{}'.format(
         protocole_id, observateur.user_id)
-    r = observateur.put(validate_url, json={'valide': True})
+    r = observateur.put(validate_url)
     assert r.status_code == 403, r.text
     # Admin validates me
-    r = administrateur.put(validate_url, json={'valide': True})
+    r = administrateur.put(validate_url)
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['protocoles'][0]['valide']
+    # Admin can reject also reject me
+    r = administrateur.delete(validate_url)
+    assert r.status_code == 200, r.text
+    observateur.update_user()
+    assert observateur.user.get('protocoles', []) == []
     # Macro-protocoles are not subscriptable
     r = observateur.put(protocole_url.format(macro_protocole_id))
     assert r.status_code == 422, r.text
@@ -242,7 +247,7 @@ def test_multi_join(observateur, administrateur, protocoles_base):
     r = observateur.put(protocole_url.format(protocole1_id))
     assert r.status_code == 200, r.text
     r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
-        protocole1_id, observateur.user_id), json={'valide': True})
+        protocole1_id, observateur.user_id))
     assert r.status_code == 200, r.text
     observateur.update_user()
     # Now observateur join another protocole, must not interfere with the other

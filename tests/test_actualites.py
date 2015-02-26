@@ -29,7 +29,7 @@ def test_actualites(clean_actualites, observateur,
     observateur.update_user()
     # Now validate the user
     r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
-        protocole_id, observateur.user_id), json={'valide': True})
+        protocole_id, observateur.user_id))
     assert r.status_code == 200, r.text
     # Create site
     r = observateur.post('/sites', json={
@@ -48,11 +48,7 @@ def test_actualites(clean_actualites, observateur,
     r = observateur.get('/moi/actualites')
     assert r.status_code == 200, r.text
     actualites = r.json()['_items']
-    print(actualites)
     assert len(actualites) == 3, actualites
-    actualites[0]['action'] == 'NOUVELLE_PARTICIPATION'
-    actualites[1]['action'] == 'NOUVEAU_SITE'
-    actualites[2]['action'] == 'INSCRIPTION_PROTOCOLE'
 
 
 def test_list_protocole_users(clean_actualites, protocoles_base,
@@ -75,10 +71,15 @@ def test_list_protocole_users(clean_actualites, protocoles_base,
     # Validate protocole only for the admin
     validate_url = '/protocoles/{}/observateurs/{}'.format(
         protocole_id, administrateur.user_id)
-    r = administrateur.put(validate_url, json={'valide': True})
+    r = administrateur.put(validate_url)
     assert r.status_code == 200, r.text
     administrateur.update_user()
     observateur.update_user()
+    sleep(1)
+    # Reject the protocle for the observateur
+    r = administrateur.delete('/protocoles/{}/observateurs/{}'.format(
+        protocole_id, observateur.user_id))
+    assert r.status_code == 200, r.text
     # Now have a look at the actualities
     r = observateur.get('/actualites/validations')
     assert r.status_code == 200, r.text
@@ -86,16 +87,17 @@ def test_list_protocole_users(clean_actualites, protocoles_base,
     assert len(items) == 3
     assert not [i for i in items if i.get('action', None) != 'INSCRIPTION_PROTOCOLE']
     # List of element :
+    # - observateur is rejected from protocole
     # - administrateur is validated in protocole
     # - observateur has joined another_protocole
-    # - observateur has joined protocole
-    assert items[0]['sujet']['_id'] == administrateur.user_id
+    assert items[0]['sujet']['_id'] == observateur.user_id
     assert items[0]['protocole']['_id'] == protocole_id
-    assert items[1]['sujet']['_id'] == observateur.user_id
-    assert items[1]['protocole']['_id'] == another_protocole_id
+    assert 'date_refus' in items[0]
+    assert items[1]['sujet']['_id'] == administrateur.user_id
+    assert items[1]['protocole']['_id'] == protocole_id
+    assert 'date_validation' in items[1]
     assert items[2]['sujet']['_id'] == observateur.user_id
-    assert items[2]['protocole']['_id'] == protocole_id
-    print(items)
+    assert items[2]['protocole']['_id'] == another_protocole_id
 
 
 def test_follow():

@@ -142,7 +142,7 @@ def test_list_protocole_users(protocoles_base, observateur, administrateur):
     # Validate protocole only for the admin
     validate_url = '/protocoles/{}/observateurs/{}'.format(
         protocole_id, administrateur.user_id)
-    r = administrateur.put(validate_url, json={'valide': True})
+    r = administrateur.put(validate_url)
     assert r.status_code == 200, r.text
     administrateur.update_user()
     observateur.update_user()

@@ -14,8 +14,6 @@ from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator, get_payload, get_resource, get_lookup_from_q
 
-from ..scripts.tadaridaD_on_participation import run_tadaridaD_on_participation
-
 from .actualites import create_actuality_nouvelle_participation
 from .fichiers import fichiers as fichiers_resource
 from .utilisateurs import utilisateurs as utilisateurs_resource

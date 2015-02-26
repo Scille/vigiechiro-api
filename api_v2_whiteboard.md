@@ -223,11 +223,14 @@ Note : si #protocole_id est mis à 'tous', la liste se fera sur tous les protoco
 
 `PUT /protocoles/#protocole_id/observateurs/#observateur_id`
 
-**Input**
+**Accès**
 
-Nom               |  Type   | Description
-------------------|---------|-------------
-valide            | boolean |
+Administrateur seulement
+
+
+### Supprimer un observateur d'un protocole
+
+`DELETE /protocoles/#protocole_id/observateurs/#observateur_id`
 
 **Accès**
 
