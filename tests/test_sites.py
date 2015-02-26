@@ -128,7 +128,8 @@ def test_create_site(administrateur, observateur, protocoles_base):
     r = observateur.get('/sites/' + r.json()['_id'])
     assert r.status_code == 200, r.text
     # Implicitly set the observateur in the created site
-    assert r.json()['observateur'] == observateur.user_id
+    assert r.json()['observateur']['_id'] == observateur.user_id
+    assert r.json()['protocole']['_id'] == protocole_id
 
 
 def test_create_site_explicit_obs(administrateur, observateur, protocoles_base):

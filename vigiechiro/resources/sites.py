@@ -126,13 +126,13 @@ def create_site():
     inserted_payload = sites.insert(payload)
     # Finally create corresponding actuality
     create_actuality_nouveau_site(inserted_payload)
-    return jsonify(**inserted_payload), 201
+    return inserted_payload, 201
 
 
 @sites.route('/sites/<objectid:site_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def display_site(site_id):
-    return jsonify(**sites.get_resource(site_id))
+    return sites.find_one({'_id': site_id})
 
 
 def _check_edit_acess(site_resource):
@@ -154,7 +154,7 @@ def edit_site(site_id):
         abort(403)
     check_configuration_participation(payload)
     result = sites.update(site_id, payload)
-    return jsonify(**result)
+    return result
 
 
 @sites.route('/sites/liste', methods=['GET'])
@@ -162,7 +162,7 @@ def edit_site(site_id):
 def get_resume_list():
     """Return a brief list of per site id and libelle"""
     items = sites.find({}, {"libelle_long": 1})
-    return jsonify(_items=[i for i in items])
+    return {'_items': [i for i in items]}
 
 
 @sites.route('/sites/<objectid:site_id>/localites', methods=['PUT'])
