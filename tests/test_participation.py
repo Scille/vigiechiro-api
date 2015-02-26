@@ -118,14 +118,18 @@ def test_participation(participation_ready, file_uploaded, observateur_other):
     assert 'wav' in pieces_jointes
     assert 'photos' in pieces_jointes
     assert len(pieces_jointes['ta']) == len(ta_ids)
+    # Bonus effect : pieces_jointes sould be marked to execute tadarida on them
     for pj in pieces_jointes['ta']:
         assert pj['_id'] in ta_ids
+        assert pj['require_process'] == 'tadarida_c'
     assert len(pieces_jointes['wav']) == len(wav_ids)
     for pj in pieces_jointes['wav']:
         assert pj['_id'] in wav_ids
+        assert pj['require_process'] == 'tadarida_d'
     assert len(pieces_jointes['photos']) == len(photos_ids)
     for pj in pieces_jointes['photos']:
         assert pj['_id'] in photos_ids
+        assert 'require_process' not in pj
 
 
 def test_participation_bad_file(participation_ready, file_init):
