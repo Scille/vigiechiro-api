@@ -553,8 +553,6 @@ meteo.temperature_debut| integer |  non   |
 meteo.temperature_fin  | integer |  non   |
 meteo.vent             | string  |  non   | NUL', 'FAIBLE', 'MOYEN' ou 'FORT'
 meteo.couverture       | string  |  non   | '0-25', '25-50', '50-75' ou '75-100'
-pieces_jointes         | list    |  non   |
-pieces_jointes[x]      | ojectid |        | lien vers une ressource fichier
 configuration          | dict    |  oui   | configuration contenant des champs variables en fonction du type de protocole
 
 **Response**
@@ -592,6 +590,35 @@ configuration          | dict    |  non   | configuration contenant des champs v
 Administrateur et observateur ayant créé la participation
 
 
+### Accèder aux pièce jointes de la participation
+
+`GET /participations/#id/pieces_jointes`
+
+**Response**
+
+```
+200
+{
+    'wav': [
+        ...
+    ],
+    'ta': [
+        ...
+    ],
+    'tc': [
+        ...
+    ],
+    'photos': [
+        ...
+    ],
+}
+```
+
+**Accès**
+
+Administrateur et observateur ayant créé la participation
+
+
 ### Ajouter des pièce jointes à la participation
 
 `PUT /participations/#id/pieces_jointes`
@@ -600,10 +627,14 @@ Administrateur et observateur ayant créé la participation
 
 Nom                    |  Type   | Requis | Description
 -----------------------|---------|--------|-------------
-pieces_jointes         | list    |  oui   |
-pieces_jointes[x]      | ojectid |        | lien vers une ressource fichier dont l'upload est terminé
+wav                    | list    |  non   |
+wav[x]                 | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `sound/wav` ou `audio/x-wav`
+ta                     | list    |  non   |
+ta[x]                  | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `application/ta` ou `application/tac`
+photos                 | list    |  non   |
+photos[x]              | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `image/bmp`, `image/png`, `image/jpg` ou bien `image/jpeg`
 
-Note : seuls les fichiers de mime type `image/*`, `application/ta`, `application/tac`, `sound/wav`/`audio/x-wav` sont acceptés
+Note : au moins un des champs `wav`, `ta` ou `photos` doit être fourni
 
 **Accès**
 

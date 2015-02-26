@@ -26,7 +26,7 @@ import re
 from ..xin import Resource
 from ..xin.tools import jsonify, abort
 from ..xin.auth import requires_auth
-from ..xin.schema import relation
+from ..xin.schema import relation, choice
 from ..xin.snippets import get_payload
 from .utilisateurs import utilisateurs as utilisateurs_resource
 
@@ -38,7 +38,8 @@ SCHEMA = {
     'disponible': {'type': 'boolean'},
     's3_id': {'type': 'string', 'postonly': True},
     's3_upload_multipart_id': {'type': 'string', 'postonly': True},
-    's3_upload_done': {'type': 'boolean'}
+    's3_upload_done': {'type': 'boolean'},
+    'require_process': choice(['tadarida_d', 'tadarida_c'])
 }
 
 

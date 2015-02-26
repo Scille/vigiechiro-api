@@ -173,9 +173,6 @@ class Resource(Blueprint):
                 abort(code, msg)
             else:
                 raise DocumentException((code, msg))
-        # Retrieve and check payload
-        if not payload:
-            error(422, 'bad payload')
         if not if_match:
             # No if_match, in case of race condition, repeatedly try the update
             while True:

@@ -9,7 +9,7 @@ from flask import abort, current_app, g
 from datetime import datetime
 
 from ..xin import Resource
-from ..xin.tools import jsonify, abort, dict_projection
+from ..xin.tools import abort, parse_id
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator, get_payload, get_resource, get_lookup_from_q
@@ -37,7 +37,19 @@ SCHEMA = {
         }
     },
     'commentaire': {'type': 'string'},
-    'pieces_jointes': {
+    'pieces_jointes_wav': {
+        'type': 'list',
+        'schema': relation('fichiers', required=True)
+    },
+    'pieces_jointes_ta': {
+        'type': 'list',
+        'schema': relation('fichiers', required=True)
+    },
+    'pieces_jointes_tc': {
+        'type': 'list',
+        'schema': relation('fichiers', required=True)
+    },
+    'pieces_jointes_photos': {
         'type': 'list',
         'schema': relation('fichiers', required=True)
     },
@@ -73,11 +85,19 @@ SCHEMA = {
     }
 }
 
-ALLOWED_MIMES = ['image/bmp', 'image/png', 'image/jpg',
-                 'application/ta', 'application/tac',
-                 'sound/wav', 'audio/x-wav']
+ALLOWED_MIMES_PHOTOS = ['image/bmp', 'image/png', 'image/jpg', 'image/jpeg']
+ALLOWED_MIMES_TA = ['application/ta', 'application/tac']
+ALLOWED_MIMES_TC = ['application/tc', 'application/tcc']
+ALLOWED_MIMES_WAV = ['sound/wav', 'audio/x-wav']
 
 participations = Resource('participations', __name__, schema=SCHEMA)
+
+
+def _strip_pieces_jointes(document):
+    document.pop('pieces_jointes_photos', None)
+    document.pop('pieces_jointes_ta', None)
+    document.pop('pieces_jointes_wav', None)
+    return document
 
 
 @participations.route('/participations', methods=['GET'])
@@ -107,9 +127,7 @@ def display_participation(participation_id):
     document = participations.find_one(participation_id)
     # Remove pieces_jointes elements
     # TODO: optimize this
-    if 'pieces_jointes' in document:
-        del document['pieces_jointes']
-    return document
+    return _strip_pieces_jointes(document)
 
 
 @participations.route('/sites/<objectid:site_id>/participations', methods=['POST'])
@@ -139,9 +157,7 @@ def create_participation(site_id):
     document = participations.insert(payload)
     # Finally create corresponding actuality
     create_actuality_nouvelle_participation(document)
-    if 'pieces_jointes' in document:
-        del document['pieces_jointes']
-    return document, 201
+    return _strip_pieces_jointes(document), 201
 
 
 def _check_edit_access(participation_resource):
@@ -179,9 +195,7 @@ def edit_participation(participation_id):
                            'commentaire': False, 'meteo': False,
                            'configuration': False})
     document = participations.update(participation_id, payload)
-    if 'pieces_jointes' in document:
-        del document['pieces_jointes']
-    return document
+    return _strip_pieces_jointes(document)
 
 
 @participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['PUT'])
@@ -189,24 +203,64 @@ def edit_participation(participation_id):
 def add_pieces_jointes(participation_id):
     participation_resource = participations.get_resource(participation_id)
     _check_edit_access(participation_resource)
-    payload = get_payload({'pieces_jointes': True})
-    errors = {'pieces_jointes': []}
-    if isinstance(payload['pieces_jointes'], list):
-        for pj_id in payload['pieces_jointes']:
-            pj = fichiers_resource.get_resource(pj_id, auto_abort=False)
-            if not pj:
-                errors['pieces_jointes'].append('bad id ' + pj_id)
-            elif pj['mime'] not in ALLOWED_MIMES:
-                errors['pieces_jointes'].append('file {} bad mime type '.format(pj_id))
-            elif not pj.get('s3_upload_done', False):
-                errors['pieces_jointes'].append('file {} upload is not done'.format(pj_id))
-    if errors['pieces_jointes']:
+    payload = get_payload({'photos', 'ta', 'wav'})
+    errors = {}
+    for field in ['ta', 'wav', 'photos']:
+        if not isinstance(payload.get(field, []), list):
+            errors[field] = 'must be a list'
+    if errors:
         abort(422, errors)
-    # If pieces_jointes is not a list, update's validation will throw error
-    mongo_update = {'$push': {'pieces_jointes': {'$each': payload['pieces_jointes']}}}
-    result = participations.update(participation_id, payload=payload,
-                                   mongo_update=mongo_update)
-    run_tadaridaD_on_participation.delay(result['_id'])
+    def check_pj(pj_id, mime):
+        mime = mime if isinstance(mime, list) else [mime]
+        pj = fichiers_resource.get_resource(pj_id, auto_abort=False)
+        if not pj:
+            return 'bad id ' + pj_id, pj
+        elif pj['mime'] not in mime:
+            return 'file {} bad mime type, should be of {}'.format(pj_id, mime), pj
+        elif not pj.get('s3_upload_done', False):
+            return 'file {} upload is not done'.format(pj_id), pj
+        return None, pj
+    errors_photos = []
+    errors_ta = []
+    errors_wav = []
+    photos_ids = [parse_id(_id) for _id in payload.get('photos', [])]
+    ta_ids = [parse_id(_id) for _id in payload.get('ta', [])]
+    wav_ids = [parse_id(_id) for _id in payload.get('wav', [])]
+    if next((_id for _id in photos_ids+ta_ids+wav_ids if _id == None), None):
+        abort(422, 'some given ids are not valid ObjectId')
+    if not photos_ids and not ta_ids and not wav_ids:
+        abort(422, 'at least one field among ta, wav and photos is required')
+    for pj_id in photos_ids:
+        error, pj = check_pj(pj_id, ALLOWED_MIMES_PHOTOS)
+        if error:
+            errors_photos.append(error)
+    for pj_id in ta_ids:
+        error, pj = check_pj(pj_id, ALLOWED_MIMES_TA)
+        if error:
+            errors_ta.append(error)
+    for pj_id in wav_ids:
+        error, pj = check_pj(pj_id, ALLOWED_MIMES_WAV)
+        if error:
+            errors_wav.append(error)
+    if errors_wav or errors_ta or errors_photos:
+        abort(422, {'photos': errors_photos, 'ta': errors_ta, 'wav': errors_wav})
+    # The pieces jointes are valid, update the database
+    payload = {'require_process': 'tadarida_d'}
+    for pj_id in wav_ids:
+        fichiers_resource.update({'_id': pj_id}, payload, auto_abort=False)
+    payload = {'require_process': 'tadarida_c'}
+    for pj_id in ta_ids:
+        fichiers_resource.update({'_id': pj_id}, payload, auto_abort=False)
+    mongo_update = {'$push': {}}
+    if photos_ids:
+        mongo_update['$push']['pieces_jointes_photos'] = {'$each': photos_ids}
+    if ta_ids:
+        mongo_update['$push']['pieces_jointes_ta'] = {'$each': ta_ids}
+    if wav_ids:
+        mongo_update['$push']['pieces_jointes_wav'] = {'$each': wav_ids}
+    # Bypass payload checking given we already did it in this function
+    payload = {}
+    result = participations.update(participation_id, payload, mongo_update=mongo_update)
     return result
 
 
@@ -215,8 +269,12 @@ def add_pieces_jointes(participation_id):
 def get_pieces_jointes(participation_id):
     participation_resource = participations.find_one(participation_id)
     _check_read_access(participation_resource)
-    pieces_jointes = participation_resource.get('pieces_jointes', [])
-    return {'_items': pieces_jointes, '_meta': {'total': len(pieces_jointes)}}
+    pieces_jointes = {}
+    for pj_field in ['ta', 'tc', 'wav', 'photos']:
+        resoure_field = 'pieces_jointes_' + pj_field
+        if resoure_field in participation_resource:
+            pieces_jointes[pj_field] = participation_resource[resoure_field]
+    return pieces_jointes
 
 
 @participations.route('/participations/<objectid:participation_id>/messages', methods=['PUT'])
