@@ -86,7 +86,7 @@ SCHEMA = {
 ALLOWED_MIMES_PHOTOS = ['image/bmp', 'image/png', 'image/jpg', 'image/jpeg']
 ALLOWED_MIMES_TA = ['application/ta', 'application/tac']
 ALLOWED_MIMES_TC = ['application/tc', 'application/tcc']
-ALLOWED_MIMES_WAV = ['sound/wav', 'audio/x-wav']
+ALLOWED_MIMES_WAV = ['audio/wav', 'audio/x-wav']
 
 participations = Resource('participations', __name__, schema=SCHEMA)
 
