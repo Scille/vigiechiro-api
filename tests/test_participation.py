@@ -103,7 +103,7 @@ def test_participation(participation_ready, file_uploaded, observateur_other):
         res = custom_upload_file({'titre': 'file_ta_{}'.format(i), 'mime': mime}, observateur)
         ta_ids.append(res['_id'])
     wav_ids = []
-    for i, mime in enumerate(['sound/wav', 'audio/x-wav']):
+    for i, mime in enumerate(['audio/wav', 'audio/x-wav']):
         res = custom_upload_file({'titre': 'file_wav_{}'.format(i), 'mime': mime}, observateur)
         wav_ids.append(res['_id'])
     r = observateur.put(pieces_jointes_url,
