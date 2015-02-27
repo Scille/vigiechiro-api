@@ -184,7 +184,7 @@ def fichier_multipart_continue(file_id):
         abort(422, 'not a multipart')
     sign = _sign_request(verb='PUT', object_name=file_resource['s3_id'],
                          sign_head='partNumber={}&uploadId={}'.format(
-                            payload['part_number'],
+                            part_number,
                             file_resource['s3_upload_multipart_id'])
                         )
     return jsonify(s3_signed_url=sign['signed_url'])

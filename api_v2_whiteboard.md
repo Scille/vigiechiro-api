@@ -631,7 +631,7 @@ Administrateur et observateur ayant créé la participation
 Nom                    |  Type   | Requis | Description
 -----------------------|---------|--------|-------------
 wav                    | list    |  non   |
-wav[x]                 | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `sound/wav` ou `audio/x-wav`
+wav[x]                 | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `audio/wav` ou `audio/x-wav`
 ta                     | list    |  non   |
 ta[x]                  | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `application/ta` ou `application/tac`
 photos                 | list    |  non   |
