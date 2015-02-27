@@ -4,7 +4,7 @@ from datetime import datetime
 
 from common import db, administrateur, observateur, format_datetime
 from test_grille_stoc import grille_stoc
-from test_protocoles import protocoles_base
+from test_protocoles import protocoles_base, protocole_point_fixe
 from test_taxons import taxons_base
 
 
@@ -107,7 +107,7 @@ def test_list_with_search(obs_sites_base):
     assert r.json()['_items'][0]['libelle_long'] == 'Chauve-Souris'
 
 
-def test_non_register_create_site(protocoles_base, observateur, administrateur):
+def test_not_registered_create_site(protocoles_base, observateur, administrateur):
     # Cannot create site if not register to a protocole
     site_payload = {
         'protocole': str(protocoles_base[1]['_id']),
@@ -120,7 +120,7 @@ def test_non_register_create_site(protocoles_base, observateur, administrateur):
     assert r.status_code == 422, r.text
 
 
-def test_create_site_non_valide(observateur, protocoles_base):
+def test_create_site_not_valide(observateur, protocoles_base):
     # Register the observateur to a protocole, but doesn't validate it
     protocole_id = str(protocoles_base[1]['_id'])
     r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
@@ -156,6 +156,60 @@ def test_create_site(administrateur, observateur, protocoles_base):
     # Implicitly set the observateur in the created site
     assert r.json()['observateur']['_id'] == observateur.user_id
     assert r.json()['protocole']['_id'] == protocole_id
+
+
+def test_same_grille_stoc_site(administrateur, protocole_point_fixe):
+    protocole, taxon = protocole_point_fixe
+    grilles = grille_stoc()
+    # Register & validate admin in protocole
+    protocole_id = str(protocole['_id'])
+    r = administrateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, administrateur.user_id))
+    assert r.status_code == 200, r.text
+    site_payload = {
+        'protocole': protocole_id,
+        'commentaire': 'My little site',
+        'grille_stoc': str(grilles[0]['_id'])
+    }
+    r = administrateur.post('/sites', json=site_payload)
+    assert r.status_code == 201, r.text
+    assert r.json()['titre'] == '{}-{}'.format(protocole['titre'], grilles[0]['numero'])
+    # Try to create another site on the same grille
+    r = administrateur.post('/sites', json=site_payload)
+    assert r.status_code == 422, r.text
+
+
+def test_naming_autoinc(administrateur, protocoles_base):
+    # Get the current counter
+    increments = db.configuration.find_one({'name': 'increments'})
+    assert 'protocole_routier_count' in increments
+    # Register the admin to a protocole
+    protocole = protocoles_base[1]
+    protocole_id = str(protocole['_id'])
+    r = administrateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, administrateur.user_id))
+    assert r.status_code == 200, r.text
+    # Create a new site
+    r = administrateur.post('/sites', json={'protocole': protocole_id})
+    assert r.status_code == 201, r.text
+    site_url = '/sites/{}'.format(r.json()['_id'])
+    site1 = r.json()
+    # Create another site
+    r = administrateur.post('/sites', json={'protocole': protocole_id})
+    assert r.status_code == 201, r.text
+    site_url = '/sites/{}'.format(r.json()['_id'])
+    site2 = r.json()
+    # Check the given titles
+    assert site1['titre'] == "{}-{}".format(protocole['titre'],
+        increments['protocole_routier_count'] + 1)
+    assert site2['titre'] == "{}-{}".format(protocole['titre'],
+        increments['protocole_routier_count'] + 2)
 
 
 def test_create_site_explicit_obs(administrateur, observateur, protocoles_base):

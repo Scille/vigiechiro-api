@@ -18,7 +18,8 @@ COLLECTIONS = [
 	'protocoles',
 	'sites',
 	'taxons',
-	'utilisateurs'
+	'utilisateurs',
+	'configuration'
 ]
 
 db = pymongo.MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
@@ -54,6 +55,14 @@ def create_indexes():
 	db.actualites.ensure_index([('_updated', -1)])
 
 
+def insert_default_documents():
+	# Increments document
+	db.configuration.insert({
+		'name': 'increments',
+		'protocole_routier_count': 600
+	})
+
+
 def main():
 	db_name = '{}:{}/{}'.format(settings.MONGO_HOST, settings.MONGO_PORT, settings.MONGO_DBNAME)
 	print('You are about to fully ERASE the database {green}{name}{endc}'.format(
@@ -67,6 +76,7 @@ def main():
 	print('Creating indexes...', flush=True, end='')
 	create_indexes()
 	print(' Done !')
+	insert_default_documents()
 
 
 if __name__ == '__main__':

@@ -7,6 +7,7 @@
 
 from flask import current_app, abort, jsonify, g, request
 from datetime import datetime
+import logging
 
 from ..xin import Resource
 from ..xin.tools import jsonify, abort, parse_id
@@ -29,12 +30,12 @@ STOC_SCHEMA = {
 
 
 SCHEMA = {
-    'titre': {'type': 'string', 'required': True},
+    'titre': {'type': 'string', 'required': True, 'unique': True, 'postonly': True},
     'protocole': relation('protocoles', required=True, postonly=True),
     'observateur': relation('utilisateurs', postonly=True),
     'commentaire': {'type': 'string'},
-    'grille_stoc': relation('grille_stoc'),
-    'verrouille': {'type': 'boolean', 'writerights': 'Administrateur'},
+    'grille_stoc': relation('grille_stoc', postonly=True),
+    'verrouille': {'type': 'boolean'},
     'coordonnee': {'type': 'point'},
     'url_cartographie': {'type': 'url'},
     'largeur': {'type': 'number'},
@@ -122,23 +123,36 @@ def create_site():
         payload.get('protocole', None), auto_abort=False)
     if not protocole_resource:
         abort(422, {'protocole': 'invalid or missing field'})
-    payload['titre'] = protocole_resource['titre'] + '-'
-    # Get grille stoc resource
-    grille_stoc_resource = get_resource('grille_stoc',
-        payload.get('grille_stoc', None), auto_abort=False)
-    if grille_stoc_resource:
-        payload['titre'] += grille_stoc_resource['numero']
-    # else:
-    #     abort(422, {'protocole': 'invalid or missing field'})
-    # TODO select type_site according to protocole
-    protocole_id = protocole_resource['_id']
+    algo_tirage_site = protocole_resource['algo_tirage_site']
     # Make sure observateur has joined protocole and is validated
+    protocole_id = protocole_resource['_id']
     joined = next((p for p in g.request_user.get('protocoles', [])
                    if p['protocole'] == protocole_id), None)
     if not joined:
         abort(422, 'not registered to protocole')
     if joined.get('verrouille', False):
         abort(422, 'protocole must be validate before creating site')
+    # Get grille stoc resource
+    grille_stoc_resource = get_resource('grille_stoc',
+        payload.get('grille_stoc', None), auto_abort=False)
+    # Create site title
+    if algo_tirage_site in ['CARRE', 'POINT_FIXE']:
+        if not grille_stoc_resource:
+            abort(422, 'site from protocole CARRE and POINT_FIXE '
+                       'must provide a valid grille_stoc field')
+        payload['titre'] = "{}-{}".format(protocole_resource['titre'],
+                                          grille_stoc_resource['numero'])
+    elif algo_tirage_site == 'ROUTIER':
+        routier_count = current_app.data.db.configuration.find_and_modify(
+            query={'name': 'increments'},
+            update={'$inc': {'protocole_routier_count': 1}}, new=True)
+        if not routier_count:
+            logging.error('Cannot increment `protocole_routier_count`, is '
+                          '`configuration` collection containing an '
+                          '`increments` document ?')
+            abort(500)
+        payload['titre'] = "{}-{}".format(protocole_resource['titre'],
+                                          routier_count['protocole_routier_count'])
     inserted_payload = sites.insert(payload)
     # Finally create corresponding actuality
     create_actuality_nouveau_site(inserted_payload)

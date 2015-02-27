@@ -4,7 +4,14 @@ from common import db, observateur
 
 
 @pytest.fixture
-def grille_stoc(request):
+def clean_grille_stoc(request):
+    def finalizer():
+        db.grille_stoc.remove()
+    request.addfinalizer(finalizer)
+
+
+@pytest.fixture
+def grille_stoc(request=None):
     grille = [
         {"centre" : {"type" : "Point", "coordinates" : [2.551195605, 51.0423964]}, "numero" : "590017"},
         {"centre" : {"type" : "Point", "coordinates" : [2.181529126, 51.0245531]}, "numero" : "590018"},
@@ -16,8 +23,10 @@ def grille_stoc(request):
         db.grille_stoc.insert(cell)
     def finalizer():
         db.grille_stoc.remove()
-    request.addfinalizer(finalizer)
+    if request:
+        request.addfinalizer(finalizer)
     return grille
+
 
 def test_grille_lookup(observateur, grille_stoc):
     r = observateur.get('/grille_stoc/rectangle', params={

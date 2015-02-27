@@ -212,7 +212,7 @@ def add_pieces_jointes(participation_id):
         mime = mime if isinstance(mime, list) else [mime]
         pj = fichiers_resource.get_resource(pj_id, auto_abort=False)
         if not pj:
-            return 'bad id ' + pj_id, pj
+            return 'bad id {}'.format(pj_id), pj
         elif pj['mime'] not in mime:
             return 'file {} bad mime type, should be of {}'.format(pj_id, mime), pj
         elif not pj.get('s3_upload_done', False):

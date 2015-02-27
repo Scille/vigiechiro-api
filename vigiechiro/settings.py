@@ -38,8 +38,6 @@ FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN', 'http://localhost:9000')
 PORT = int(environ.get('BACKEND_PORT', 8080))
 BACKEND_DOMAIN = environ.get(
     'BACKEND_DOMAIN', 'http://localhost:{}'.format(PORT))
-ALLOWED_READ_ROLES = ['Lecteur']
-ALLOWED_READ_ITEM_ROLES = ['Lecteur']
 
 ### Redis ###
 REDIS_PORT = environ.get('REDIS_PORT', 6379)
@@ -61,18 +59,10 @@ def get_mongo_uri():
             username=quote(MONGO_USERNAME), password=quote(MONGO_PASSWORD),
             basepart=basepart)
 
-### Eve ###
+### CORS ###
 X_DOMAINS = FRONTEND_DOMAIN
 X_HEADERS = ['Accept', 'Content-type', 'Authorization', 'If-Match', 'Cache-Control']
 X_EXPOSE_HEADERS = X_HEADERS
-
-RESOURCE_METHODS = ['GET', 'POST', 'DELETE']
-ITEM_METHODS = ['GET', 'PATCH', 'PUT', 'DELETE']
-
-ALLOWED_READ_ROLES = ['Observateur']
-ALLOWED_WRITE_ROLES = ['Administrateur']
-ALLOWED_ITEM_READ_ROLES = ['Observateur']
-ALLOWED_ITEM_WRITE_ROLES = ['Administrateur']
 
 ### Authomatic ###
 AUTHOMATIC = {

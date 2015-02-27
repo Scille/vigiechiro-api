@@ -154,7 +154,7 @@ def _s3_create_singlepart(payload):
 
 def _s3_create_multipart(payload):
     amz_headers = {'x-amz-meta-title': payload['titre']}
-    amz_headers['Content-Type'] = payload.get['mime']
+    amz_headers['Content-Type'] = payload['mime']
     sign = _sign_request(verb='POST', object_name=payload['s3_id'],
                          content_type=payload['mime'], sign_head='uploads')
     # Create the multipart object on s3 using the signed request

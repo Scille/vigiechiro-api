@@ -9,6 +9,20 @@ from vigiechiro.resources import protocoles as protocoles_resource
 
 
 @pytest.fixture
+def protocole_point_fixe(request, administrateur, taxons_base):
+    protocole_titre = 'Test'
+    payload = {
+        'titre': protocole_titre,
+        'type_site': 'POLYGONE',
+        'algo_tirage_site': 'POINT_FIXE',
+        'taxon': str(taxons_base[0]['_id'])
+    }
+    r = administrateur.post('/protocoles', json=payload)
+    assert r.status_code == 201, r.text
+    return r.json(), taxons_base[0]
+
+
+@pytest.fixture
 def protocoles_base(request, taxons_base):
     # Insert macro protocole first
     macro_protocole = {
@@ -18,7 +32,7 @@ def protocoles_base(request, taxons_base):
         'tags': ['chiroptères'],
         'taxon': taxons_base[0]['_id'],
         'type_site': 'LINEAIRE',
-        'algo_tirage_site': 'CARRE'
+        'algo_tirage_site': 'ROUTIER'
     }
     @with_flask_context
     def insert_macro_protocole():
@@ -34,7 +48,7 @@ def protocoles_base(request, taxons_base):
             'tags': ['chiroptères'],
             'taxon': taxons_base[0]['_id'],
             'type_site': 'LINEAIRE',
-            'algo_tirage_site': 'CARRE',
+            'algo_tirage_site': 'ROUTIER',
             'parent': macro_protocole['_id'],
             'configuration_participation': ['micro0_hauteur', 'micro0_position']
         },
@@ -44,7 +58,7 @@ def protocoles_base(request, taxons_base):
             'tags': ['orthoptères'],
             'taxon': taxons_base[0]['_id'],
             'type_site': 'LINEAIRE',
-            'algo_tirage_site': 'CARRE'
+            'algo_tirage_site': 'ROUTIER'
         }
     ]
     @with_flask_context
