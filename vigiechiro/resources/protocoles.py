@@ -35,13 +35,12 @@ SCHEMA = {
         'type': 'list',
         'schema': relation('fichiers', required=True),
     },
-    'type_site': choice(['LINEAIRE', 'POLYGONE'], required=True),
     'taxon': relation('taxons', required=True),
     'configuration_participation': {
         'type': 'list',
         'schema': {'type': 'string'}
     },
-    'algo_tirage_site': choice(['CARRE', 'ROUTIER', 'POINT_FIXE'], required=True)
+    'type_site': choice(['CARRE', 'ROUTIER', 'POINT_FIXE'], required=True)
 }
 
 
