@@ -40,7 +40,7 @@ SCHEMA = {
         'type': 'list',
         'schema': {'type': 'string'}
     },
-    'type_site': choice(['CARRE', 'ROUTIER', 'POINT_FIXE'], required=True)
+    'type_site': choice(['CARRE', 'ROUTIER', 'POINT_FIXE'])
 }
 
 
@@ -90,13 +90,23 @@ def list_user_protocoles():
     return pagination.make_response(*found)
 
 
+def _check_macro_protocole_type_site(payload):
+    if payload.get('macro_protocole', False):
+        if payload.get('type_site', None):
+            abort(422, 'macro protocole should not contain a type_site')
+    else:
+        if not payload.get('type_site', None):
+            abort(422, 'non macro protocole must contain a type_site')
+
+
 @protocoles.route('/protocoles', methods=['POST'])
 @requires_auth(roles='Administrateur')
 def create_protocole():
     payload = get_payload()
+    _check_macro_protocole_type_site(payload)
     check_configuration_participation(payload)
     inserted_payload = protocoles.insert(payload)
-    return jsonify(inserted_payload), 201
+    return inserted_payload, 201
 
 
 @protocoles.route('/protocoles/<objectid:protocole_id>', methods=['GET'])
@@ -109,6 +119,7 @@ def display_protocole(protocole_id):
 @requires_auth(roles='Administrateur')
 def edit_protocole(protocole_id):
     payload = get_payload()
+    _check_macro_protocole_type_site(payload)
     check_configuration_participation(payload)
     result = protocoles.update(protocole_id, payload, if_match=get_if_match())
     return jsonify(result)

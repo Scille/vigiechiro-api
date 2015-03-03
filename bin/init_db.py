@@ -64,6 +64,7 @@ def insert_default_documents():
 
 
 def main():
+	print(settings.get_mongo_uri())
 	db_name = '{}:{}/{}'.format(settings.MONGO_HOST, settings.MONGO_PORT, settings.MONGO_DBNAME)
 	print('You are about to fully ERASE the database {green}{name}{endc}'.format(
 		green='\033[92m', name=db_name, endc='\033[0m'))

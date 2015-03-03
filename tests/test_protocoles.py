@@ -30,7 +30,6 @@ def protocoles_base(request, taxons_base):
         'macro_protocole': True,
         'tags': ['chiroptères'],
         'taxon': taxons_base[0]['_id'],
-        'type_site': 'ROUTIER'
     }
     @with_flask_context
     def insert_macro_protocole():
