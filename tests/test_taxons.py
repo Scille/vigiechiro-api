@@ -113,9 +113,10 @@ def test_multi_parents(taxons_base, administrateur):
     r = administrateur.get(url)
     assert r.status_code == 200, r.text
     payload = r.json()
-    payload['parents'] = [str(taxons_base[2]['_id'])] + payload['parents']
+    # from pprint import pprint
+    new_parents = [p['_id'] for p in payload['parents']] + [str(taxons_base[2]['_id'])]
     r = administrateur.patch(url, headers={'If-Match': payload['_etag']},
-                             json={'parents': payload['parents']})
+                             json={'parents': new_parents})
     assert r.status_code == 200, r.text
     etag = r.json()['_etag']
     # Try with 2 times the same

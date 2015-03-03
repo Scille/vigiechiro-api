@@ -98,14 +98,13 @@ def create_taxon():
 @taxons.route('/taxons/<objectid:taxon_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def display_taxon(taxon_id):
-    return jsonify(**taxons.get_resource(taxon_id))
+    return taxons.find_one({'_id': taxon_id})
 
 
 @taxons.route('/taxons/<objectid:taxon_id>', methods=['PATCH'])
 @requires_auth(roles='Administrateur')
 def edit_taxon(taxon_id):
-    result = taxons.update(taxon_id, get_payload(), if_match=get_if_match())
-    return jsonify(result)
+    return taxons.update(taxon_id, get_payload(), if_match=get_if_match())
 
 
 @taxons.route('/taxons/liste', methods=['GET'])
@@ -113,4 +112,4 @@ def edit_taxon(taxon_id):
 def get_resume_list():
     """Return a brief list of per taxon id and libelle"""
     items = taxons.find({}, {"libelle_long": 1})
-    return jsonify(_items=[i for i in items[0]])
+    return {'_items': [i for i in items[0]]}

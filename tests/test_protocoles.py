@@ -73,7 +73,7 @@ def protocoles_base(request, taxons_base):
     protocoles = [macro_protocole] + regular_protocoles
     def finalizer():
         for protocole in protocoles:
-            db.protocoles.remove({'_id': protocole['_id']})
+            db.protocoles.remove()
     request.addfinalizer(finalizer)
     return protocoles
 
