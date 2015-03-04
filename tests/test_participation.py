@@ -31,14 +31,14 @@ def participation_ready(clean_participations, obs_sites_base, administrateur):
     protocole = db.protocoles.find_one({'_id': site['protocole']})
     # Make sure observateur is validate
     db.utilisateurs.update({'_id': observateur.user['_id']},
-        {'$push': {
-            'protocoles': {
-                'protocole': str(protocole['_id']),
+        {'$set': {
+            'protocoles': [{
+                'protocole': protocole['_id'],
                 'date_inscription': format_datetime(datetime.utcnow()),
                 'valide': True
+                }]
             }
-        }
-    })
+        })
     # Lock site
     r = administrateur.patch('/sites/{}'.format(site['_id']),
                              json={'verrouille': True})
@@ -47,7 +47,7 @@ def participation_ready(clean_participations, obs_sites_base, administrateur):
     return (observateur, protocole, site)
 
 
-def test_pices_jointes_access(participation_ready, file_uploaded,
+def test_pieces_jointes_access(participation_ready, file_uploaded,
                               observateur_other, administrateur, validateur):
     observateur, protocole, site = participation_ready
     # Post participation

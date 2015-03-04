@@ -39,7 +39,9 @@ SCHEMA = {
     's3_id': {'type': 'string', 'postonly': True},
     's3_upload_multipart_id': {'type': 'string', 'postonly': True},
     's3_upload_done': {'type': 'boolean'},
-    'require_process': choice(['tadarida_d', 'tadarida_c'])
+    'require_process': choice(['tadarida_d', 'tadarida_c']),
+    'lien_participation': relation('participations'),
+    'lien_protocole': relation('protocoles')
 }
 
 

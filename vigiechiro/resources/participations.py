@@ -22,7 +22,6 @@ SCHEMA = {
     'observateur': relation('utilisateurs', required=True),
     'protocole': relation('protocoles', required=True),
     'site': relation('sites', required=True),
-    # 'numero': {'type': 'integer', 'required': True},
     'date_debut': {'type': 'datetime', 'required': True},
     'date_fin': {'type': 'datetime'},
     'meteo': {
@@ -35,22 +34,6 @@ SCHEMA = {
         }
     },
     'commentaire': {'type': 'string'},
-    'pieces_jointes_wav': {
-        'type': 'list',
-        'schema': relation('fichiers', required=True)
-    },
-    'pieces_jointes_ta': {
-        'type': 'list',
-        'schema': relation('fichiers', required=True)
-    },
-    'pieces_jointes_tc': {
-        'type': 'list',
-        'schema': relation('fichiers', required=True)
-    },
-    'pieces_jointes_photos': {
-        'type': 'list',
-        'schema': relation('fichiers', required=True)
-    },
     'messages': {
         'type': 'list',
         'schema': {
@@ -91,13 +74,6 @@ ALLOWED_MIMES_WAV = ['audio/wav', 'audio/x-wav']
 participations = Resource('participations', __name__, schema=SCHEMA)
 
 
-def _strip_pieces_jointes(document):
-    document.pop('pieces_jointes_photos', None)
-    document.pop('pieces_jointes_ta', None)
-    document.pop('pieces_jointes_wav', None)
-    return document
-
-
 @participations.route('/participations', methods=['GET'])
 @requires_auth(roles='Observateur')
 def list_participations():
@@ -123,9 +99,7 @@ def list_user_participations():
 @requires_auth(roles='Observateur')
 def display_participation(participation_id):
     document = participations.find_one(participation_id)
-    # Remove pieces_jointes elements
-    # TODO: optimize this
-    return _strip_pieces_jointes(document)
+    return document
 
 
 @participations.route('/sites/<objectid:site_id>/participations', methods=['POST'])
@@ -155,7 +129,7 @@ def create_participation(site_id):
     document = participations.insert(payload)
     # Finally create corresponding actuality
     create_actuality_nouvelle_participation(document)
-    return _strip_pieces_jointes(document), 201
+    return document, 201
 
 
 def _check_edit_access(participation_resource):
@@ -193,7 +167,7 @@ def edit_participation(participation_id):
                            'commentaire': False, 'meteo': False,
                            'configuration': False})
     document = participations.update(participation_id, payload)
-    return _strip_pieces_jointes(document)
+    return document
 
 
 @participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['PUT'])
@@ -243,22 +217,26 @@ def add_pieces_jointes(participation_id):
     if errors_wav or errors_ta or errors_photos:
         abort(422, {'photos': errors_photos, 'ta': errors_ta, 'wav': errors_wav})
     # The pieces jointes are valid, update the database
-    payload = {'require_process': 'tadarida_d'}
-    for pj_id in wav_ids:
-        fichiers_resource.update({'_id': pj_id}, payload, auto_abort=False)
-    payload = {'require_process': 'tadarida_c'}
-    for pj_id in ta_ids:
-        fichiers_resource.update({'_id': pj_id}, payload, auto_abort=False)
-    mongo_update = {'$push': {}}
-    if photos_ids:
-        mongo_update['$push']['pieces_jointes_photos'] = {'$each': photos_ids}
-    if ta_ids:
-        mongo_update['$push']['pieces_jointes_ta'] = {'$each': ta_ids}
+    result = {}
     if wav_ids:
-        mongo_update['$push']['pieces_jointes_wav'] = {'$each': wav_ids}
-    # Bypass payload checking given we already did it in this function
-    payload = {}
-    result = participations.update(participation_id, payload, mongo_update=mongo_update)
+        result['wav'] = current_app.data.db.fichiers.update(
+            {'_id': {'$in': wav_ids}},
+            {'$set': {
+                'require_process': 'tadarida_d',
+                'lien_participation': participation_id}
+            }, multi=True)
+    if ta_ids:
+        result['ta'] = current_app.data.db.fichiers.update(
+            {'_id': {'$in': ta_ids}},
+            {'$set': {
+                'require_process': 'tadarida_c',
+                'lien_participation': participation_id}
+            }, multi=True)
+    if photos_ids:
+        result['photos'] = current_app.data.db.fichiers.update(
+            {'_id': {'$in': photos_ids}},
+            {'$set': {'lien_participation': participation_id}},
+            multi=True)
     return result
 
 
@@ -267,12 +245,19 @@ def add_pieces_jointes(participation_id):
 def get_pieces_jointes(participation_id):
     participation_resource = participations.find_one(participation_id)
     _check_read_access(participation_resource)
-    pieces_jointes = {}
-    for pj_field in ['ta', 'tc', 'wav', 'photos']:
-        resoure_field = 'pieces_jointes_' + pj_field
-        if resoure_field in participation_resource:
-            pieces_jointes[pj_field] = participation_resource[resoure_field]
-    return pieces_jointes
+    pieces_jointes = current_app.data.db.fichiers.find(
+        {'lien_participation': participation_resource['_id']})
+    result = {'photos': [], 'ta': [], 'tc': [], 'wav': []}
+    for pj in pieces_jointes:
+        if pj['mime'] in ALLOWED_MIMES_PHOTOS:
+            result['photos'].append(pj)
+        elif pj['mime'] in ALLOWED_MIMES_TA:
+            result['ta'].append(pj)
+        elif pj['mime'] in ALLOWED_MIMES_TC:
+            result['tc'].append(pj)
+        elif pj['mime'] in ALLOWED_MIMES_WAV:
+            result['wav'].append(pj)
+    return result
 
 
 @participations.route('/participations/<objectid:participation_id>/messages', methods=['PUT'])

@@ -123,7 +123,6 @@ def create_site():
         payload.get('protocole', None), auto_abort=False)
     if not protocole_resource:
         abort(422, {'protocole': 'invalid or missing field'})
-    type_site = protocole_resource['type_site']
     # Make sure observateur has joined protocole and is validated
     protocole_id = protocole_resource['_id']
     joined = next((p for p in g.request_user.get('protocoles', [])
@@ -136,6 +135,7 @@ def create_site():
     grille_stoc_resource = get_resource('grille_stoc',
         payload.get('grille_stoc', None), auto_abort=False)
     # Create site title
+    type_site = protocole_resource['type_site']
     if type_site in ['CARRE', 'POINT_FIXE']:
         if not grille_stoc_resource:
             abort(422, 'site from protocole CARRE and POINT_FIXE '
