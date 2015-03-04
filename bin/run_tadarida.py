@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
 
+import logging; logging.basicConfig(level=logging.INFO)
 import sys
 from vigiechiro.scripts import tadarida
-import logging
 
 
 USAGE = 'usage : {} [d|c] [now|delay]'.format(sys.argv[0])

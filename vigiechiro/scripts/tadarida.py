@@ -8,7 +8,6 @@ from pymongo import MongoClient
 
 from .celery import celery_app
 from .. import settings
-from ..resources.fichiers import _sign_request
 
 
 TADARIDA_D = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD'
@@ -33,10 +32,13 @@ def _download_files(wdir_path, to_compute):
         if r.status_code != 200:
             raise S3Error('Cannot get back file {} : {}, {}'.format(
                 file_info, r.status_code, r.text))
-        logging.info('get back file {}'.format(file_info))
+        logging.info('got back file {}'.format(file_info))
 
 
 def _upload_results(wdir_path):
+    if not os.path.exists(wdir_path + '/waves/txt'):
+        logging.warning("txt output directory hasn't been created")
+        return
     for to_upload in os.listdir(wdir_path + '/waves/txt'):
         if to_upload.split('.')[-1] != 'csv': # TODO replace csv by ta when available
             continue
@@ -62,7 +64,7 @@ def _upload_results(wdir_path):
 
 def _create_working_dir():
     wdir  = tempfile.mkdtemp()
-    logging.info('Working in directory {}'.format(wdir))
+    logging.info('working in directory {}'.format(wdir))
     os.mkdir(wdir + '/waves')
     return wdir
 
@@ -76,6 +78,10 @@ def run_tadarida_d():
         cursor = db.fichiers.find({'require_process': 'tadaridaD'}, limit=50)
         count = cursor.count()
         total = cursor.count(with_limit_and_skip=False)
+        logging.info('found {} files requiring tadaridaD'.format(total))
+        if not total:
+            # Nothing to do, just leave
+            return
         _download_files(wdir_path, cursor)
         # Run tadarida
         logging.info('running tadaridaD')
