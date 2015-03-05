@@ -96,15 +96,13 @@ def test_list_protocole_sites(obs_sites_base, protocoles_base):
     assert len(r.json()['_items']) == 0, r.json()
 
 
-
-@pytest.mark.xfail
 def test_list_with_search(obs_sites_base):
     observateur, sites_base = obs_sites_base
-    url = 'sites/{}'.format(sites_base[0]['_id'])
-    r = observateur.get('/sites', params={'q': 'Chauve'})
+    query = sites_base[0]['titre'].split('-')[-1]
+    r = observateur.get('/sites', params={'q': query})
     assert r.status_code == 200, r.text
     assert len(r.json()['_items']) == 1, r.json()
-    assert r.json()['_items'][0]['libelle_long'] == 'Chauve-Souris'
+    assert r.json()['_items'][0]['_id'] == str(sites_base[0]['_id'])
 
 
 def test_not_registered_create_site(protocoles_base, observateur, administrateur):
@@ -255,23 +253,6 @@ def test_lock_site(administrateur, obs_sites_base):
     r = observateur.patch(url, headers={'If-Match': r.json()['_etag']},
                           json={'commentaire': "Can't touch this !"})
     assert r.status_code == 403, r.text
-
-
-@pytest.mark.xfail
-def test_increment_numero(administrateur, new_site_payload):
-    bad_payload = new_site_payload.copy()
-    # Cannot specify site number on post
-    bad_payload['numero'] = 1
-    r = administrateur.post('/sites', json=bad_payload)
-    assert r.status_code == 422, r.text
-    # Regular site posts
-    r = administrateur.post('/sites', json=new_site_payload)
-    assert r.status_code == 201, r.text
-    url = r.json()['_links']['self']['href']
-    r = administrateur.get(url)
-    assert 'numero' in r.json()
-    r = administrateur.post('/sites', json=new_site_payload)
-    assert r.status_code == 201, r.text
 
 
 def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
