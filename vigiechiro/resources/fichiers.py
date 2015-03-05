@@ -23,6 +23,7 @@ from flask import request, abort, current_app, g, redirect
 import requests
 import re
 
+from .. import settings
 from ..xin import Resource
 from ..xin.tools import jsonify, abort
 from ..xin.auth import requires_auth
@@ -113,7 +114,7 @@ def _sign_request(**kwargs):
 def display_fichier(fichier_id):
     file_resource = fichiers.get_resource(fichier_id)
     _check_access_rights(file_resource)
-    return jsonify(**file_resource)
+    return file_resource
 
 
 @fichiers.route('/fichiers', methods=['POST'])
@@ -151,7 +152,7 @@ def _s3_create_singlepart(payload):
     inserted = fichiers.insert(payload)
     # signed_request is not stored in the database but transfered once
     inserted['s3_signed_url'] = sign['signed_url']
-    return jsonify(**inserted), 201
+    return inserted, 201
 
 
 def _s3_create_multipart(payload):
@@ -160,14 +161,17 @@ def _s3_create_multipart(payload):
     sign = _sign_request(verb='POST', object_name=payload['s3_id'],
                          content_type=payload['mime'], sign_head='uploads')
     # Create the multipart object on s3 using the signed request
-    r = requests.post(sign['signed_url'], headers={'Content-Type': payload.get('mime', '')})
-    if r.status_code != 200:
-        logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
-        abort(500, 'S3 has rejected file creation request')
-    # Why AWS doesn't provide a JSON api ???
-    payload['s3_upload_multipart_id'] = re.search('<UploadId>(.+)</UploadId>', r.text).group(1)
+    if not settings.DEV_FAKE_S3_URL:
+        r = requests.post(sign['signed_url'], headers={'Content-Type': payload.get('mime', '')})
+        if r.status_code != 200:
+            logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
+            abort(500, 'S3 has rejected file creation request')
+        # Why AWS doesn't provide a JSON api ???
+        payload['s3_upload_multipart_id'] = re.search('<UploadId>(.+)</UploadId>', r.text).group(1)
+    else:
+        payload['s3_upload_multipart_id'] = uuid.uuid4().hex
     inserted = fichiers.insert(payload)
-    return jsonify(**inserted), 201
+    return inserted, 201
 
 
 @fichiers.route('/fichiers/<objectid:file_id>/multipart', methods=['PUT'])
@@ -189,7 +193,7 @@ def fichier_multipart_continue(file_id):
                             part_number,
                             file_resource['s3_upload_multipart_id'])
                         )
-    return jsonify(s3_signed_url=sign['signed_url'])
+    return {'s3_signed_url': sign['signed_url']}
 
 
 @fichiers.route('/fichiers/<objectid:file_id>', methods=['DELETE'])
@@ -200,7 +204,7 @@ def fichier_delete(file_id):
         abort(403)
     if 's3_id' not in file_resource or file_resource.get('s3_upload_done', False):
         abort(422, 'cannot cancel file once upload is done')
-    if 's3_upload_multipart_id' in file_resource:
+    if 's3_upload_multipart_id' in file_resource and not settings.DEV_FAKE_S3_URL:
         # Destroy the unfinished file on S3
         sign = _sign_request(verb='DELETE', object_name=file_resource['s3_id'],
                              sign_head='uploadId=' + file_resource['s3_upload_multipart_id'])
@@ -209,7 +213,7 @@ def fichier_delete(file_id):
             logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
             abort(500, 'S3 has rejected file creation request')
     fichiers.remove({'_id': file_resource['_id']})
-    return jsonify(), 204
+    return {}, 204
 
 
 @fichiers.route('/fichiers/<objectid:file_id>', methods=['POST'])
@@ -241,17 +245,18 @@ def fichier_upload_done(file_id):
                              content_type=content_type,
                              sign_head='uploadId='+file_resource['s3_upload_multipart_id']
                             )
-        r = requests.post(sign['signed_url'],
-                         headers={'Content-Type': content_type},
-                         data=xml_body)
-        if r.status_code != 200:
-            logging.error('Completing {} error {} : {}'.format(
-                sign['signed_url'], r.status_code, r.text))
-            abort(500, 'Error with S3')
+        if not settings.DEV_FAKE_S3_URL:
+            r = requests.post(sign['signed_url'],
+                             headers={'Content-Type': content_type},
+                             data=xml_body)
+            if r.status_code != 200:
+                logging.error('Completing {} error {} : {}'.format(
+                    sign['signed_url'], r.status_code, r.text))
+                abort(500, 'Error with S3')
     # Finally update the resource status
     result = fichiers.update(file_id, {'s3_upload_done': True,
                                        'disponible': True})
-    return jsonify(**result)
+    return result
 
 
 @fichiers.route('/fichiers/<objectid:file_id>/acces', methods=['GET'])
@@ -263,8 +268,11 @@ def s3_access_file(file_id):
     if 's3_id' not in file_resource or not file_resource.get('s3_upload_done', False):
         abort(410, 'file is not available')
     object_name = file_resource['s3_id']
-    sign = _sign_request(verb='GET', object_name=object_name)
+    if not settings.DEV_FAKE_S3_URL:
+        sign = _sign_request(verb='GET', object_name=object_name)
+    else:
+        sign = {'signed_url': settings.DEV_FAKE_S3_URL + '/' + object_name}
     if redirection:
         return redirect(sign['signed_url'], code=302)
     else:
-        return jsonify(s3_signed_url=sign['signed_url'])
+        return {'s3_signed_url': sign['signed_url']}

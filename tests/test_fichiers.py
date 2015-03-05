@@ -1,6 +1,7 @@
 import requests
 from pymongo import MongoClient
 import pytest
+from uuid import uuid4
 
 from common import db, administrateur, validateur, observateur, observateur_other
 from vigiechiro import settings
@@ -52,18 +53,24 @@ def test_singlepart_upload(clean_fichiers, observateur):
     assert 's3_upload_done' in r.json()
     assert r.json()['s3_upload_done']
 
-@pytest.mark.xfail
+
 def test_multipart_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url
     r = observateur.post('/fichiers',
         json={'titre': 'test', 'mime': 'image/png', 'multipart': True})
     assert r.status_code == 201, r.text
     response = r.json()
-    assert 's3_multipart_upload_id' in response
-    assert 's3_signed_url' in response
+    assert 's3_upload_multipart_id' in response
+    # Request part upload signed url
+    fichier_url = '/fichiers/' + response['_id']
+    r = observateur.put(fichier_url + '/multipart',
+                        json={'part_number': 1})
+    assert r.status_code == 200, r.text
+    assert 's3_signed_url' in r.json()
     # We should be uploading to S3 here...
     # Once the upload is done, we have to signify it to the server
-    r = observateur.post('/fichiers/' + response['_id'])
+    r = observateur.post(fichier_url,
+                         json={'parts': [{'part_number': 1, 'etag': uuid4().hex}]})
     assert r.status_code == 200, r.text
     assert 's3_upload_done' in r.json()
     assert r.json()['s3_upload_done']

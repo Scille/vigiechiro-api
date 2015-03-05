@@ -16,6 +16,7 @@ DATE_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
 
 ## vigiechiro ##
 DEV_FAKE_AUTH = environ.get('DEV_FAKE_AUTH', 'False').lower() == 'true'
+DEV_FAKE_S3_URL = environ.get('DEV_FAKE_S3_URL', None)
 TOKEN_EXPIRE_TIME = 24 * 3600
 ROLE_RULES = {
     'Lecteur': ['Lecteur'],
