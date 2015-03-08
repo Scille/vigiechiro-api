@@ -4,9 +4,9 @@ from bson import ObjectId
 from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs
 
-from common import db, observateur
+from .common import db, observateur
+from .test_utilisateurs import users_base
 from vigiechiro import settings
-from test_utilisateurs import users_base
 
 
 PROTECTED_URL = settings.BACKEND_DOMAIN + '/moi'

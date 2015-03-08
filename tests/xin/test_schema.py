@@ -6,7 +6,7 @@ from copy import deepcopy
 from vigiechiro import app
 from vigiechiro.xin.schema import GenericValidator, Validator, Unserializer
 
-from common import db
+from ..common import db
 
 TEST_RESOURCE = __name__
 

@@ -1,6 +1,6 @@
 import pytest
 
-from common import db, observateur
+from .common import db, observateur
 
 
 @pytest.fixture

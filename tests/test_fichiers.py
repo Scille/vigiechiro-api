@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import pytest
 from uuid import uuid4
 
-from common import db, administrateur, validateur, observateur, observateur_other
+from .common import db, administrateur, validateur, observateur, observateur_other
 from vigiechiro import settings
 from vigiechiro.resources import fichiers as fichiers_resource
 

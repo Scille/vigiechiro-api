@@ -2,12 +2,12 @@ import pytest
 from datetime import datetime
 from time import sleep
 
-from common import db, observateur, validateur, administrateur, format_datetime, with_flask_context
 from vigiechiro import settings
 from vigiechiro.resources import utilisateurs as utilisateurs_resource
 
-from test_protocoles import protocoles_base
-from test_taxons import taxons_base
+from .common import db, observateur, validateur, administrateur, format_datetime, with_flask_context
+from .test_protocoles import protocoles_base
+from .test_taxons import taxons_base
 
 
 @pytest.fixture

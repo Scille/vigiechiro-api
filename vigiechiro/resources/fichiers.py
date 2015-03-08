@@ -151,7 +151,10 @@ def _s3_create_singlepart(payload):
     # Insert the file representation in the files resource
     inserted = fichiers.insert(payload)
     # signed_request is not stored in the database but transfered once
-    inserted['s3_signed_url'] = sign['signed_url']
+    if not settings.DEV_FAKE_S3_URL:
+        inserted['s3_signed_url'] = sign['signed_url']
+    else:
+        inserted['s3_signed_url'] = settings.DEV_FAKE_S3_URL + '/' + payload['s3_id']
     return inserted, 201
 
 
@@ -188,11 +191,14 @@ def fichier_multipart_continue(file_id):
         abort(403)
     if 's3_id' not in file_resource or 's3_upload_multipart_id' not in file_resource:
         abort(422, 'not a multipart')
-    sign = _sign_request(verb='PUT', object_name=file_resource['s3_id'],
-                         sign_head='partNumber={}&uploadId={}'.format(
-                            part_number,
-                            file_resource['s3_upload_multipart_id'])
-                        )
+    if not settings.DEV_FAKE_S3_URL:
+        sign = _sign_request(verb='PUT', object_name=file_resource['s3_id'],
+                             sign_head='partNumber={}&uploadId={}'.format(
+                                part_number,
+                                file_resource['s3_upload_multipart_id'])
+                            )
+    else:
+        sign = {'signed_url': settings.DEV_FAKE_S3_URL}
     return {'s3_signed_url': sign['signed_url']}
 
 
@@ -272,6 +278,7 @@ def s3_access_file(file_id):
         sign = _sign_request(verb='GET', object_name=object_name)
     else:
         sign = {'signed_url': settings.DEV_FAKE_S3_URL + '/' + object_name}
+        print('redirect', sign['signed_url'])
     if redirection:
         return redirect(sign['signed_url'], code=302)
     else:

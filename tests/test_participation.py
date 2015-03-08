@@ -5,15 +5,15 @@ import json
 from bson import ObjectId
 from datetime import datetime, timedelta
 
-from common import (db, observateur, observateur_other, validateur,
-                    administrateur, format_datetime, with_flask_context)
+from .common import (db, observateur, observateur_other, validateur,
+                     administrateur, format_datetime, with_flask_context)
 from vigiechiro import settings
 from vigiechiro.resources import utilisateurs as utilisateurs_resource
-from test_protocoles import protocoles_base
-from test_taxons import taxons_base
-from test_sites import obs_sites_base
-from test_fichiers import (file_uploaded, custom_upload_file, clean_fichiers,
-                           file_init, file_uploaded)
+from .test_protocoles import protocoles_base
+from .test_taxons import taxons_base
+from .test_sites import obs_sites_base
+from .test_fichiers import (file_uploaded, custom_upload_file, clean_fichiers,
+                            file_init, file_uploaded)
 
 @pytest.fixture
 def clean_participations(request):

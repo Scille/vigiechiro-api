@@ -2,10 +2,10 @@ import pytest
 from bson import ObjectId
 from datetime import datetime
 
-from common import db, administrateur, observateur, format_datetime
-from test_grille_stoc import grille_stoc
-from test_protocoles import protocoles_base, protocole_point_fixe
-from test_taxons import taxons_base
+from .common import db, administrateur, observateur, format_datetime
+from .test_grille_stoc import grille_stoc
+from .test_protocoles import protocoles_base, protocole_point_fixe
+from .test_taxons import taxons_base
 
 
 @pytest.fixture

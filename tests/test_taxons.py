@@ -2,7 +2,7 @@ import requests
 from pymongo import MongoClient
 import pytest
 
-from common import db, administrateur, observateur, with_flask_context
+from .common import db, administrateur, observateur, with_flask_context
 from vigiechiro.resources import taxons as taxons_resource
 
 
