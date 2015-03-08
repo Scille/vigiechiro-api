@@ -44,7 +44,7 @@ def fake_s3(request):
     return wdir
 
 
-def test_fake_s3(fake_s3):
+def test_fake_s3(fake_s3, clean_fichiers):
     default_waves = sorted(os.listdir(WAVES_DEFAULT_DIR))
     # Test post file
     wav_0_name = default_waves[0]
@@ -82,7 +82,7 @@ def test_fake_s3(fake_s3):
     assert ls == sorted([wav_1_name, wav_2_name])
 
 
-def test_participation(fake_s3, participation_ready):
+def test_participation(fake_s3, clean_fichiers, participation_ready):
     observateur, protocole, site = participation_ready
     # Post participation
     participations_url = '/sites/{}/participations'.format(site['_id'])

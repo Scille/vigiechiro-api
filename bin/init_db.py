@@ -5,6 +5,7 @@ Reset&configure the bdd for vigiechiro
 """
 
 import pymongo
+from datetime import datetime, timedelta
 
 from vigiechiro import settings
 
@@ -61,7 +62,14 @@ def insert_default_documents():
 		'name': 'increments',
 		'protocole_routier_count': 600
 	})
-
+	# Script worker utilisateur
+	db.utilisateurs.insert({
+            'pseudo': 'script_worker',
+            'email': 'script_worker@email.com',
+            'role': 'Administrateur',
+            'tokens': {settings.SCRIPT_WORKER_TOKEN:
+            datetime.utcnow() + timedelta(days=settings.SCRIPT_WORKER_EXPIRES)}
+		})
 
 def main():
 	db_name = '{}:{}/{}'.format(settings.MONGO_HOST, settings.MONGO_PORT, settings.MONGO_DBNAME)

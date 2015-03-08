@@ -672,11 +672,16 @@ Fichiers
 
 **Input**
 
-Nom               |  Type   | Description
-------------------|---------|-------------
- titre            | string  | Nom du fichier
- mime             | string  | Mime type du fichier
- multipart        | boolean | Le fichier va-t-il être uploader en multipart ?
+Nom                 |  Type   | Description
+--------------------|---------|-------------
+ titre              | string  | Nom du fichier
+ mime               | string  | Mime type du fichier
+ multipart          | boolean | Le fichier va-t-il être uploader en multipart ?
+ require_process    | string  | Administrateur seulement, `tadarida_c` ou `tadarida_d`
+ fichier_source     | objectid| Administrateur seulement, fichier ayant servi à généré le fichier
+ lien_participation | objectid| Relie le fiechier à une participation
+ lien_protocole     | objectid| Relie le fichier à un protocole
+ proprietaire       | objectid| L'administrateur peut définir le propriétaire du fichier
 
 Note: si le fichier à uploader fait plus de 5mo, il doit être uploader en multipart
 

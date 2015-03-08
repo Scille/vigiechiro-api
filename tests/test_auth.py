@@ -12,6 +12,12 @@ from vigiechiro import settings
 PROTECTED_URL = settings.BACKEND_DOMAIN + '/moi'
 
 
+def test_script_worker():
+    r = requests.get(PROTECTED_URL, auth=(settings.SCRIPT_WORKER_TOKEN, None))
+    assert r.status_code == 200
+    assert r.json()['role'] == 'Administrateur'
+
+
 def test_allowed():
     assert requests.get(PROTECTED_URL).status_code == 401
 

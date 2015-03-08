@@ -14,6 +14,9 @@ from enum import Enum
 # RFC 1123 (ex RFC 822)
 DATE_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
 
+SCRIPT_WORKER_EXPIRES = int(environ.get('SCRIPT_WORKER_EXPIRES', 100 * 365))
+SCRIPT_WORKER_TOKEN = environ.get('SCRIPT_WORKER_TOKEN', 'token_for_test_only')
+
 ## vigiechiro ##
 DEV_FAKE_AUTH = environ.get('DEV_FAKE_AUTH', 'False').lower() == 'true'
 DEV_FAKE_S3_URL = environ.get('DEV_FAKE_S3_URL', None)

@@ -41,6 +41,7 @@ SCHEMA = {
     's3_upload_multipart_id': {'type': 'string', 'postonly': True},
     's3_upload_done': {'type': 'boolean'},
     'require_process': choice(['tadarida_d', 'tadarida_c']),
+    'fichier_source':  relation('fichiers'),
     'lien_participation': relation('participations'),
     'lien_protocole': relation('protocoles')
 }
@@ -128,17 +129,35 @@ def fichier_create():
     titre = payload.pop('titre')
     mime = payload.pop('mime')
     multipart = payload.pop('multipart', False)
+    lien_participation = payload.pop('lien_participation', None)
+    lien_protocole = payload.pop('lien_protocole', None)
+    if g.request_user['role'] == 'Administrateur':
+        proprietaire = payload.pop('proprietaire', g.request_user['_id'])
+        fichier_source = payload.pop('fichier_source', None)
+        require_process = payload.pop('require_process', None)
+    else:
+        require_process = None
+        fichier_source = None
+        proprietaire = g.request_user['_id']
     # Remaining fields are unexpected
     if payload.keys():
         abort(422, {f: 'unknown field' for f in payload.keys()})
     payload = {
         'titre': titre,
         'mime': mime,
-        'proprietaire': g.request_user['_id'],
+        'proprietaire': proprietaire,
         'disponible': False,
         's3_id': uuid.uuid4().hex,
         's3_upload_done': False
     }
+    if require_process:
+        payload['require_process'] = require_process
+    if fichier_source:
+        payload['fichier_source'] = fichier_source
+    if lien_participation:
+        payload['lien_participation'] = lien_participation
+    if lien_protocole:
+        payload['lien_protocole'] = lien_protocole
     if multipart:
         return _s3_create_multipart(payload)
     else:
@@ -226,7 +245,8 @@ def fichier_delete(file_id):
 @requires_auth(roles='Observateur')
 def fichier_upload_done(file_id):
     file_resource = fichiers.get_resource(file_id)
-    if file_resource['proprietaire'] != g.request_user['_id']:
+    if (g.request_user['role'] != 'Administrateur' and
+        file_resource['proprietaire'] != g.request_user['_id']):
         abort(403)
     if 's3_id' not in file_resource or file_resource.get('s3_upload_done', False):
         abort(422, 'upload is already done')
