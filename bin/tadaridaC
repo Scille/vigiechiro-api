@@ -13,6 +13,13 @@ if ( [ "$#" -eq 0 ] )
 then
     echo 'usage: tadaridaC <input.ta>'
     exit 1
+else
+    INPUT_FILE=`readlink -f $1`
+    if ( [ "$?" -ne 0 ] )
+    then
+        echo "$1 is not a valid file"
+        exit 1
+    fi
 fi
 
 cd $TADARIDAC_DIR
@@ -24,4 +31,4 @@ then
 fi
 
 # Finally start tadaridaC R script
-Rscript ./TadaridaC_0.2.0.r $1
+Rscript ./TadaridaC_0.2.0.r $INPUT_FILE
