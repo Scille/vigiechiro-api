@@ -3,13 +3,13 @@
 TADARIDAC_DIR=`dirname $0`/tadaridaC_src
 TADARIDAC_LEARNER_NAME="ClassifEsp.learner"
 
-if [[ "$TADARIDAC_LEARNER_URL" = "" ]]
+if ( [ "$TADARIDAC_LEARNER_URL" = "" ] )
 then
  echo "TADARIDAC_LEARNER_URL must be defined among the environment variables"
  exit 1
 fi
 
-if [[ "$#" -eq 0 ]]
+if ( [ "$#" -eq 0 ] )
 then
     echo 'usage: tadaridaC <input.ta>'
     exit 1
@@ -17,7 +17,7 @@ fi
 
 cd $TADARIDAC_DIR
 
-if ! [[ -f $TADARIDAC_LEARNER_NAME ]]
+if ( ! [ -f $TADARIDAC_LEARNER_NAME ] )
 then
     echo 'Retrieving tadaridaC learder'
     wget $TADARIDAC_LEARNER_URL -O $TADARIDAC_LEARNER_NAME
