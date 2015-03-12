@@ -21,7 +21,7 @@ from ..test_sites import obs_sites_base
 from ..test_fichiers import (file_uploaded, custom_upload_file, clean_fichiers,
                              file_init, file_uploaded)
 
-from .test_fake_s3 import fake_s3, S3_ADDRESS, WAVES_DEFAULT_DIR
+from .test_fake_s3 import fake_s3, S3_ADDRESS, WAVES_DEFAULT_DIR, TAS_DEFAULT_DIR
 
 
 def _generate_participation(pieces_jointes, participation_ready):
@@ -76,7 +76,32 @@ def test_tadaridaD(fake_s3, clean_fichiers, participation_ready):
         pj_ta_objs = db.fichiers.find({'fichier_source': pj_obj['_id']})
         assert pj_ta_objs.count() == 1
         pj_ta_obj = pj_ta_objs[0]
+        assert pj_ta_obj['mime'] in ['application/ta', 'application/tac']
         assert (pj_ta_obj.get('lien_participation', None) ==
                 pj_obj.get('lien_participation', None))
         assert pj_ta_obj.get('require_process', None) == 'tadarida_c'
         assert pj_ta_obj['proprietaire'] == pj_obj['proprietaire']
+
+
+def test_tadaridaC(fake_s3, clean_fichiers, participation_ready):
+    files = [{'path': TAS_DEFAULT_DIR + '/' + t, 'titre': t,
+              'mime': 'application/ta', 'type': 'ta'}
+             for t in os.listdir(TAS_DEFAULT_DIR)]
+    participation, pjs_participation = _generate_participation(files, participation_ready)
+    # Now we have a participation with some wav files associated and requesting
+    # a tadaridaD processing, it's time to actually release tadaridaD !
+    tadarida.run_tadarida_c()
+    # Finally check the result of tadarida
+    for pj in pjs_participation['ta']:
+        # Each wav should have been processed and then have a corresponding ta
+        pj_ta_obj = db.fichiers.find_one({'_id': ObjectId(pj)})
+        assert pj_ta_obj
+        assert not pj_ta_obj.get('require_process', None)
+        pj_tc_objs = db.fichiers.find({'fichier_source': pj_ta_obj['_id']})
+        assert pj_tc_objs.count() == 1
+        pj_tc_obj = pj_tc_objs[0]
+        assert pj_tc_obj['mime'] in ['application/tc', 'application/tcc']
+        assert (pj_tc_obj.get('lien_participation', None) ==
+                pj_ta_obj.get('lien_participation', None))
+        assert pj_tc_obj.get('require_process', None) == None
+        assert pj_tc_obj['proprietaire'] == pj_ta_obj['proprietaire']

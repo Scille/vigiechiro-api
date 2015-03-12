@@ -21,6 +21,7 @@ from .fake_s3 import start_server
 
 S3_ADDRESS = 'http://localhost:8000'
 WAVES_DEFAULT_DIR = os.path.abspath(os.path.dirname(__file__)) + '/default_waves'
+TAS_DEFAULT_DIR = os.path.abspath(os.path.dirname(__file__)) + '/default_tas'
 
 
 @pytest.fixture

@@ -12,16 +12,18 @@ from .. import settings
 
 AUTH = (settings.SCRIPT_WORKER_TOKEN, None)
 TADARIDA_D = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD'
+TADARIDA_C = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaC'
 logging.info('tadaridaD is {}'.format(TADARIDA_D))
 
 
 class S3Error(Exception): pass
 
 
-def _create_working_dir():
+def _create_working_dir(subdirs):
     wdir  = tempfile.mkdtemp()
     logging.info('working in directory {}'.format(wdir))
-    os.mkdir(wdir + '/waves')
+    for subdir in subdirs:
+        os.mkdir(wdir + '/' + subdir)
     return wdir
 
 
@@ -55,7 +57,7 @@ class ProcessItem:
         else:
             self.expected_output_file = expected_generate_name(self.input_file)
 
-    def upload_result(self):
+    def upload_result(self, require_process=None):
         if not os.path.exists(self.expected_output_file):
             logging.warning("{} hasn't been created, hence {} has"
                             " not been processed".format(
@@ -65,8 +67,9 @@ class ProcessItem:
         pj_data = {'titre': self.expected_output_file.split('/')[-1],
                    'mime': self.expected_mime,
                    'proprietaire': str(self._input_doc['proprietaire']),
-                   'fichier_source': str(self._input_doc['_id']),
-                   'require_process': 'tadarida_c'}
+                   'fichier_source': str(self._input_doc['_id'])}
+        if require_process:
+            pj_data['require_process'] = require_process
         if 'lien_participation' in self._input_doc:
             pj_data['lien_participation'] = str(self._input_doc['lien_participation'])
         r = requests.post(settings.BACKEND_DOMAIN + '/fichiers',
@@ -98,7 +101,7 @@ def run_tadarida_d():
     db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
     ProcessItem.DB = db
     while True: 
-        wdir_path = _create_working_dir()
+        wdir_path = _create_working_dir(['waves'])
         # Get back the list of fichiers requesting a ride with tadaridaD
         cursor = db.fichiers.find({'require_process': 'tadarida_d'}, limit=50)
         count = cursor.count()
@@ -119,7 +122,7 @@ def run_tadarida_d():
             logging.error('Error in running tadaridaD : returns {}'.format(ret))
         # Now upload back the results
         for item in items:
-            item.upload_result()
+            item.upload_result(require_process='tadarida_c')
         # Continue until no more fichier request to be processed
         if count == total:
             break
@@ -127,4 +130,30 @@ def run_tadarida_d():
 
 @celery_app.task
 def run_tadarida_c():
-    logging.error('run_tadarida_c is not implemented yet')
+    db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+    ProcessItem.DB = db
+    while True:
+        wdir_path = _create_working_dir(['tas'])
+        # Get back the list of fichiers requesting a ride with tadaridaD
+        cursor = db.fichiers.find({'require_process': 'tadarida_c'}, limit=50)
+        count = cursor.count()
+        total = cursor.count(with_limit_and_skip=False)
+        logging.info('found {} files requiring tadaridaC'.format(total))
+        if not total:
+            # Nothing to do, just leave
+            return
+        def expected_generate_name(input_file):
+            path, name = input_file.rsplit('/', 1)
+            return path + '/' + name[:-4] + '.csc'
+        items = [ProcessItem(doc, wdir_path + '/tas', 'application/tc', expected_generate_name)
+                 for doc in cursor]
+        # Run tadarida
+        logging.info('running tadaridaC')
+        for item in items:
+            subprocess.call([TADARIDA_C, item.input_file], cwd=wdir_path)
+        # Now upload back the results
+        for item in items:
+            item.upload_result()
+        # Continue until no more fichier request to be processed
+        if count == total:
+            break
