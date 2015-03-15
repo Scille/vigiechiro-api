@@ -145,7 +145,8 @@ def test_create_site(administrateur, observateur, protocoles_base):
     # Create site for the observateur
     site_payload = {
         'protocole': protocole_id,
-        'commentaire': 'My little site'
+        'commentaire': 'My little site',
+        'justification_non_aleatoire': 'dunno'
     }
     r = observateur.post('/sites', json=site_payload)
     assert r.status_code == 201, r.text
@@ -283,20 +284,16 @@ def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
         assert r.status_code == 422, r.text
 
 
-def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
-    # Register the observateur to a protocole
-    protocole_id = str(protocoles_base[1]['_id'])
-    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
-    assert r.status_code == 200, r.text
-    # Validate the user
-    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
-                           protocole_id, observateur.user_id))
-    assert r.status_code == 200, r.text
-    # First create a site
-    site_payload = {"protocole": protocole_id}
-    r = observateur.post('/sites', json=site_payload)
-    assert r.status_code == 201, r.text
-    localite_url = '/sites/{}/localites'.format(r.json()['_id'])
+def create_site_with_localite(protocole_id, observateur, site_id=None):
+    if not site_id:
+        # First create a site
+        site_payload = {"protocole": protocole_id}
+        r = observateur.post('/sites', json=site_payload)
+        assert r.status_code == 201, r.text
+        site_url = '/sites/{}'.format(r.json()['_id'])
+    else:
+        site_url = '/sites/{}'.format(site_id)
+    localite_url = site_url + '/localites'
     geometries = {'type': 'GeometryCollection',
                   'geometries': [
                       {"type":"Point", "coordinates":[48.862004474432936,2.338886260986328]},
@@ -309,6 +306,57 @@ def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
                     ]
                 }
     # Add localite
-    r = observateur.put(localite_url, json={'nom': 'bad_localite',
+    r = observateur.put(localite_url, json={'nom': 'localite1',
                                             'geometries': geometries})
     assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_create_site_with_localite(administrateur, observateur, protocoles_base):
+    # Register the observateur to a protocole
+    protocole_id = str(protocoles_base[1]['_id'])
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, observateur.user_id))
+    assert r.status_code == 200, r.text
+    site = create_site_with_localite(protocole_id, observateur)
+    # Make sure localite is present
+    site_url = '/sites/{}'.format(site['_id'])
+    r = observateur.get(site_url)
+    assert r.status_code == 200, r.text
+    assert len(r.json()['localites']) == 1
+
+
+def test_add_and_remove_locatiltes(administrateur, observateur, protocoles_base):
+    def check_localite_count(x):
+        r = observateur.get(site_url)
+        assert r.status_code == 200, r.text
+        assert len(r.json().get('localites', [])) == x
+    # Register the observateur to a protocole
+    protocole_id = str(protocoles_base[1]['_id'])
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, observateur.user_id))
+    assert r.status_code == 200, r.text
+    site = create_site_with_localite(protocole_id, observateur)
+    # Make sure localite is present
+    site_url = '/sites/{}'.format(site['_id'])
+    check_localite_count(1)
+    # Delete the localite
+    r = observateur.delete(site_url + '/localites')
+    assert r.status_code == 204, r.text
+    # No more localites in the site
+    check_localite_count(0)
+    # Add back a localite and lock the site
+    site = create_site_with_localite(protocole_id, observateur, site['_id'])
+    check_localite_count(1)
+    r = administrateur.patch(site_url, json={'verrouille': True})
+    assert r.status_code == 200, r.text
+    # Now owner cannot remove localites
+    r = observateur.delete(site_url + '/localites')
+    assert r.status_code == 403, r.text
+    check_localite_count(1)

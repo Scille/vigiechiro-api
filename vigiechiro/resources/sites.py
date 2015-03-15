@@ -116,7 +116,7 @@ def list_protocole_sites(protocole_id):
 @sites.route('/sites', methods=['POST'])
 @requires_auth(roles='Observateur')
 def create_site():
-    payload = get_payload({'protocole', 'commentaire', 'grille_stoc'})
+    payload = get_payload({'protocole', 'commentaire', 'grille_stoc', 'justification_non_aleatoire'})
     payload['observateur'] = g.request_user['_id']
     # Get protocole resource
     protocole_resource = get_resource('protocoles',
@@ -211,6 +211,16 @@ def add_localite(site_id):
     mongo_update = {'$push': {'localites': payload['localites'][0]}}
     result = sites.update(site_id, payload=payload, mongo_update=mongo_update)
     return result
+
+
+@sites.route('/sites/<objectid:site_id>/localites', methods=['DELETE'])
+@requires_auth(roles='Observateur')
+def remove_localites(site_id):
+    site_resource = sites.get_resource(site_id)
+    _check_edit_acess(site_resource)
+    mongo_update = {'$unset': {'localites': True}}
+    result = sites.update(site_id, payload={}, mongo_update=mongo_update)
+    return (result, 204)
 
 
 @sites.route('/sites/<objectid:site_id>/localites/<localite_nom>/habitat', methods=['PUT'])
