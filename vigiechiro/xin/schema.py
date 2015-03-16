@@ -338,7 +338,11 @@ class GenericValidator(SchemaRunner):
         # If value is not a datetime object, try to unserialize it
         if isinstance(context.value, str):
             # If the unserialized succeed, update the context stack
-            unserialized = str_to_date(context.value)
+            try:
+                unserialized = str_to_date(context.value)
+            except ValueError:
+                context.add_error(ERROR_BAD_TYPE % "datetime")
+                return
             if unserialized:
                 schema, field, _ = context.pop()
                 context.value[field] = unserialized
