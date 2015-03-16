@@ -80,8 +80,9 @@ def get_url_params(params=None):
     if isinstance(params, list):
         params = {a: {} for a in params}
     for param, config in params.items():
-        if config.get('required', False) and param not in request.args:
-            errors[param] = 'missing required param'
+        if param not in request.args:
+            if config.get('required', False):
+                errors[param] = 'missing required param'
             continue
         param_type = config.get('type', str)
         try:
