@@ -329,7 +329,9 @@ class GenericValidator(SchemaRunner):
     def _run_attribute_regex(self, context):
         regex = context.schema['regex']
         pattern = re.compile(regex)
-        if not pattern.match(context.value):
+        if not isinstance(context.value, str):
+            context.add_error(ERROR_BAD_TYPE % 'string')
+        elif not pattern.match(context.value):
             context.add_error(ERROR_REGEX % regex)
 
     def _run_type_datetime(self, context):
@@ -358,7 +360,9 @@ class GenericValidator(SchemaRunner):
 
     def _run_type_url(self, context):
         """Basic url regex filter"""
-        if not re.match(r"^https?://", context.value):
+        if not isinstance(context.value, str):
+            context.add_error(ERROR_BAD_TYPE % 'string')
+        elif not re.match(r"^https?://", context.value):
             context.add_error(ERROR_BAD_TYPE % 'url')
 
     def _run_attribute_maxlength(self, context):
