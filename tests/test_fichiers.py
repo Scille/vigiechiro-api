@@ -50,8 +50,8 @@ def test_singlepart_upload(clean_fichiers, observateur):
     # Once the upload is done, we have to signify it to the server
     r = observateur.post('/fichiers/' + response['_id'])
     assert r.status_code == 200, r.text
-    assert 's3_upload_done' in r.json()
-    assert r.json()['s3_upload_done']
+    assert 'disponible' in r.json()
+    assert r.json()['disponible']
 
 
 def test_multipart_upload(clean_fichiers, observateur):
@@ -72,8 +72,8 @@ def test_multipart_upload(clean_fichiers, observateur):
     r = observateur.post(fichier_url,
                          json={'parts': [{'part_number': 1, 'etag': uuid4().hex}]})
     assert r.status_code == 200, r.text
-    assert 's3_upload_done' in r.json()
-    assert r.json()['s3_upload_done']
+    assert 'disponible' in r.json()
+    assert r.json()['disponible']
 
 
 def test_access(file_init, observateur):

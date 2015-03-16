@@ -87,8 +87,7 @@ def test_participation(participation_ready, file_uploaded, observateur_other):
     r = observateur.get('/participations/{}'.format(participation['_id']))
     assert r.status_code == 200, r.text
     pieces_jointes_url = '/participations/{}/pieces_jointes'.format(participation['_id'])
-    r = observateur.put(pieces_jointes_url,
-                        json={'photos': [file_uploaded['_id']]})
+    r = observateur.put(pieces_jointes_url, json={'photos': [file_uploaded['_id']]})
     assert r.status_code == 200, r.text
     # Send multiple files with different allowed mime types
     photos_ids = []

@@ -824,8 +824,7 @@ Note: si le fichier à uploader fait plus de 5mo, il doit être uploader en mult
     "mime": "image/png",
     "proprietaire": "54ba5dfd1d41c83768e76fc2",
     "disponible": False,
-    "s3_id": "..."
-    "s3_upload_done": False,
+    "s3_id": "...",
     "s3_signed_url": "https://vigiechiro.s3.com/..."
 }
 ```
@@ -838,8 +837,7 @@ Note: si le fichier à uploader fait plus de 5mo, il doit être uploader en mult
     "mime": "image/png",
     "proprietaire": "54ba5dfd1d41c83768e76fc2",
     "disponible": False,
-    "s3_id": "..."
-    "s3_upload_done": False,
+    "s3_id": "...",
     "s3_multipart_upload_id": "..."
 }
 ```
@@ -918,7 +916,6 @@ Note : dans le cas d'un singlepart upload, pas d'input n'est requis
     "proprietaire": "54ba5dfd1d41c83768e76fc2",
     "disponible": False,
     "s3_id": "..."
-    "s3_upload_done": True
 }
 ```
 
@@ -946,9 +943,8 @@ Sinon : tous les observateurs
     "titre": "kitten.png",
     "mime": "image/png",
     "proprietaire": "54ba5dfd1d41c83768e76fc2",
-    "disponible": False,
+    "disponible": True,
     "s3_id": "..."
-    "s3_upload_done": True
 }
 ```
 

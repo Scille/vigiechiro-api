@@ -32,6 +32,11 @@ from ..xin.snippets import get_payload
 from .utilisateurs import utilisateurs as utilisateurs_resource
 
 
+ALLOWED_MIMES_PHOTOS = ['image/bmp', 'image/png', 'image/jpg', 'image/jpeg']
+ALLOWED_MIMES_TA = ['application/ta', 'application/tac']
+ALLOWED_MIMES_TC = ['application/tc', 'application/tcc']
+ALLOWED_MIMES_WAV = ['audio/wav', 'audio/x-wav']
+
 SCHEMA = {
     'titre': {'type': 'string', 'postonly': True, 'required': True},
     'mime': {'type': 'string', 'postonly': True, 'required': True},
@@ -142,13 +147,22 @@ def fichier_create():
     # Remaining fields are unexpected
     if payload.keys():
         abort(422, {f: 'unknown field' for f in payload.keys()})
+    if mime in ALLOWED_MIMES_PHOTOS:
+        prefix = '/photos/'
+    elif mime in ALLOWED_MIMES_TA:
+        prefix = '/ta/'
+    elif mime in ALLOWED_MIMES_TC:
+        prefix = '/tc/'
+    elif mime in ALLOWED_MIMES_WAV:
+        prefix = '/wav/'
+    else:
+        prefix = '/other/'
     payload = {
         'titre': titre,
         'mime': mime,
         'proprietaire': proprietaire,
         'disponible': False,
-        's3_id': uuid.uuid4().hex,
-        's3_upload_done': False
+        's3_id': prefix + uuid.uuid4().hex
     }
     if require_process:
         payload['require_process'] = require_process
@@ -227,7 +241,7 @@ def fichier_delete(file_id):
     file_resource = fichiers.get_resource(file_id)
     if file_resource['proprietaire'] != g.request_user['_id']:
         abort(403)
-    if 's3_id' not in file_resource or file_resource.get('s3_upload_done', False):
+    if 's3_id' not in file_resource or file_resource.get('disponible', False):
         abort(422, 'cannot cancel file once upload is done')
     if 's3_upload_multipart_id' in file_resource and not settings.DEV_FAKE_S3_URL:
         # Destroy the unfinished file on S3
@@ -248,7 +262,7 @@ def fichier_upload_done(file_id):
     if (g.request_user['role'] != 'Administrateur' and
         file_resource['proprietaire'] != g.request_user['_id']):
         abort(403)
-    if 's3_id' not in file_resource or file_resource.get('s3_upload_done', False):
+    if 's3_id' not in file_resource or file_resource.get('disponible', False):
         abort(422, 'upload is already done')
     if 's3_upload_multipart_id' in file_resource:
         # Finalize the file on S3
@@ -280,8 +294,7 @@ def fichier_upload_done(file_id):
                     sign['signed_url'], r.status_code, r.text))
                 abort(500, 'Error with S3')
     # Finally update the resource status
-    result = fichiers.update(file_id, {'s3_upload_done': True,
-                                       'disponible': True})
+    result = fichiers.update(file_id, {'disponible': True})
     return result
 
 
@@ -291,7 +304,7 @@ def s3_access_file(file_id):
     redirection = request.args.get('redirection', False)
     file_resource = fichiers.get_resource(file_id)
     _check_access_rights(file_resource)
-    if 's3_id' not in file_resource or not file_resource.get('s3_upload_done', False):
+    if 's3_id' not in file_resource or not file_resource.get('disponible', False):
         abort(410, 'file is not available')
     object_name = file_resource['s3_id']
     if not settings.DEV_FAKE_S3_URL:

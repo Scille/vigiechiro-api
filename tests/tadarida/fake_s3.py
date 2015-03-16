@@ -102,6 +102,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             fn = os.getcwd() + '/' + key.replace('${filename}', filename)
         else:
             fn = self.translate_path(self.path)
+        os.makedirs(os.path.split(fn)[0], exist_ok=True)
         line = self.rfile.readline()
         remainbytes -= len(line)
         if not content_type.startswith('multipart/form-data;'):

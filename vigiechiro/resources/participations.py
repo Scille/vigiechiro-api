@@ -16,7 +16,8 @@ from ..xin.snippets import (Paginator, get_payload, get_resource,
                             get_lookup_from_q, get_url_params)
 
 from .actualites import create_actuality_nouvelle_participation
-from .fichiers import fichiers as fichiers_resource
+from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
+                       ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
 
 SCHEMA = {
@@ -67,10 +68,6 @@ SCHEMA = {
     }
 }
 
-ALLOWED_MIMES_PHOTOS = ['image/bmp', 'image/png', 'image/jpg', 'image/jpeg']
-ALLOWED_MIMES_TA = ['application/ta', 'application/tac']
-ALLOWED_MIMES_TC = ['application/tc', 'application/tcc']
-ALLOWED_MIMES_WAV = ['audio/wav', 'audio/x-wav']
 
 participations = Resource('participations', __name__, schema=SCHEMA)
 
@@ -190,7 +187,7 @@ def add_pieces_jointes(participation_id):
             return 'bad id {}'.format(pj_id), pj
         elif pj['mime'] not in mime:
             return 'file {} bad mime type, should be of {}'.format(pj_id, mime), pj
-        elif not pj.get('s3_upload_done', False):
+        elif not pj.get('disponible', False):
             return 'file {} upload is not done'.format(pj_id), pj
         return None, pj
     errors_photos = []
