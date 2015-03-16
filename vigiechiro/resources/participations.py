@@ -12,7 +12,8 @@ from ..xin import Resource
 from ..xin.tools import abort, parse_id
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-from ..xin.snippets import Paginator, get_payload, get_resource, get_lookup_from_q
+from ..xin.snippets import (Paginator, get_payload, get_resource,
+                            get_lookup_from_q, get_url_params)
 
 from .actualites import create_actuality_nouvelle_participation
 from .fichiers import fichiers as fichiers_resource
@@ -243,11 +244,35 @@ def add_pieces_jointes(participation_id):
 @participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_pieces_jointes(participation_id):
+    # import pdb; pdb.set_trace()
+    params = get_url_params({
+        'photos': {'required': False, 'type': bool},
+        'ta': {'required': False, 'type': bool},
+        'tc': {'required': False, 'type': bool},
+        'wav': {'required': False, 'type': bool}
+    })
     participation_resource = participations.find_one(participation_id)
     _check_read_access(participation_resource)
-    pieces_jointes = current_app.data.db.fichiers.find(
-        {'lien_participation': participation_resource['_id']})
-    result = {'photos': [], 'ta': [], 'tc': [], 'wav': []}
+    lookup = {'lien_participation': participation_resource['_id']}
+    if params:
+        allowed_mimes = []
+        result = {}
+        if params.get('photos', False):
+            allowed_mimes += ALLOWED_MIMES_PHOTOS
+            result['photos'] = []
+        if params.get('ta', False):
+            allowed_mimes += ALLOWED_MIMES_TA
+            result['ta'] = []
+        if params.get('tc', False):
+            allowed_mimes += ALLOWED_MIMES_TC
+            result['tc'] = []
+        if params.get('wav', False):
+            allowed_mimes += ALLOWED_MIMES_WAV
+            result['wav'] = []
+        lookup['mime'] = {'$in': allowed_mimes}
+    else:
+        result = {'photos': [], 'ta': [], 'tc': [], 'wav': []}
+    pieces_jointes = current_app.data.db.fichiers.find(lookup)
     for pj in pieces_jointes:
         if pj['mime'] in ALLOWED_MIMES_PHOTOS:
             result['photos'].append(pj)
