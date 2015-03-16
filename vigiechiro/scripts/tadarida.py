@@ -48,7 +48,7 @@ class ProcessItem:
                     f.flush()
         if r.status_code != 200:
             raise S3Error('Cannot get back file {} : {}, {}'.format(
-                self.file_info, r.status_code))
+                self.file_info, r.status_code, r.text))
         logging.info('got back file {}'.format(self.file_info))
         if not expected_output_file and not expected_generate_name:
             raise RuntimeError('expected_output_file or expected_generate_name must be present')
