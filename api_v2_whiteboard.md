@@ -382,13 +382,13 @@ Nom          |  type   | Requis | Description
 
 **Input**
 
-Nom               |  Type   | Requis | Description
-------------------|---------|--------|-------------
-titre             | string  |  oui   |
-protocole         | objectid|  oui   |
-commentaire       | string  |  non   |
-grille_stoc       | objectid|  non   |
-
+Nom                         |  Type   | Requis | Description
+----------------------------|---------|--------|-------------
+titre                       | string  |  oui   |
+protocole                   | objectid|  oui   |
+commentaire                 | string  |  non   |
+grille_stoc                 | objectid|  non   |
+justification_non_aleatoire | string  |  non   |
 
 **Accès**
 
@@ -478,6 +478,15 @@ stoc_secondaire   | schema_stoc |
 **Accès**
 
 Administrateur et propriétaire
+
+## Supprimer toutes les localités
+
+`DELETE /sites/#id/localites`
+
+**Accès**
+
+ - si non verrouillé : Administrateur et propriétaire
+ - si verrouillé : Administrateur seulement
 
 
 Participations
@@ -597,6 +606,16 @@ Administrateur et observateur ayant créé la participation
 
 `GET /participations/#id/pieces_jointes`
 
+**Params**
+
+Nom    |  Type   | Requis | Description
+-------|---------|--------|-------------
+photos | boolean |   non  | Retourne ou non les pièces jointes de type photo (défaut: oui)
+ta     | boolean |   non  | Retourne ou non les pièces jointes de type ta (défaut: oui)
+tc     | boolean |   non  | Retourne ou non les pièces jointes de type tc (défaut: oui)
+wav    | boolean |   non  | Retourne ou non les pièces jointes de type wav (défaut: oui)
+
+
 **Response**
 
 ```
@@ -661,6 +680,118 @@ Administrateur, Validateur et observateur ayant créé la participation
 
 Données
 -------
+
+### Lister les données d'une participation
+
+`GET /participations/#id/donnees`
+
+**Accès**
+
+Si propriétaire.donnees_publiques == False : propriétaire, administrateur et validateur
+Sinon : tous les observateurs
+
+**Parameters**
+
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+ q           | string  |  non   | Filtre de recherche
+
+**Response**
+```
+[
+    {
+        "_id": "54ba5dfd1d41c83768e76fc2",
+        "_created": "2015-01-17T13:05:01Z",
+        "_updated": "2015-01-17T13:05:01Z",
+        "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+        ...
+    }
+]
+```
+
+
+### Créer une donnée
+
+`POST /donnees`
+
+**Accès**
+
+Administrateur seulement
+
+**Input**
+
+Nom                                    |  Type   | Requis | Description
+---------------------------------------|---------|-------------
+ proprietaire                          | objectid|  non   | Si non fourni, le propriétaire sera l'utilisateur courant
+ commentaire                           | string  |  non   |
+ participation                         | objectid|  oui   |
+ observations                          | list    |  non   | liste des observations faites
+ observations[x].temps_debut           | float   |  oui   |
+ observations[x].temps_fin             | float   |  oui   |
+ observations[x].frequence_mediane     | float   |  oui   |
+ observations[x].tadarida_taxon        | objectid|  oui   |
+ observations[x].tadarida_probabilite  | integer |  oui   |
+ observations[x].tadarida_taxon_autre  | list    |  non   |
+ observations[x].tadarida_taxon_autre[y].taxon | objectid | oui |
+ observations[x].tadarida_taxon_autre[y].probabilite | integer | oui |
+
+**Response**
+```
+{
+    "_id": "54ba5dfd1d41c83768e76fc2",
+    "_created": "2015-01-17T13:05:01Z",
+    "_updated": "2015-01-17T13:05:01Z",
+    "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+    ...
+}
+```
+
+
+### Consulter une donnée
+
+`GET /donnees/#id`
+
+**Accès**
+
+Si propriétaire.donnees_publiques == False : propriétaire, administrateur et validateur
+Sinon : tous les observateurs
+
+**Response**
+```
+{
+    "_id": "54ba5dfd1d41c83768e76fc2",
+    "_created": "2015-01-17T13:05:01Z",
+    "_updated": "2015-01-17T13:05:01Z",
+    "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+    ...
+}
+```
+
+
+### Modifier une observation
+
+`PATCH /donnees/#id/observations/#id_observation/`
+
+**Input**
+
+Nom                      |  Type   | Description
+-------------------------|---------|-------------
+ observateur_taxon       | string  | taxon reconnu par l'observateur
+ observateur_probabilite | string  | `SUR`, `PROBABLE`, `POSSIBLE`
+ validateur_taxon        | string  | taxon reconnu par le validateur
+ validateur_probabilite  | string  | `SUR`, `PROBABLE`, `POSSIBLE`
+
+### Commenter une observation
+
+`PUT /donnees/#id/observations/#id_observation/messages`
+
+**Input**
+
+Nom                 |  Type   | Description
+--------------------|---------|-------------
+ message            | string  |
 
 
 Fichiers
