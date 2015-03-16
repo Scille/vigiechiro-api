@@ -13,7 +13,7 @@ from ..xin.tools import jsonify, abort, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import (Paginator, get_lookup_from_q, get_payload,
-                            get_if_match, get_url_params)
+                            get_if_match)
 
 from .actualites import (create_actuality_validation_protocole,
                          create_actuality_inscription_protocole,
