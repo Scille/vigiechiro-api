@@ -1,8 +1,5 @@
-import requests
 import pytest
-import base64
 import json
-from bson import ObjectId
 from datetime import datetime, timedelta
 
 from .common import (db, observateur, observateur_other, validateur,

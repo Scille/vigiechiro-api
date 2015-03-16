@@ -51,6 +51,7 @@ def test_actualites(clean_actualites, observateur,
     assert len(actualites) == 3, actualites
 
 
+@pytest.mark.slow
 def test_list_protocole_users(clean_actualites, protocoles_base,
                               observateur, administrateur):
     protocole = protocoles_base[1]

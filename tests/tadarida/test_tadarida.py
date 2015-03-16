@@ -59,6 +59,7 @@ def _generate_participation(pieces_jointes, participation_ready):
     return participation, pjs_participation
 
 
+@pytest.mark.slow
 def test_tadaridaD(fake_s3, clean_fichiers, participation_ready):
     files = [{'path': WAVES_DEFAULT_DIR + '/' + t, 'titre': t,
               'mime': 'audio/wav', 'type': 'wav'}
@@ -83,6 +84,7 @@ def test_tadaridaD(fake_s3, clean_fichiers, participation_ready):
         assert pj_ta_obj['proprietaire'] == pj_obj['proprietaire']
 
 
+@pytest.mark.slow
 def test_tadaridaC(fake_s3, clean_fichiers, participation_ready):
     files = [{'path': TAS_DEFAULT_DIR + '/' + t, 'titre': t,
               'mime': 'application/ta', 'type': 'ta'}
