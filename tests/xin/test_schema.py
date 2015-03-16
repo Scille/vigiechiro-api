@@ -115,6 +115,43 @@ def test_bad_serialized():
     test()
 
 
+def test_bad_types():
+    schema = {
+        'f_integer': {'type': 'boolean'},
+        'f_boolean': {'type': 'integer'},
+        'f_float': {'type': 'float'}
+    }
+    v = GenericValidator(schema)
+    valid_doc = {
+        'f_integer': 42,
+        'f_boolean': True,
+        'f_float': 3.14
+    }
+    @with_flask_context
+    def test():
+        bad_doc = deepcopy(valid_doc)
+        for dummy in ['string', 3.14, '']:
+            bad_doc['f_integer'] = dummy
+            result = v.run(bad_doc)
+            if result.is_valid:
+                return False, 'Bad type accepted for integer: {}'.format(dummy)
+        bad_doc = deepcopy(valid_doc)
+        for dummy in ['string', 3.14, 1, '']:
+            bad_doc['f_boolean'] = dummy
+            result = v.run(bad_doc)
+            if result.is_valid:
+                return False, 'Bad type accepted for boolean: {}'.format(dummy)
+        bad_doc = deepcopy(valid_doc)
+        for dummy in ['string', '']:
+            bad_doc['f_float'] = dummy
+            result = v.run(bad_doc)
+            if result.is_valid:
+                return False, 'Bad type accepted for float: {}'.format(dummy)
+        return True, ''
+    result, msg = test()
+    assert result, msg
+
+
 def test_required_fields():
     schema = {
         # Add automatically added fields to prevent "unknown field" errors
