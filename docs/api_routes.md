@@ -1,5 +1,5 @@
-Api v2 whiteboard
-=================
+Api route guide
+===============
 
 Introductions
 -------------
