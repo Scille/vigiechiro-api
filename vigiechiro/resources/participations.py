@@ -93,6 +93,16 @@ def list_user_participations():
     return pagination.make_response(*found)
 
 
+@participations.route('/sites/<objectid:site_id>/participations', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_site_participations(site_id):
+    pagination = Paginator()
+    lookup = {'site': site_id}
+    lookup.update(get_lookup_from_q() or {})
+    found = participations.find(lookup, skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(*found)
+
+
 @participations.route('/participations/<objectid:participation_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def display_participation(participation_id):
