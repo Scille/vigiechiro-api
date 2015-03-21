@@ -434,7 +434,7 @@ verrouille        | boolean |  non   | accès seulement pour administrateur
  - si verrouillé : Administrateur seulement
 
 
-## Ajouter une localité
+## Ajouter des localités
 
 `PUT /sites/#id/localites`
 
@@ -442,10 +442,7 @@ verrouille        | boolean |  non   | accès seulement pour administrateur
 
 Nom               |  Type              | Requis | Description
 ------------------|--------------------|--------|-------------
-nom               | string             |  oui   |
-coordonnee        | point              |  non   |
-geometries        | geometrycollection |  non   |
-representatif     | boolean            |  non   |
+localites         | dict               | oui    |
 
 **Accès**
 

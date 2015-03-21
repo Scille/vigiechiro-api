@@ -306,10 +306,53 @@ def create_site_with_localite(protocole_id, observateur, site_id=None):
                     ]
                 }
     # Add localite
-    r = observateur.put(localite_url, json={'nom': 'localite1',
-                                            'geometries': geometries})
+    r = observateur.put(localite_url,
+        json={'localites': [{'nom': 'localite1', 'geometries': geometries}]})
     assert r.status_code == 200, r.text
     return r.json()
+
+
+def test_localite_name_unicity(observateur, administrateur, protocoles_base):
+    protocole_id = str(protocoles_base[1]['_id'])
+    # Register the observateur to a protocole
+    protocole_id = str(protocoles_base[1]['_id'])
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, observateur.user_id))
+    assert r.status_code == 200, r.text
+    # First create a site
+    site_payload = {"protocole": protocole_id}
+    r = observateur.post('/sites', json=site_payload)
+    assert r.status_code == 201, r.text
+    site_url = '/sites/{}'.format(r.json()['_id'])
+    localite_url = site_url + '/localites'
+    geometries = {'type': 'GeometryCollection',
+                  'geometries': [
+                      {"type":"Point", "coordinates":[48.862004474432936,2.338886260986328]},
+                      {"type":"Point", "coordinates":[48.877812415009195,2.3639488220214844]},
+                      {"type":"LineString", "coordinates":[
+                          [48.86539231071163,2.353992462158203],
+                          [48.87239311228893,2.353649139404297],
+                          [48.87736082887189,2.344379425048828]]
+                      }
+                    ]
+                }
+    # Cannot add localite with the same name
+    r = observateur.put(localite_url,
+        json={'localites': [{'nom': 'localite1', 'geometries': geometries},
+                            {'nom': 'localite2', 'geometries': geometries},
+                            {'nom': 'localite1', 'geometries': geometries}]})
+    assert r.status_code == 422, r.text
+    # Now add valid localite
+    r = observateur.put(localite_url,
+        json={'localites': [{'nom': 'localite1', 'geometries': geometries}]})
+    assert r.status_code == 200, r.text
+    # Cannot add localite with the same name at a different time
+    r = observateur.put(localite_url,
+        json={'localites': [{'nom': 'localite1', 'geometries': geometries}]})
+    assert r.status_code == 422, r.text
 
 
 def test_create_site_with_localite(administrateur, observateur, protocoles_base):
@@ -329,7 +372,7 @@ def test_create_site_with_localite(administrateur, observateur, protocoles_base)
     assert len(r.json()['localites']) == 1
 
 
-def test_add_and_remove_locatiltes(administrateur, observateur, protocoles_base):
+def test_add_and_remove_localites(administrateur, observateur, protocoles_base):
     def check_localite_count(x):
         r = observateur.get(site_url)
         assert r.status_code == 200, r.text

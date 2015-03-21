@@ -41,6 +41,7 @@ SCHEMA = {
     'largeur': {'type': 'number'},
     'localites': {
         'type': 'list',
+        'unique_field': 'nom',
         'schema': {
             'type': 'dict',
             'schema': {
@@ -75,6 +76,26 @@ SCHEMA = {
 
 
 sites = Resource('sites', __name__, schema=SCHEMA)
+
+
+@sites.validator.attribute
+def unique_field(context):
+    path = context.get_current_path()
+    node = context.additional_context.get('old_document', {})
+    for field in path.split('.'):
+        if field in node:
+            node = node[field]
+        else:
+            node = None
+            break
+    old_field_value = node or []
+    field = context.schema['unique_field']
+    field_values = []
+    for elem in context.value + old_field_value:
+        if field in elem:
+            field_values.append(elem[field])
+    if len(field_values) != len(set(field_values)):
+        context.add_error("field {} has duplicated values".format(field))
 
 
 @sites.route('/sites', methods=['GET'])
@@ -198,17 +219,12 @@ def get_resume_list():
 @sites.route('/sites/<objectid:site_id>/localites', methods=['PUT'])
 @requires_auth(roles='Observateur')
 def add_localite(site_id):
+    payload = get_payload({'localites': True})
     site_resource = sites.get_resource(site_id)
     _check_edit_acess(site_resource)
-    payload = {'localites': [get_payload({'nom': True, 'coordonnee': False,
-        'geometries': False, 'representatif': False})]}
-    # Make sure given nom is unique
-    nom = payload['localites'][0]['nom']
-    localites = site_resource.get('localites', [])
-    existing_nom = next((l for l in localites if l['nom'] == nom), None)
-    if existing_nom:
-        abort(422, {'nom': 'another localite has already this name'})
-    mongo_update = {'$push': {'localites': payload['localites'][0]}}
+    # payload = {'localites': [get_payload({'nom': True, 'coordonnee': False,
+    #     'geometries': False, 'representatif': False})]}
+    mongo_update = {'$push': {'localites': {'$each': payload['localites']}}}
     result = sites.update(site_id, payload=payload, mongo_update=mongo_update)
     return result
 
