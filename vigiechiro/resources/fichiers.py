@@ -30,6 +30,7 @@ from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import get_payload
 from .utilisateurs import utilisateurs as utilisateurs_resource
+from .donnees import validate_donnee_name
 
 
 ALLOWED_MIMES_PHOTOS = ['image/bmp', 'image/png', 'image/jpg', 'image/jpeg']
@@ -39,6 +40,7 @@ ALLOWED_MIMES_WAV = ['audio/wav', 'audio/x-wav']
 
 SCHEMA = {
     'titre': {'type': 'string', 'postonly': True, 'required': True},
+    'tadarida_titre': {'type': 'string', 'postonly': True},
     'mime': {'type': 'string', 'postonly': True, 'required': True},
     'proprietaire': relation('utilisateurs', postonly=True, required=True),
     'disponible': {'type': 'boolean'},
@@ -132,6 +134,8 @@ def fichier_create():
     if missing_fields:
         abort(422, {f: 'missing field' for f in missing_fields})
     titre = payload.pop('titre')
+    if not re.match(r'^[a-zA-Z0-9_\-.]+$', titre):
+        abort(422, {'titre': 'string contains forbidden characters'})
     mime = payload.pop('mime')
     multipart = payload.pop('multipart', False)
     lien_participation = payload.pop('lien_participation', None)
@@ -145,25 +149,35 @@ def fichier_create():
         fichier_source = None
         proprietaire = g.request_user['_id']
     # Remaining fields are unexpected
+    need_tadarida_titre = None
     if payload.keys():
         abort(422, {f: 'unknown field' for f in payload.keys()})
     if mime in ALLOWED_MIMES_PHOTOS:
-        prefix = '/photos/'
+        path = '/photos/'
     elif mime in ALLOWED_MIMES_TA:
-        prefix = '/ta/'
+        path = '/ta/'
+        need_tadarida_titre = True
     elif mime in ALLOWED_MIMES_TC:
-        prefix = '/tc/'
+        path = '/tc/'
+        need_tadarida_titre = True
     elif mime in ALLOWED_MIMES_WAV:
-        prefix = '/wav/'
+        path = '/wav/'
+        need_tadarida_titre = True
     else:
-        prefix = '/other/'
+        path = '/others/'
     payload = {
         'titre': titre,
         'mime': mime,
         'proprietaire': proprietaire,
         'disponible': False,
-        's3_id': prefix + uuid.uuid4().hex
+        # Add uuid to make sure the file name is unique
+        's3_id': path + titre + '_' + uuid.uuid4().hex
     }
+    if need_tadarida_titre:
+        tadarida_titre = validate_donnee_name(titre)
+        if not tadarida_titre:
+            abort(422, {'titre': 'Invalid titre for tadarida related file'})
+        payload['tadarida_titre'] = tadarida_titre
     if require_process:
         payload['require_process'] = require_process
     if fichier_source:

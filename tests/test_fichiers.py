@@ -23,6 +23,14 @@ def file_init(clean_fichiers, observateur):
 
 
 @pytest.fixture
+def file_bad_name(observateur):
+    bad_titres = ['', '*', '../test', 'éééé']
+    for titre in bad_titres:
+        r = observateur.post('/fichiers', json={'titre': titre, 'mime': 'image/png'})
+        assert r.status_code == 422, r.text
+
+
+@pytest.fixture
 def file_uploaded(clean_fichiers, observateur):
     r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
     assert r.status_code == 201, r.text

@@ -94,13 +94,14 @@ def test_participation(participation_ready, file_uploaded, observateur_other):
     for i, mime in enumerate(['image/bmp', 'image/png', 'image/jpg']):
         res = custom_upload_file({'titre': 'file_photo_{}'.format(i), 'mime': mime}, observateur)
         photos_ids.append(res['_id'])
+    tadarida_file_template = "Car170517-2014-Pass1-C1_1_140702_225107_{:0>3}.{}"
     ta_ids = []
     for i, mime in enumerate(['application/ta', 'application/tac']):
-        res = custom_upload_file({'titre': 'file_ta_{}'.format(i), 'mime': mime}, observateur)
+        res = custom_upload_file({'titre': tadarida_file_template.format(i, 'ta'), 'mime': mime}, observateur)
         ta_ids.append(res['_id'])
     wav_ids = []
     for i, mime in enumerate(['audio/wav', 'audio/x-wav']):
-        res = custom_upload_file({'titre': 'file_wav_{}'.format(i), 'mime': mime}, observateur)
+        res = custom_upload_file({'titre': tadarida_file_template.format(i, 'wav'), 'mime': mime}, observateur)
         wav_ids.append(res['_id'])
     r = observateur.put(pieces_jointes_url,
                         json={'wav': wav_ids, 'ta': ta_ids, 'photos': photos_ids })

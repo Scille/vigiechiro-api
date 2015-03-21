@@ -7,6 +7,7 @@
 
 from flask import request, current_app, g
 from datetime import datetime
+import re
 
 from ..xin import Resource
 from ..xin.tools import jsonify, abort
@@ -15,6 +16,31 @@ from ..xin.snippets import Paginator, get_payload
 from ..xin.schema import relation, choice
 
 from .utilisateurs import utilisateurs as utilisateurs_resource
+
+
+def validate_donnee_name(name):
+    allow_extensions = ['wav', 'ta', 'tc', 'tac', 'tcc']
+    try:
+        basename, ext = name.rsplit('.', 1)
+    except ValueError:
+        return None
+    if ext not in allow_extensions:
+        return None
+    # See rules: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893805
+    if re.match(r'^Cir[0-9]+-[0-9]{4}-Pass[0-9]{1,2}-Tron[0-9]{1,2}-Chiro_[01]_[0-9]+_000$', basename):
+        # Protocole "routier" or "pedestre"
+        if int(re.search(r'Pass([0-9]{1,2})').group(1)) > 10:
+            return None
+        if int(re.search(r'Tron([0-9]{1,2})').group(1)) > 15:
+            return None
+    elif re.match(r'^Car[0-9]+-[0-9]{4}-Pass[0-9]{1,2}-[a-zA-Z0-9]{1,5}_[01]_[0-9]{6}_[0-9]{6}_[0-9]{3}$', basename):
+        # Protocole "point fixe"
+        # TODO complete this !
+        pass
+    else:
+        # Bad name
+        return None
+    return basename
 
 
 SCHEMA = {
