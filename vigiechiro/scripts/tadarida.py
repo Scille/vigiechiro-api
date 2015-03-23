@@ -93,7 +93,7 @@ class ProcessItem:
             logging.error('notify end upload for {} error {} : {}'.format(pj_data['_id'], r.status_code, r.text))
             return
         # Finally remove the process request in original fichier
-        self.DB.fichiers.update({'_id': self._input_doc['_id']}, {'$unset': {'require_process': ""}})
+        print(self.DB.fichiers.update({'_id': self._input_doc['_id']}, {'$unset': {'require_process': ""}}))
 
 
 @celery_app.task
@@ -112,7 +112,7 @@ def run_tadarida_d():
             return
         def expected_generate_name(input_file):
             path, name = input_file.rsplit('/', 1)
-            return path + '/txt/' + name[:-4] + '.csv'
+            return path + '/txt/' + name.rsplit('.', 1)[0] + '.ta'
         items = [ProcessItem(doc, wdir_path + '/waves', 'application/ta', expected_generate_name)
                  for doc in cursor]
         # Run tadarida
@@ -144,13 +144,15 @@ def run_tadarida_c():
             return
         def expected_generate_name(input_file):
             path, name = input_file.rsplit('/', 1)
-            return path + '/' + name[:-4] + '.csc'
+            return path + '/' + name.rsplit('.', 1)[0] + '.tc'
         items = [ProcessItem(doc, wdir_path + '/tas', 'application/tc', expected_generate_name)
                  for doc in cursor]
         # Run tadarida
         logging.info('running tadaridaC')
         for item in items:
-            subprocess.call([TADARIDA_C, item.input_file], cwd=wdir_path)
+            ret = subprocess.call([TADARIDA_C, item.input_file], cwd=wdir_path)
+            if ret:
+                logging.error('Error in running tadaridaC : returns {}'.format(ret))
         # Now upload back the results
         for item in items:
             item.upload_result()
