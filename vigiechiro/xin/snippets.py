@@ -6,11 +6,12 @@ from .tools import jsonify, parse_id
 
 class Paginator:
     """Pagination heavy lifting"""
-    def __init__(self, max_results_limit=20):
+    def __init__(self, max_results_limit=20, args=None):
+        args = args if args else request.args
         # Check request params
         try:
-            self.max_results = int(request.args.get('max_results', 20))
-            self.page = int(request.args.get('page', 1))
+            self.max_results = int(args.get('max_results', 20))
+            self.page = int(args.get('page', 1))
             self.skip = (self.page - 1) * self.max_results
             if self.skip < 0:
                 abort(422, 'page params must be > 0')
@@ -67,27 +68,29 @@ def get_payload(allowed_fields=None):
     return payload
 
 
-def get_url_params(params=None):
+def get_url_params(params_spec=None, args=None):
     """
         Retrieve the given params in url or abort request
-        :param params: list of required arguments or dict of params/config
+        :param params_spec: list of required arguments or dict of params/config
+        :param args: request.args by default
         (i.g. `{'a': {'required': True, 'type': int}, 'b': {}}`)
     """
-    if not params:
+    args = args if args else request.args
+    if not params_spec:
         return
     result = {}
     errors = {}
-    if isinstance(params, list):
-        params = {a: {} for a in params}
-    for param, config in params.items():
-        if param not in request.args:
+    if isinstance(params_spec, list):
+        params_spec = {a: {} for a in params_spec}
+    for param, config in params_spec.items():
+        if param not in args:
             if config.get('required', False):
                 errors[param] = 'missing required param'
             continue
         param_type = config.get('type', str)
         try:
-            result[param] = param_type(request.args[param])
-        except ValueError:
+            result[param] = param_type(args[param])
+        except:
             errors[param] = 'bad value, should be {}'.format(param_type)
     if errors:
         abort(422, errors)
@@ -102,9 +105,10 @@ def get_if_match():
     return if_match
 
 
-def get_lookup_from_q():
+def get_lookup_from_q(params=None):
     """Create a mongodb lookup dict from q param present in url's arguments"""
-    if 'q' in request.args:
-        return {'$text': {'$search': request.args['q']}}
+    params = params if params else request.args
+    if 'q' in params:
+        return {'$text': {'$search': params['q']}}
     else:
         return None

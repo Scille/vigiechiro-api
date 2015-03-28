@@ -93,7 +93,7 @@ class ProcessItem:
             logging.error('notify end upload for {} error {} : {}'.format(pj_data['_id'], r.status_code, r.text))
             return
         # Finally remove the process request in original fichier
-        print(self.DB.fichiers.update({'_id': self._input_doc['_id']}, {'$unset': {'require_process': ""}}))
+        self.DB.fichiers.update({'_id': self._input_doc['_id']}, {'$unset': {'require_process': ""}})
 
 
 @celery_app.task

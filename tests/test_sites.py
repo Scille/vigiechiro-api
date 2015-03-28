@@ -105,6 +105,22 @@ def test_list_with_search(obs_sites_base):
     assert r.json()['_items'][0]['_id'] == str(sites_base[0]['_id'])
 
 
+def test_list_with_grille_stoc(obs_sites_base):
+    observateur, sites_base = obs_sites_base
+    r = observateur.get('/sites', params={'grille_stoc': str(sites_base[0]['grille_stoc'])})
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 1, r.json()
+    assert r.json()['_items'][0]['_id'] == str(sites_base[0]['_id'])
+    # Unknown id should return an empty list
+    r = observateur.get('/sites', params={'grille_stoc': '5516db691d41c8eac15ab672'})
+    assert r.status_code == 200, r.text
+    assert len(r.json()['_items']) == 0, r.json()
+    # Try bad ids
+    for bad_id in ['', 42, '*']:
+        r = observateur.get('/sites', params={'grille_stoc': bad_id})
+        assert r.status_code == 422, r.text
+
+
 def test_not_registered_create_site(protocoles_base, observateur, administrateur):
     # Cannot create site if not register to a protocole
     site_payload = {

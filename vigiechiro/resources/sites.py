@@ -7,13 +7,14 @@
 
 from flask import current_app, abort, jsonify, g, request
 from datetime import datetime
+from bson import ObjectId
 import logging
 
 from ..xin import Resource
 from ..xin.tools import jsonify, abort, parse_id
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-from ..xin.snippets import Paginator, get_payload, get_resource, get_lookup_from_q
+from ..xin.snippets import Paginator, get_payload, get_resource, get_url_params
 
 from .actualites import create_actuality_nouveau_site
 from .protocoles import check_configuration_participation
@@ -98,40 +99,47 @@ def unique_field(context):
         context.add_error("field {} has duplicated values".format(field))
 
 
+def _sites_generic_list(params):
+    # Make sure no bad params provided
+    params = get_url_params({'q': {'type': str},
+                             'protocole': {'type': ObjectId},
+                             'observateur': {'type': ObjectId},
+                             'grille_stoc': {'type': ObjectId},
+                             'max_results': {'type': int},
+                             'page': {'type': int}},
+                            args=params)
+    lookup = {}
+    if 'q' in params:
+        lookup['$text'] = {'$search': params['q']}
+    for field in ['protocole', 'observateur', 'grille_stoc']:
+        if field in params:
+            lookup[field] = params[field]
+    pagination = Paginator(args=params)
+    found = sites.find(lookup or None, skip=pagination.skip,
+                       limit=pagination.max_results)
+    return pagination.make_response(*found)
+
+
 @sites.route('/sites', methods=['GET'])
 @requires_auth(roles='Observateur')
 def list_sites():
-    pagination = Paginator()
-    found = sites.find(get_lookup_from_q(), skip=pagination.skip,
-                       limit=pagination.max_results)
-    return pagination.make_response(*found)
+    return _sites_generic_list(request.args)
 
 
 @sites.route('/moi/sites', methods=['GET'])
 @requires_auth(roles='Observateur')
 def list_user_sites():
-    pagination = Paginator()
-    protocole_id = request.args.get('protocole', None)
-    if protocole_id:
-        protocole_id = parse_id(protocole_id)
-        if not protocole_id:
-            abort(422, {'protocole': 'must be an objectid'})
-    lookup = {'observateur': g.request_user['_id']}
-    if protocole_id:
-        lookup['protocole'] = protocole_id
-    lookup.update(get_lookup_from_q() or {})
-    found = sites.find(lookup, skip=pagination.skip, limit=pagination.max_results)
-    return pagination.make_response(*found)
+    params = request.args.copy()
+    params['observateur'] = g.request_user['_id']
+    return _sites_generic_list(params)
 
 
 @sites.route('/protocoles/<objectid:protocole_id>/sites', methods=['GET'])
 @requires_auth(roles='Observateur')
 def list_protocole_sites(protocole_id):
-    pagination = Paginator()
-    lookup = {'protocole': protocole_id}
-    lookup.update(get_lookup_from_q() or {})
-    found = sites.find(lookup, skip=pagination.skip, limit=pagination.max_results)
-    return pagination.make_response(*found)
+    params = request.args.copy()
+    params['protocole'] = protocole_id
+    return _sites_generic_list(params)
 
 
 @sites.route('/sites', methods=['POST'])

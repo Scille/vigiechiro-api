@@ -323,6 +323,9 @@ Nom          |  type   | Requis | Description
  page        | integer |  non   | Page courante
  max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
  q           | string  |  non   | Filtre de recherche
+ observateur | objectid|  non   | N'afficher les site que d'un seul observateur
+ protocole   | objectid|  non   | N'afficher les site que d'un seul protocole
+ grille_stoc | objectid|  non   | N'afficher les site que d'une seule grille_stoc
 
 **Response**
 ```
@@ -341,39 +344,14 @@ Nom          |  type   | Requis | Description
 
 `GET /moi/sites`
 
-**Parameters**
-
-Nom          |  type   | Requis | Description
--------------|---------|--------|-------------
- page        | integer |  non   | Page courante
- max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
- q           | string  |  non   | Filtre de recherche
- protocole   | objectid|  non   | N'afficher les site que d'un seul protocole
-
-**Response**
-```
-200
-{
-    '_items': [
-        {
-            ...
-        }
-    ]
-}
-```
+Raccourcis vers la route `GET /sites/` avec param observateur définit à l'utilisateur courant.
 
 
 ### Lister les sites d'un protocole
 
 `GET /protocole/#id/sites`
 
-**Parameters**
-
-Nom          |  type   | Requis | Description
--------------|---------|--------|-------------
- page        | integer |  non   | Page courante
- max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
- q           | string  |  non   | Filtre de recherche
+Raccourcis vers la route `GET /sites/` avec param protocole définit à `#id`.
 
 
 ### Créer un site
