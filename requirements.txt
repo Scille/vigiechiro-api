@@ -1,12 +1,14 @@
-redis
 requests
-newrelic
-HireFire
+redis
 celery
-Flask-PyMongo
 Flask
-# authomatic's dependancies
-six
+Flask-PyMongo
+authomatic
+
+# 3rd party services
+HireFire
+newrelic
+
 # Application server
 gunicorn
 # tornado
