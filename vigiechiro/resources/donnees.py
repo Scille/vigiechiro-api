@@ -48,6 +48,7 @@ SCHEMA = {
     # 'localite': {'type': 'string', 'required': True},
     'participation': relation('participations', required=True),
     'proprietaire': relation('utilisateurs', required=True),
+    'publique': {'type': 'boolean'},
     # 'fichier': relation('fichiers'),
     # 'date_fichier': {'type': 'date', 'required': True},
     # 'probleme': {'type': 'string'},
@@ -106,6 +107,13 @@ SCHEMA = {
 donnees = Resource('donnees', __name__, schema=SCHEMA)
 
 
+def update_donnees_publique(user_id, donnees_publiques):
+    if not isinstance(donnees_publiques, bool):
+        raise RuntimeError('donnees_publiques must be a boolean')
+    db = current_app.data.db[donnees.name]
+    db.update({'proprietaire': user_id}, {'$set': {'publique': donnees_publiques}})
+
+
 def _check_access_rights(donnee_resource):
     # Check access rights : admin, validateur and owner can read,
     # other can read only if the data is public
@@ -116,6 +124,20 @@ def _check_access_rights(donnee_resource):
             owner = utilisateurs_resource.get_resource(donnee_resource['proprietaire'])
             if not owner.get('donnees_publiques', True):
                 abort(403)
+
+
+@donnees.route('/donnees', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_donnees():
+    pagination = Paginator()
+    if g.request_user['role'] in ['Administrateur', 'Validateur']:
+        # Show all donnees for admin and validateurs
+        lookup = None
+    else:
+        # Only show public and owned donnees
+        lookup = {'$or': [{'publique': True}, {'proprietaire': g.request_user['_id']}]}
+    found = donnees.find(lookup, skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(*found)
 
 
 @donnees.route('/donnees/<objectid:donnee_id>', methods=['GET'])
@@ -133,6 +155,10 @@ def create_donnee():
                            'observations': False, 'proprietaire': False})
     if 'proprietaire' not in payload:
         payload['proprietaire'] = g.request_user['_id']
+        payload['publique'] = g.request_user.get('donnees_publiques', False)
+    else:
+        payload['publique'] = utilisateurs_resource.get_resource(payload['proprietaire']
+            ).get('donnees_publiques', False)
     return donnees.insert(payload), 201
 
 

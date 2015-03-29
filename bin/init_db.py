@@ -55,6 +55,7 @@ def create_indexes():
 	], default_language='french', name='sitesTextIndex')
 	db.actualites.ensure_index([('_updated', -1)])
 	db.fichiers.ensure_index([('mime', 1)])
+	db.donnees.ensure_index([('proprietaire', 1), ('publique', 1)])
 
 
 def insert_default_documents():

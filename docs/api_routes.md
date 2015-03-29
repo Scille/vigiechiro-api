@@ -656,6 +656,36 @@ Administrateur, Validateur et observateur ayant créé la participation
 Données
 -------
 
+### Lister les données
+
+`GET /donnees`
+
+**Accès**
+
+Si propriétaire.donnees_publiques == False : propriétaire, administrateur et validateur
+Sinon : tous les observateurs
+
+**Parameters**
+
+Nom          |  type   | Requis | Description
+-------------|---------|--------|-------------
+ page        | integer |  non   | Page courante
+ max_results | integer |  non   | Nombre de résultats par page (défaut 40, max 100)
+
+**Response**
+```
+[
+    {
+        "_id": "54ba5dfd1d41c83768e76fc2",
+        "_created": "2015-01-17T13:05:01Z",
+        "_updated": "2015-01-17T13:05:01Z",
+        "_etag": "7b3cad09dd2f14a713a7d7710744b51ef10e2048",
+        ...
+    }
+]
+```
+
+
 ### Lister les données d'une participation
 
 `GET /participations/#id/donnees`

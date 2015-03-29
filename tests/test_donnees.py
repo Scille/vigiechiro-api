@@ -16,7 +16,7 @@ from vigiechiro import settings
 
 
 @pytest.fixture
-def donnee_env(participation_ready, taxons_base):
+def donnee_env(request, participation_ready, taxons_base):
     observateur, protocole, site = participation_ready
     # Post participation
     participations_url = '/sites/{}/participations'.format(site['_id'])
@@ -48,7 +48,15 @@ def donnee_env(participation_ready, taxons_base):
         ]
     }
     donnee_payload['_id'] = db.donnees.insert(donnee_payload)
+    def finalizer():
+        db.donnees.remove({'_id': donnee_payload['_id']})
+    request.addfinalizer(finalizer)
     return participation_ready + (participation, donnee_payload)
+
+
+@pytest.fixture
+def clean_donnees():
+    db.donnees.remove({})
 
 
 def test_new_donnee_required(administrateur):
@@ -57,7 +65,7 @@ def test_new_donnee_required(administrateur):
     assert r.status_code == 422, r.text
 
 
-def test_new_donnee(administrateur, participation_ready, taxons_base):
+def test_new_donnee(clean_donnees, administrateur, participation_ready, taxons_base):
     observateur, protocole, site = participation_ready
     # Post participation
     participations_url = '/sites/{}/participations'.format(site['_id'])
@@ -87,7 +95,7 @@ def test_new_donnee(administrateur, participation_ready, taxons_base):
     assert r.status_code == 201, r.text
 
 
-def test_new_donnee_access(participation_ready):
+def test_new_donnee_access(clean_donnees, participation_ready):
     # Only admin (in fact script from tadaridaC) can post new donnees
     observateur, protocole, site = participation_ready
     # Post participation
@@ -108,17 +116,26 @@ def test_access(donnee_env, observateur_other, validateur, administrateur):
     # Other observateurs can't see it
     r = observateur_other.get(donnee_url)
     assert r.status_code == 403, r.text
+    r = observateur_other.get('/donnees')
+    assert r.status_code == 200, r.text
+    assert(len(r.json()['_items']) == 0), r.json()
     # Validateur and admin still can
     r = validateur.get(donnee_url)
     assert r.status_code == 200, r.text
     r = administrateur.get(donnee_url)
     assert r.status_code == 200, r.text
+    r = validateur.get('/donnees')
+    assert r.status_code == 200, r.text
+    assert(len(r.json()['_items']) == 1), r.json()
     # Now switch back to public
     r = observateur.patch('/moi', json={'donnees_publiques': True})
     assert r.status_code == 200, r.text
     # Other observateur are now allowed
     r = observateur_other.get(donnee_url)
     assert r.status_code == 200, r.text
+    r = observateur_other.get('/donnees')
+    assert r.status_code == 200, r.text
+    assert(len(r.json()['_items']) == 1), r.json()
 
 
 def test_messages(donnee_env, observateur_other, validateur, administrateur):

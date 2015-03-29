@@ -145,6 +145,9 @@ def _utilisateur_patch(user_id, additional_context=None):
     payload = get_payload(allowed_fields)
     result = utilisateurs.update(user_id, payload,
                                  additional_context=additional_context)
+    if 'donnees_publiques' in payload:
+        from .donnees import update_donnees_publique
+        update_donnees_publique(user_id, payload['donnees_publiques'])
     return result
 
 
