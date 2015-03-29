@@ -20,6 +20,7 @@ from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
 
+
 SCHEMA = {
     'observateur': relation('utilisateurs', required=True),
     'protocole': relation('protocoles', required=True),
