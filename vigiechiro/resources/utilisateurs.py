@@ -121,7 +121,8 @@ def list_users():
     found = utilisateurs.find(get_lookup_from_q(),
                                skip=pagination.skip,
                                limit=pagination.max_results,
-                               additional_context=_hide_email())
+                               additional_context=_hide_email(),
+                               sort=[('pseudo', 1)])
     return pagination.make_response(*found)
 
 
