@@ -29,9 +29,9 @@ def validate_donnee_name(name):
     # See rules: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893805
     if re.match(r'^Cir[0-9]+-[0-9]{4}-Pass[0-9]{1,2}-Tron[0-9]{1,2}-Chiro_[01]_[0-9]+_000$', basename):
         # Protocole "routier" or "pedestre"
-        if int(re.search(r'Pass([0-9]{1,2})').group(1)) > 10:
+        if int(re.search(r'Pass([0-9]{1,2})', basename).group(1)) > 10:
             return None
-        if int(re.search(r'Tron([0-9]{1,2})').group(1)) > 15:
+        if int(re.search(r'Tron([0-9]{1,2})', basename).group(1)) > 15:
             return None
     elif re.match(r'^Car[0-9]+-[0-9]{4}-Pass[0-9]{1,2}-[a-zA-Z0-9]{1,5}_[01]_[0-9]{6}_[0-9]{6}_[0-9]{3}$', basename):
         # Protocole "point fixe"
