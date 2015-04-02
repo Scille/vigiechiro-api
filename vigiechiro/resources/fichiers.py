@@ -152,18 +152,18 @@ def fichier_create():
     if payload.keys():
         abort(422, {f: 'unknown field' for f in payload.keys()})
     if mime in ALLOWED_MIMES_PHOTOS:
-        path = '/photos/'
+        path = 'photos/'
     elif mime in ALLOWED_MIMES_TA:
-        path = '/ta/'
+        path = 'ta/'
         need_tadarida_titre = True
     elif mime in ALLOWED_MIMES_TC:
-        path = '/tc/'
+        path = 'tc/'
         need_tadarida_titre = True
     elif mime in ALLOWED_MIMES_WAV:
-        path = '/wav/'
+        path = 'wav/'
         need_tadarida_titre = True
     else:
-        path = '/others/'
+        path = 'others/'
     payload = {
         'titre': titre,
         'mime': mime,
