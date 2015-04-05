@@ -6,9 +6,12 @@
 ###########################################################
 # Update this line with the R packages to install:
 
-my_packages = c("randomForest")
+my_packages = c("randomForest", "data.table")
 
 ###########################################################
+
+local({r <- getOption("repos"); 
+       r["CRAN"] <- "http://cran.r-project.org"; options(repos=r)})
 
 install_if_missing = function(p) {
   if (p %in% rownames(installed.packages()) == FALSE) {
