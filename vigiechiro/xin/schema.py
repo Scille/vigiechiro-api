@@ -44,13 +44,14 @@ ERROR_STORAGE_TYPE = "'%s' must be stored as '%s' in database"
 ERROR_UNIQUE_FIELD = "value '%s' is not unique"
 
 
-def relation(resource, field='_id', expend=True, **kwargs):
+def relation(resource, field='_id', expend=True, validator=None, **kwargs):
     """Data model template for a resource relation"""
     kwargs.update({'type': 'objectid',
                    'data_relation': {
                        'resource': resource,
                        'field': field,
-                       'expend': expend
+                       'expend': expend,
+                       'validator': validator
                    }
                    })
     return kwargs
@@ -222,7 +223,6 @@ class SchemaRunner:
         list_schema = context.schema.get('schema', None)
         if not list_schema:
             raise SchemaRunnerException('List must have a `schema` attribute')
-
         for i, elem in enumerate(context.value):
             context.push(list_schema, i, elem)
             self._run_schema(context)
@@ -242,11 +242,18 @@ class Unserializer(SchemaRunner):
         return super().run(*args, **kwargs)
 
     def _run_type_set(self, context):
+        set_schema = context.schema.get('schema', None)
+        if not set_schema:
+            raise SchemaRunnerException('Set must have a `schema` attribute')
         if isinstance(context.value, list):
             unserialized = set(context.value)
             schema, field, _ = context.pop()
             context.value[field] = unserialized
             context.push(schema, field, unserialized)
+            for i, elem in enumerate(context.value):
+                context.push(set_schema, i, elem)
+                self._run_schema(context)
+                context.pop()
         else:
             context.add_error(ERROR_STORAGE_TYPE % ('set', 'list'))
 
@@ -425,6 +432,9 @@ class GenericValidator(SchemaRunner):
         pass
 
     def _run_type_set(self, context):
+        set_schema = context.schema.get('schema', None)
+        if not set_schema:
+            raise SchemaRunnerException('Set must have a `schema` attribute')
         error = lambda: context.add_error(ERROR_BAD_TYPE % 'set')
         if isinstance(context.value, set):
             # Given set is not supported in mongodb, it is stored as a list
@@ -445,6 +455,10 @@ class GenericValidator(SchemaRunner):
         else:
             # No other convertion possible...
             return error()
+        for i, elem in enumerate(context.value):
+            context.push(set_schema, i, elem)
+            self._run_schema(context)
+            context.pop()
 
     def _run_type_geometrycollection(self, context):
         try:
@@ -544,7 +558,7 @@ class Validator(GenericValidator):
             if not isinstance(serialized, ObjectId):
                 context.add_error("missing field `{}` to shrink"
                                   " data_relation".format(field))
-            schema, field, _ = context.pop()
+            schema, field, data_relation = context.pop()
             context.value[field] = serialized
             context.push(schema, field, serialized)
         else:
@@ -554,6 +568,11 @@ class Validator(GenericValidator):
                 context.add_error("value '%s' must exist in resource"
                                   " '%s', field '%s'." %
                                   (context.value, resource_name, field))
+        if data_relation and 'validator' in data_relation:
+            error = data_relation['validator'](context, data_relation)
+            if error:
+                context.add_error(error)
+
 
     def _run_attribute_unique(self, context):
         if not context.schema['unique']:

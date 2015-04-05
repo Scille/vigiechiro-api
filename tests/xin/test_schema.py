@@ -281,7 +281,7 @@ def test_nested_data_relation(clean_db):
 
 
 def test_bijection_set():
-    schema = {'s': {'type': 'set'}}
+    schema = {'s': {'type': 'set', 'schema': {'type': 'integer'}}}
     u = Unserializer(schema)
     v = GenericValidator(schema)
     data = {'s': {1, 2, 3}}
