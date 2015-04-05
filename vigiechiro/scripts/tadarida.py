@@ -140,18 +140,16 @@ def run_tadarida_c():
         if not total:
             # Nothing to do, just leave
             return
-        def expected_generate_name(input_file):
-            path, name = input_file.rsplit('/', 1)
-            return path + '/' + name.rsplit('.', 1)[0] + '.tc'
-        items = [ProcessItem(doc, wdir_path + '/tas', 'application/tc', expected_generate_name)
+        working_dir = wdir_path + '/tas'
+        items = [ProcessItem(doc, working_dir, 'application/tc',
+                             expected_output_file=working_dir + '/output.tc')
                  for doc in cursor]
         # Run tadarida
         logging.info('running tadaridaC')
-        for item in items:
-            ret = subprocess.call([TADARIDA_C, item.input_file], cwd=wdir_path)
-            if ret:
-                logging.error('Error in running tadaridaC : returns {}'.format(ret))
-        # Now upload back the results
+        ret = subprocess.call([TADARIDA_C, working_dir], cwd=wdir_path)
+        if ret:
+            logging.error('Error in running tadaridaC : returns {}'.format(ret))
+        # Only one output is generated
         for item in items:
             item.upload_result()
         # Continue until no more fichier request to be processed

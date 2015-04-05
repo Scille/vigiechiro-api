@@ -1,17 +1,16 @@
 #! /bin/sh
 
 TADARIDAC_DIR=`dirname $0`/tadaridaC_src
-TADARIDAC_LEARNER_NAME="ClassifEsp.learner"
+TADARIDAC_LEARNER_NAME=$TADARIDAC_DIR/ClassifEsp.learner
 
 if ( [ "$TADARIDAC_LEARNER_URL" = "" ] )
 then
- echo "TADARIDAC_LEARNER_URL must be defined among the environment variables"
- exit 1
+    TADARIDAC_LEARNER_URL='https://s3-eu-west-1.amazonaws.com/vigie-chiro-site/ClassifEsp.learner'
 fi
 
 if ( [ "$#" -eq 0 ] )
 then
-    echo 'usage: tadaridaC <input.ta>'
+    echo 'usage: tadaridaC <directory>'
     exit 1
 else
     INPUT_FILE=`readlink -f $1`
@@ -22,7 +21,6 @@ else
     fi
 fi
 
-cd $TADARIDAC_DIR
 
 if ( ! [ -f $TADARIDAC_LEARNER_NAME ] )
 then
@@ -31,4 +29,4 @@ then
 fi
 
 # Finally start tadaridaC R script
-Rscript ./TadaridaC_0.2.0.r $INPUT_FILE
+cd $TADARIDAC_DIR && Rscript ./TadaridaC.r $INPUT_FILE

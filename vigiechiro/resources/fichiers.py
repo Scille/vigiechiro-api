@@ -155,20 +155,16 @@ def fichier_create():
         require_process = None
         proprietaire = g.request_user['_id']
     # Remaining fields are unexpected
-    need_tadarida_titre = None
     if payload.keys():
         abort(422, {f: 'unknown field' for f in payload.keys()})
     if mime in ALLOWED_MIMES_PHOTOS:
         path = 'photos/'
     elif mime in ALLOWED_MIMES_TA:
         path = 'ta/'
-        need_tadarida_titre = True
     elif mime in ALLOWED_MIMES_TC:
         path = 'tc/'
-        need_tadarida_titre = True
     elif mime in ALLOWED_MIMES_WAV:
         path = 'wav/'
-        need_tadarida_titre = True
     else:
         path = 'others/'
     payload = {
@@ -179,11 +175,6 @@ def fichier_create():
         # Add uuid to make sure the file name is unique
         's3_id': path + titre + '.' + uuid.uuid4().hex
     }
-    if need_tadarida_titre:
-        tadarida_titre = validate_donnee_name(titre)
-        if not tadarida_titre:
-            abort(422, {'titre': 'Invalid titre for tadarida related file'})
-        # payload['tadarida_titre'] = tadarida_titre
     if require_process:
         payload['require_process'] = require_process
     if lien_donnee:

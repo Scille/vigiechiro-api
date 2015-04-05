@@ -56,13 +56,6 @@ def _generate_participation(pieces_jointes, participation_ready):
     assert r.status_code == 201, r.text
     participation = r.json()
     return  participation, fichiers_ids
-    # # Upload files
-    # pjs_participation = {}
-    # pieces_jointes_url = '/participations/{}/pieces_jointes'.format(participation['_id'])
-    # # Mark files as part of the participation
-    # r = observateur.put(pieces_jointes_url, json=pjs_participation)
-    # assert r.status_code == 200, r.text
-    # return participation, pjs_participation
 
 
 @pytest.mark.slow
