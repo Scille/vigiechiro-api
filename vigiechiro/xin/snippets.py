@@ -89,7 +89,15 @@ def get_url_params(params_spec=None, args=None):
             continue
         param_type = config.get('type', str)
         try:
-            result[param] = param_type(args[param])
+            if param_type is bool:
+                if args[param].lower() == 'true':
+                    result[param] = True
+                elif args[param].lower() == 'false':
+                    result[param] = False
+                else:
+                    raise ValueError()
+            else:
+                result[param] = param_type(args[param])
         except:
             errors[param] = 'bad value, should be {}'.format(param_type)
     if errors:
