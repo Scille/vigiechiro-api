@@ -67,11 +67,9 @@ class ProcessItem:
         pj_data = {'titre': self.expected_output_file.split('/')[-1],
                    'mime': self.expected_mime,
                    'proprietaire': str(self._input_doc['proprietaire']),
-                   'fichier_source': str(self._input_doc['_id'])}
+                   'lien_donnee': str(self._input_doc['lien_donnee'])}
         if require_process:
             pj_data['require_process'] = require_process
-        if 'lien_participation' in self._input_doc:
-            pj_data['lien_participation'] = str(self._input_doc['lien_participation'])
         r = requests.post(settings.BACKEND_DOMAIN + '/fichiers',
                           json=pj_data, auth=AUTH)
         if r.status_code != 201:

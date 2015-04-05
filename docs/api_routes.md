@@ -535,6 +535,7 @@ numero                 | integer |  oui   | draft : à terme le numero sera dét
 date_debut             | datetime|  oui   |
 date_fin               | datetime|  non   |
 commentaire            | string  |  non   |
+donnees                | objectid|  non   | liens vers des fichiers uploadés (ta, tc ou données audio)
 meteo                  | dict    |  non   |
 meteo.temperature_debut| integer |  non   |
 meteo.temperature_fin  | integer |  non   |
@@ -581,33 +582,14 @@ Administrateur et observateur ayant créé la participation
 
 `GET /participations/#id/pieces_jointes`
 
-**Params**
-
-Nom    |  Type   | Requis | Description
--------|---------|--------|-------------
-photos | boolean |   non  | Retourne ou non les pièces jointes de type photo (défaut: oui)
-ta     | boolean |   non  | Retourne ou non les pièces jointes de type ta (défaut: oui)
-tc     | boolean |   non  | Retourne ou non les pièces jointes de type tc (défaut: oui)
-wav    | boolean |   non  | Retourne ou non les pièces jointes de type wav (défaut: oui)
-
-
 **Response**
 
 ```
 200
 {
-    'wav': [
+    'pieces_jointes': [
         ...
-    ],
-    'ta': [
-        ...
-    ],
-    'tc': [
-        ...
-    ],
-    'photos': [
-        ...
-    ],
+    ]
 }
 ```
 
@@ -624,14 +606,8 @@ Administrateur et observateur ayant créé la participation
 
 Nom                    |  Type   | Requis | Description
 -----------------------|---------|--------|-------------
-wav                    | list    |  non   |
-wav[x]                 | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `audio/wav` ou `audio/x-wav`
-ta                     | list    |  non   |
-ta[x]                  | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `application/ta` ou `application/tac`
-photos                 | list    |  non   |
-photos[x]              | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `image/bmp`, `image/png`, `image/jpg` ou bien `image/jpeg`
-
-Note : au moins un des champs `wav`, `ta` ou `photos` doit être fourni
+pieces_jointes         | list    |  oui   |
+pieces_jointes[x]      | ojectid |        | lien vers une ressource fichier dont l'upload est terminé de type `image/bmp`, `image/png`, `image/jpg` ou bien `image/jpeg`
 
 **Accès**
 
@@ -717,13 +693,13 @@ Nom          |  type   | Requis | Description
 ```
 
 
-### Créer une donnée
+### Créer une donnée pour une participation
 
-`POST /donnees`
+`POST /participations/#id/donnees`
 
 **Accès**
 
-Administrateur seulement
+Propriétaire de la participation et administrateur.
 
 **Input**
 
@@ -731,7 +707,6 @@ Nom                                    |  Type   | Requis | Description
 ---------------------------------------|---------|-------------
  proprietaire                          | objectid|  non   | Si non fourni, le propriétaire sera l'utilisateur courant
  commentaire                           | string  |  non   |
- participation                         | objectid|  oui   |
  observations                          | list    |  non   | liste des observations faites
  observations[x].temps_debut           | float   |  oui   |
  observations[x].temps_fin             | float   |  oui   |
@@ -814,8 +789,7 @@ Nom                 |  Type   | Description
  mime               | string  | Mime type du fichier
  multipart          | boolean | Le fichier va-t-il être uploader en multipart ?
  require_process    | string  | Administrateur seulement, `tadarida_c` ou `tadarida_d`
- fichier_source     | objectid| Administrateur seulement, fichier ayant servi à généré le fichier
- lien_participation | objectid| Relie le fiechier à une participation
+ lien_donnee        | objectid| Relie le fichier à une donnee
  lien_protocole     | objectid| Relie le fichier à un protocole
  proprietaire       | objectid| L'administrateur peut définir le propriétaire du fichier
 

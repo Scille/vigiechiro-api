@@ -19,12 +19,28 @@ from .actualites import create_actuality_nouvelle_participation
 from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
+from .donnees import donnees as donnees_resource
+
+def _validate_site(context, site):
+    print('validating site : {}'.format(fichier))
+    if site['observateur'] != g.request_user['_id']:
+        return "observateur doesn't own this site"
+    if not site.get('verrouille', False):
+        return "cannot create protocole on an unlocked site"
+
+
+def _validate_piece_jointe(context, fichier):
+    print('validating fichier : {}'.format(fichier))
+    if fichier['mime'] not in ALLOWED_MIMES_PHOTOS:
+        return 'bad mime type, should be of {}'.format(ALLOWED_MIMES_PHOTOS)
+    if not fichier.get('disponible', False):
+        return 'upload is not done'.format(pj_id)
 
 
 SCHEMA = {
     'observateur': relation('utilisateurs', required=True),
     'protocole': relation('protocoles', required=True),
-    'site': relation('sites', required=True),
+    'site': relation('sites', required=True, validator=_validate_site),
     'date_debut': {'type': 'datetime', 'required': True},
     'date_fin': {'type': 'datetime'},
     'meteo': {
@@ -47,6 +63,10 @@ SCHEMA = {
                 'date': {'type': 'datetime', 'required': True},
             }
         }
+    },
+    'pieces_jointes': {
+        'type': 'set',
+        'schema': relation('fichiers', validator=_validate_piece_jointe, expend=False)
     },
     'configuration': {
         'type': 'dict',
@@ -114,13 +134,12 @@ def display_participation(participation_id):
 @participations.route('/sites/<objectid:site_id>/participations', methods=['POST'])
 @requires_auth(roles='Observateur')
 def create_participation(site_id):
-    # TODO : handle numero automatically
-    # payload = get_payload({'numero': True, 'date_debut': False,
     payload = get_payload({'date_debut': False, 'date_fin': False,
                            'commentaire': False, 'meteo': False,
-                           'configuration': False})
+                           'configuration': False, 'donnees': False})
     payload['observateur'] = g.request_user['_id']
     payload['site'] = site_id
+    # Other inputs sanity check
     site_resource = get_resource('sites', site_id, auto_abort=False)
     if not site_resource:
         abort(422, {'site': 'no site with this id'})
@@ -135,7 +154,35 @@ def create_participation(site_id):
                    if p['protocole'] == protocole_id), None)
     if not joined:
         abort(422, {'site': 'not registered to corresponding protocole'})
+    donnees_fichiers = [get_resource('fichiers', d) for d in payload.pop('donnees', [])]
+    if next((d for d in donnees_fichiers if not d), None):
+        abort(422, {'donnees': 'some ObjectIds are invalid fichiers resources'})
+    # Create the participation
     document = participations.insert(payload)
+    # Given a list of fichiers and a participation, generate the donnees
+    # and link the fichiers to them
+    donnees = {}
+    for fichier in donnees_fichiers:
+        basename = fichier['titre'].rsplit('.', 1)[0]
+        if basename not in donnees:
+            donnees[basename] = []
+        donnees[basename].append(fichier)
+    for basename, fichiers in donnees.items():
+        donnee = donnees_resource.insert({'participation': document['_id'],
+                                          'proprietaire': payload['observateur'],
+                                          'publique': g.request_user['donnees_publiques']})
+        for fichier in fichiers:
+            if fichier['mime'] in ALLOWED_MIMES_WAV:
+                current_app.data.db.fichiers.update({'_id': fichier['_id']},
+                                                    {'$set': {'lien_donnee': donnee['_id'],
+                                                     'require_process': 'tadarida_d'}}, multi=True)
+            elif fichier['mime'] in ALLOWED_MIMES_TA:
+                current_app.data.db.fichiers.update({'_id': fichier['_id']},
+                                                    {'$set': {'lien_donnee': donnee['_id'],
+                                                     'require_process': 'tadarida_c'}}, multi=True)
+            elif fichier['mime'] in ALLOWED_MIMES_TC:
+                current_app.data.db.fichiers.update({'_id': fichier['_id']},
+                                                    {'$set': {'lien_donnee': donnee['_id']}}, multi=True)
     # Finally create corresponding actuality
     create_actuality_nouvelle_participation(document)
     return document, 201
@@ -184,113 +231,24 @@ def edit_participation(participation_id):
 def add_pieces_jointes(participation_id):
     participation_resource = participations.get_resource(participation_id)
     _check_edit_access(participation_resource)
-    payload = get_payload({'photos', 'ta', 'wav'})
-    errors = {}
-    for field in ['ta', 'wav', 'photos']:
-        if not isinstance(payload.get(field, []), list):
-            errors[field] = 'must be a list'
-    if errors:
-        abort(422, errors)
-    def check_pj(pj_id, mime):
-        mime = mime if isinstance(mime, list) else [mime]
-        pj = fichiers_resource.get_resource(pj_id, auto_abort=False)
-        if not pj:
-            return 'bad id {}'.format(pj_id), pj
-        elif pj['mime'] not in mime:
-            return 'file {} bad mime type, should be of {}'.format(pj_id, mime), pj
-        elif not pj.get('disponible', False):
-            return 'file {} upload is not done'.format(pj_id), pj
-        return None, pj
-    errors_photos = []
-    errors_ta = []
-    errors_wav = []
-    photos_ids = [parse_id(_id) for _id in payload.get('photos', [])]
-    ta_ids = [parse_id(_id) for _id in payload.get('ta', [])]
-    wav_ids = [parse_id(_id) for _id in payload.get('wav', [])]
-    if next((_id for _id in photos_ids+ta_ids+wav_ids if _id == None), None):
-        abort(422, 'some given ids are not valid ObjectId')
-    if not photos_ids and not ta_ids and not wav_ids:
-        abort(422, 'at least one field among ta, wav and photos is required')
-    for pj_id in photos_ids:
-        error, pj = check_pj(pj_id, ALLOWED_MIMES_PHOTOS)
-        if error:
-            errors_photos.append(error)
-    for pj_id in ta_ids:
-        error, pj = check_pj(pj_id, ALLOWED_MIMES_TA)
-        if error:
-            errors_ta.append(error)
-    for pj_id in wav_ids:
-        error, pj = check_pj(pj_id, ALLOWED_MIMES_WAV)
-        if error:
-            errors_wav.append(error)
-    if errors_wav or errors_ta or errors_photos:
-        abort(422, {'photos': errors_photos, 'ta': errors_ta, 'wav': errors_wav})
-    # The pieces jointes are valid, update the database
-    result = {}
-    if wav_ids:
-        result['wav'] = current_app.data.db.fichiers.update(
-            {'_id': {'$in': wav_ids}},
-            {'$set': {
-                'require_process': 'tadarida_d',
-                'lien_participation': participation_id}
-            }, multi=True)
-    if ta_ids:
-        result['ta'] = current_app.data.db.fichiers.update(
-            {'_id': {'$in': ta_ids}},
-            {'$set': {
-                'require_process': 'tadarida_c',
-                'lien_participation': participation_id}
-            }, multi=True)
-    if photos_ids:
-        result['photos'] = current_app.data.db.fichiers.update(
-            {'_id': {'$in': photos_ids}},
-            {'$set': {'lien_participation': participation_id}},
-            multi=True)
-    return result
+    payload = get_payload({'pieces_jointes': True})
+    if not payload['pieces_jointes']:
+        abort(422, {'pieces_jointes': 'no given pieces jointes to add'})
+    payload['pieces_jointes'] += participation_resource.get('pieces_jointes', [])
+    return participations.update(participation_id, payload)
 
 
 @participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['GET'])
 @requires_auth(roles='Observateur')
 def get_pieces_jointes(participation_id):
-    # import pdb; pdb.set_trace()
-    params = get_url_params({
-        'photos': {'required': False, 'type': bool},
-        'ta': {'required': False, 'type': bool},
-        'tc': {'required': False, 'type': bool},
-        'wav': {'required': False, 'type': bool}
-    })
     participation_resource = participations.find_one(participation_id)
     _check_read_access(participation_resource)
-    lookup = {'lien_participation': participation_resource['_id']}
-    if params:
-        allowed_mimes = []
-        result = {}
-        if params.get('photos', False):
-            allowed_mimes += ALLOWED_MIMES_PHOTOS
-            result['photos'] = []
-        if params.get('ta', False):
-            allowed_mimes += ALLOWED_MIMES_TA
-            result['ta'] = []
-        if params.get('tc', False):
-            allowed_mimes += ALLOWED_MIMES_TC
-            result['tc'] = []
-        if params.get('wav', False):
-            allowed_mimes += ALLOWED_MIMES_WAV
-            result['wav'] = []
-        lookup['mime'] = {'$in': allowed_mimes}
+    pj_ids = participation_resource.get('pieces_jointes', [])
+    if not pj_ids:
+        return {'pieces_jointes': []}
     else:
-        result = {'photos': [], 'ta': [], 'tc': [], 'wav': []}
-    pieces_jointes = current_app.data.db.fichiers.find(lookup)
-    for pj in pieces_jointes:
-        if pj['mime'] in ALLOWED_MIMES_PHOTOS:
-            result['photos'].append(pj)
-        elif pj['mime'] in ALLOWED_MIMES_TA:
-            result['ta'].append(pj)
-        elif pj['mime'] in ALLOWED_MIMES_TC:
-            result['tc'].append(pj)
-        elif pj['mime'] in ALLOWED_MIMES_WAV:
-            result['wav'].append(pj)
-    return result
+        lookup = {'_id': {'$in': list(pj_ids)}}
+        return {'pieces_jointes': list(current_app.data.db.fichiers.find(lookup))}
 
 
 @participations.route('/participations/<objectid:participation_id>/messages', methods=['PUT'])

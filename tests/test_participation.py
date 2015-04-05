@@ -10,7 +10,8 @@ from .test_protocoles import protocoles_base
 from .test_taxons import taxons_base
 from .test_sites import obs_sites_base
 from .test_fichiers import (file_uploaded, custom_upload_file, clean_fichiers,
-                            file_init, file_uploaded)
+                            file_init)
+
 
 @pytest.fixture
 def clean_participations(request):
@@ -74,26 +75,8 @@ def test_pieces_jointes_access(participation_ready, file_uploaded,
     assert r.status_code == 200, r.text
 
 
-def test_participation(participation_ready, file_uploaded, observateur_other):
+def test_donnees(participation_ready, observateur):
     observateur, protocole, site = participation_ready
-    # Post participation
-    participations_url = '/sites/{}/participations'.format(site['_id'])
-    r = observateur.post(participations_url,
-                         json={'date_debut': format_datetime(datetime.utcnow())})
-    assert r.status_code == 201, r.text
-    participation = r.json()
-    sent_pieces_jointes = set()
-    # Send files
-    r = observateur.get('/participations/{}'.format(participation['_id']))
-    assert r.status_code == 200, r.text
-    pieces_jointes_url = '/participations/{}/pieces_jointes'.format(participation['_id'])
-    r = observateur.put(pieces_jointes_url, json={'photos': [file_uploaded['_id']]})
-    assert r.status_code == 200, r.text
-    # Send multiple files with different allowed mime types
-    photos_ids = []
-    for i, mime in enumerate(['image/bmp', 'image/png', 'image/jpg']):
-        res = custom_upload_file({'titre': 'file_photo_{}'.format(i), 'mime': mime}, observateur)
-        photos_ids.append(res['_id'])
     tadarida_file_template = "Car170517-2014-Pass1-C1_1_140702_225107_{:0>3}.{}"
     ta_ids = []
     for i, mime in enumerate(['application/ta', 'application/tac']):
@@ -103,37 +86,55 @@ def test_participation(participation_ready, file_uploaded, observateur_other):
     for i, mime in enumerate(['audio/wav', 'audio/x-wav']):
         res = custom_upload_file({'titre': tadarida_file_template.format(i, 'wav'), 'mime': mime}, observateur)
         wav_ids.append(res['_id'])
-    r = observateur.put(pieces_jointes_url,
-                        json={'wav': wav_ids, 'ta': ta_ids, 'photos': photos_ids })
+    participations_url = '/sites/{}/participations'.format(site['_id'])
+    r = observateur.post(participations_url,
+                         json={'date_debut': format_datetime(datetime.utcnow()),
+                               'donnees': wav_ids + ta_ids})
+    assert r.status_code == 201, r.text
+    # Now check the donnees generated
+    r = observateur.get('/participations/{}/donnees'.format(r.json()['_id']))
+    assert r.status_code == 200, r.text
+    donnees = r.json()['_items']
+    assert len(donnees) == 2, r.json()
+    # Retrieve the fichiers behind the donnees
+    for donnee in donnees:
+        r = observateur.get('/donnees/{}/fichiers'.format(donnee['_id']))
+        assert r.status_code == 200, r.text
+        assert len(r.json()['_items']) == 2, r.json()
+        # Test filter too
+        r = observateur.get('/donnees/{}/fichiers'.format(donnee['_id']),
+            params={'ta': True, 'wav': False})
+        assert r.status_code == 200, r.text
+        assert len(r.json()['_items']) == 1, r.json()
+
+
+def test_participation(participation_ready, file_uploaded, observateur_other):
+    observateur, protocole, site = participation_ready
+    # Post participation
+    participations_url = '/sites/{}/participations'.format(site['_id'])
+    r = observateur.post(participations_url,
+                         json={'date_debut': format_datetime(datetime.utcnow())})
+    assert r.status_code == 201, r.text
+    participation = r.json()
+    # Send files
+    r = observateur.get('/participations/{}'.format(participation['_id']))
+    assert r.status_code == 200, r.text
+    pieces_jointes_url = '/participations/{}/pieces_jointes'.format(participation['_id'])
+    r = observateur.put(pieces_jointes_url, json={'pieces_jointes': [file_uploaded['_id']]})
+    assert r.status_code == 200, r.text
+    # Send multiple files with different allowed mime types
+    photos_ids = []
+    for i, mime in enumerate(['image/bmp', 'image/png', 'image/jpg']):
+        res = custom_upload_file({'titre': 'file_photo_{}'.format(i), 'mime': mime}, observateur)
+        photos_ids.append(res['_id'])
+    r = observateur.put(pieces_jointes_url, json={'pieces_jointes': photos_ids})
     photos_ids.append(file_uploaded['_id'])
     assert r.status_code == 200, r.text
     # Finally display all the pieces_jointes
     r = observateur.get(pieces_jointes_url)
     assert r.status_code == 200, r.text
-    pieces_jointes = r.json()
-    assert sorted(pieces_jointes.keys()) == sorted(['tc', 'ta', 'wav', 'photos'])
-    assert len(pieces_jointes['tc']) == 0
-    assert len(pieces_jointes['ta']) == len(ta_ids)
-    assert len(pieces_jointes['wav']) == len(wav_ids)
-    assert len(pieces_jointes['photos']) == len(photos_ids)
-    # Bonus effect : pieces_jointes sould be marked to execute tadarida on them
-    for pj in pieces_jointes['ta']:
-        assert pj['_id'] in ta_ids
-        assert pj['require_process'] == 'tadarida_c'
-    assert len(pieces_jointes['wav']) == len(wav_ids)
-    for pj in pieces_jointes['wav']:
-        assert pj['_id'] in wav_ids
-        assert pj['require_process'] == 'tadarida_d'
-    assert len(pieces_jointes['photos']) == len(photos_ids)
-    for pj in pieces_jointes['photos']:
-        assert pj['_id'] in photos_ids
-        assert 'require_process' not in pj
-    # Now try to get only a filter on pieces_jointes
-    r = observateur.get(pieces_jointes_url, params={'photos': True})
-    assert r.status_code == 200, r.text
-    pieces_jointes = r.json()
-    assert sorted(pieces_jointes.keys()) == sorted(['photos'])
-    assert len(pieces_jointes['photos']) == len(photos_ids)
+    pieces_jointes = r.json()['pieces_jointes']
+    assert len(pieces_jointes) == len(photos_ids)
 
 
 def test_participation_bad_file(participation_ready, file_init):

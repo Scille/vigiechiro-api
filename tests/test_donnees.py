@@ -59,13 +59,7 @@ def clean_donnees():
     db.donnees.remove({})
 
 
-def test_new_donnee_required(administrateur):
-    # Try to create a donnee with no participation
-    r = administrateur.post('/donnees', json={})
-    assert r.status_code == 422, r.text
-
-
-def test_new_donnee(clean_donnees, administrateur, participation_ready, taxons_base):
+def test_bad_change_proprietaire(clean_donnees, administrateur, participation_ready, taxons_base):
     observateur, protocole, site = participation_ready
     # Post participation
     participations_url = '/sites/{}/participations'.format(site['_id'])
@@ -74,7 +68,6 @@ def test_new_donnee(clean_donnees, administrateur, participation_ready, taxons_b
     assert r.status_code == 201, r.text
     donnee_payload = {
         'proprietaire': observateur.user_id,
-        'participation': r.json()['_id'],
         'observations': [
             {
                 'temps_debut': 102,
@@ -91,23 +84,59 @@ def test_new_donnee(clean_donnees, administrateur, participation_ready, taxons_b
             }
         ]
     }
-    r = administrateur.post('/donnees', json=donnee_payload)
-    assert r.status_code == 201, r.text
+    r = administrateur.post('/participations/{}/donnees'.format(r.json()['_id']),
+                            json=donnee_payload)
+    assert r.status_code == 422, r.text
 
 
-def test_new_donnee_access(clean_donnees, participation_ready):
-    # Only admin (in fact script from tadaridaC) can post new donnees
+def test_new_donnee(clean_donnees, administrateur, participation_ready, taxons_base):
     observateur, protocole, site = participation_ready
     # Post participation
     participations_url = '/sites/{}/participations'.format(site['_id'])
     r = observateur.post(participations_url,
                          json={'date_debut': format_datetime(datetime.utcnow())})
     assert r.status_code == 201, r.text
-    r = observateur.post('/donnees', json={'participation': r.json()['_id']})
+    donnee_payload = {
+        'observations': [
+            {
+                'temps_debut': 102,
+                'temps_fin': 1300,
+                'frequence_mediane': 10000000,
+                'tadarida_taxon': str(taxons_base[1]['_id']),
+                'tadarida_probabilite': 70,
+                'tadarida_taxon_autre': [
+                    {
+                        'taxon': str(taxons_base[2]['_id']),
+                        'probabilite': 30
+                    },
+                ]
+            }
+        ]
+    }
+    r = administrateur.post('/participations/{}/donnees'.format(r.json()['_id']),
+                            json=donnee_payload)
+    assert r.status_code == 201, r.text
+
+
+def test_new_donnee_access(clean_donnees, participation_ready, administrateur, observateur_other):
+    observateur, protocole, site = participation_ready
+    # Post participation
+    participations_url = '/sites/{}/participations'.format(site['_id'])
+    r = observateur.post(participations_url,
+                         json={'date_debut': format_datetime(datetime.utcnow())})
+    assert r.status_code == 201, r.text
+    # Admin (in fact script from tadaridaC) can post new donnees for observateur
+    donnees_url = '/participations/{}/donnees'.format(r.json()['_id'])
+    r = administrateur.post(donnees_url,
+                            json={})
+    assert r.status_code == 201, r.text
+    # But other observateur cannot
+    r = observateur_other.post(donnees_url,
+                               json={})
     assert r.status_code == 403, r.text
 
 
-def test_access(donnee_env, observateur_other, validateur, administrateur):
+def test_access(clean_donnees, donnee_env, observateur_other, validateur, administrateur):
     observateur, protocole, site, participation, donnee = donnee_env
     donnee_url = '/donnees/{}'.format(donnee['_id'])
     # Observateur wants to keep it work private

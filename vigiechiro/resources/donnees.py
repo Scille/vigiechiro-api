@@ -12,7 +12,7 @@ import re
 from ..xin import Resource
 from ..xin.tools import jsonify, abort
 from ..xin.auth import requires_auth
-from ..xin.snippets import Paginator, get_payload
+from ..xin.snippets import Paginator, get_payload, get_resource, get_url_params
 from ..xin.schema import relation, choice
 
 from .utilisateurs import utilisateurs as utilisateurs_resource
@@ -44,12 +44,11 @@ def validate_donnee_name(name):
 
 
 SCHEMA = {
+    'titre': {'type': 'string'},
     'commentaire': {'type': 'string'},
-    # 'localite': {'type': 'string', 'required': True},
     'participation': relation('participations', required=True),
     'proprietaire': relation('utilisateurs', required=True),
     'publique': {'type': 'boolean'},
-    # 'fichier': relation('fichiers'),
     # 'date_fichier': {'type': 'date', 'required': True},
     # 'probleme': {'type': 'string'},
     # 'sous_probleme': {'type': 'string'},
@@ -148,17 +147,58 @@ def display_donnee(donnee_id):
     return donnee_resource
 
 
-@donnees.route('/donnees', methods=['POST'])
-@requires_auth(roles='Administrateur')
-def create_donnee():
-    payload = get_payload({'commentaire': False, 'participation': True,
-                           'observations': False, 'proprietaire': False})
-    if 'proprietaire' not in payload:
-        payload['proprietaire'] = g.request_user['_id']
-        payload['publique'] = g.request_user.get('donnees_publiques', False)
-    else:
+@donnees.route('/donnees/<objectid:donnee_id>/fichiers', methods=['GET'])
+@requires_auth(roles='Observateur')
+def display_donnee_fichiers(donnee_id):
+    from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_TA,
+                           ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
+    donnee_resource = donnees.get_resource(donnee_id)
+    _check_access_rights(donnee_resource)
+    lookup = {'lien_donnee': donnee_id}
+    payload = get_url_params({'ta': {'type': bool, 'required': False},
+                              'tc': {'type': bool, 'required': False},
+                              'wav': {'type': bool, 'required': False}})
+    if payload:
+        mime = []
+        if payload.get('ta', False):
+            mime += ALLOWED_MIMES_TA
+        if payload.get('tc', False):
+            mime += ALLOWED_MIMES_TC
+        if payload.get('wav', False):
+            mime += ALLOWED_MIMES_WAV
+        lookup['mime'] = {'$in': mime}
+    pagination = Paginator()
+    found = fichiers_resource.find(lookup, skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(*found)
+
+
+@donnees.route('/participations/<objectid:participation_id>/donnees', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_participation_donnees(participation_id):
+    pagination = Paginator()
+    lookup = {'participation': participation_id}
+    if g.request_user['role'] not in ['Administrateur', 'Validateur']:
+        # Only show public and owned donnees
+        lookup['$or'] = [{'publique': True}, {'proprietaire': g.request_user['_id']}]
+    found = donnees.find(lookup, skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(*found)
+
+
+@donnees.route('/participations/<objectid:participation_id>/donnees', methods=['POST'])
+@requires_auth(roles='Observateur')
+def create_donnee(participation_id):
+    participation = get_resource('participations', participation_id)
+    # Only owner and admin can edit
+    payload = get_payload({'commentaire': False, 'observations': False})
+    payload['participation'] = participation_id
+    payload['proprietaire'] = participation['observateur']
+    if g.request_user['_id'] != participation['observateur']:
+        if g.request_user['role'] != 'Administrateur':
+            abort(403)
         payload['publique'] = utilisateurs_resource.get_resource(payload['proprietaire']
             ).get('donnees_publiques', False)
+    else:
+        payload['publique'] = g.request_user.get('donnees_publiques', False)
     return donnees.insert(payload), 201
 
 

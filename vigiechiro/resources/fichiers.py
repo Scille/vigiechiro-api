@@ -38,18 +38,27 @@ ALLOWED_MIMES_TA = ['application/ta', 'application/tac']
 ALLOWED_MIMES_TC = ['application/tc', 'application/tcc']
 ALLOWED_MIMES_WAV = ['audio/wav', 'audio/x-wav']
 
+
+def _validate_donnee(context, donnee):
+    if donnee['proprietaire'] != context.document.get('proprietaire', None):
+        return 'fichier and donnee must have the same owner'
+
+
+def _validate_participation(context, participation):
+    if participation['observateur'] != context.document.get('proprietaire', None):
+        return 'fichier and participation must have the same owner'
+
+
 SCHEMA = {
     'titre': {'type': 'string', 'postonly': True, 'required': True},
-    'tadarida_titre': {'type': 'string', 'postonly': True},
     'mime': {'type': 'string', 'postonly': True, 'required': True},
     'proprietaire': relation('utilisateurs', postonly=True, required=True),
     'disponible': {'type': 'boolean'},
     's3_id': {'type': 'string', 'postonly': True},
     's3_upload_multipart_id': {'type': 'string', 'postonly': True},
     'require_process': choice(['tadarida_d', 'tadarida_c']),
-    'fichier_source':  relation('fichiers'),
-    'lien_participation': relation('participations'),
-    'lien_protocole': relation('protocoles')
+    'lien_protocole': relation('protocoles'),
+    'lien_donnee': relation('donnees', validator=_validate_donnee)
 }
 
 
@@ -137,15 +146,13 @@ def fichier_create():
         abort(422, {'titre': 'string contains forbidden characters'})
     mime = payload.pop('mime')
     multipart = payload.pop('multipart', False)
-    lien_participation = payload.pop('lien_participation', None)
+    lien_donnee = payload.pop('lien_donnee', None)
     lien_protocole = payload.pop('lien_protocole', None)
     if g.request_user['role'] == 'Administrateur':
         proprietaire = payload.pop('proprietaire', g.request_user['_id'])
-        fichier_source = payload.pop('fichier_source', None)
         require_process = payload.pop('require_process', None)
     else:
         require_process = None
-        fichier_source = None
         proprietaire = g.request_user['_id']
     # Remaining fields are unexpected
     need_tadarida_titre = None
@@ -170,19 +177,17 @@ def fichier_create():
         'proprietaire': proprietaire,
         'disponible': False,
         # Add uuid to make sure the file name is unique
-        's3_id': path + titre + '_' + uuid.uuid4().hex
+        's3_id': path + titre + '.' + uuid.uuid4().hex
     }
     if need_tadarida_titre:
         tadarida_titre = validate_donnee_name(titre)
         if not tadarida_titre:
             abort(422, {'titre': 'Invalid titre for tadarida related file'})
-        payload['tadarida_titre'] = tadarida_titre
+        # payload['tadarida_titre'] = tadarida_titre
     if require_process:
         payload['require_process'] = require_process
-    if fichier_source:
-        payload['fichier_source'] = fichier_source
-    if lien_participation:
-        payload['lien_participation'] = lien_participation
+    if lien_donnee:
+        payload['lien_donnee'] = lien_donnee
     if lien_protocole:
         payload['lien_protocole'] = lien_protocole
     if multipart:
