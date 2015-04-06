@@ -750,6 +750,31 @@ Sinon : tous les observateurs
 ```
 
 
+### Modifier une donnee
+
+`PATCH /donnees/#id`
+
+**Input**
+
+Nom                      |  Type   | Description
+-------------------------|---------|-------------
+ commentaire                           | string  |  non   |
+ observations                          | list    |  non   | liste des observations faites
+ observations[x].temps_debut           | float   |  oui   |
+ observations[x].temps_fin             | float   |  oui   |
+ observations[x].frequence_mediane     | float   |  oui   |
+ observations[x].tadarida_taxon        | objectid|  oui   |
+ observations[x].tadarida_probabilite  | integer |  oui   |
+ observations[x].tadarida_taxon_autre  | list    |  non   |
+ observations[x].tadarida_taxon_autre[y].taxon | objectid | oui |
+ observations[x].tadarida_taxon_autre[y].probabilite | integer | oui |
+
+**Accès**
+
+Administrateur : commentaire et observations
+Propriétaire : commentaire seulement
+
+
 ### Modifier une observation
 
 `PATCH /donnees/#id/observations/#id_observation/`
