@@ -32,7 +32,6 @@ def fake_s3(request):
     # shutil.copytree(S3_INIT_DIR, s3_work_dir)
     # Switch to create directory and start server
     os.chdir(wdir)
-    # import pdb; pdb.set_trace()
     p = Process(target=start_server)
     p.start()
     def finalizer():

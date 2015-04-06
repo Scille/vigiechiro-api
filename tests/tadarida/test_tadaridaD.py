@@ -7,9 +7,9 @@ from bson import ObjectId
 from vigiechiro import settings
 from vigiechiro.scripts import tadaridaD
 
+from .test_fake_s3 import fake_s3, S3_ADDRESS, WAVES_DEFAULT_DIR
 
 AUTH = (settings.SCRIPT_WORKER_TOKEN, None)
-WAVES_DEFAULT_DIR = os.path.abspath(os.path.dirname(__file__)) + '/default_waves'
 # To save complexity, just hack into the database the only needed
 # informations (i.e. the fichier and donnee) instead of creating an
 # observateur, join a protocole, then create a site, etc...
@@ -17,7 +17,7 @@ db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
 
 
 @pytest.fixture
-def init_env(request):
+def init_env(fake_s3, request):
     fichiers_ids = []
     donnees_ids = []
     default_waves = sorted([n for n in os.listdir(WAVES_DEFAULT_DIR)
