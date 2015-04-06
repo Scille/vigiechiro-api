@@ -5,9 +5,9 @@ from pymongo import MongoClient
 from bson import ObjectId
 
 from vigiechiro import settings
-from vigiechiro.scripts import tadaridaD
+from vigiechiro.scripts import tadaridaC
 
-from .test_fake_s3 import fake_s3, S3_ADDRESS, WAVES_DEFAULT_DIR
+from .test_fake_s3 import fake_s3, TAS_DEFAULT_DIR
 
 AUTH = (settings.SCRIPT_WORKER_TOKEN, None)
 # To save complexity, just hack into the database the only needed
@@ -20,15 +20,15 @@ db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
 def init_env(fake_s3, request):
     fichiers_ids = []
     donnees_ids = []
-    default_waves = sorted([n for n in os.listdir(WAVES_DEFAULT_DIR)
-                            if n.rsplit('.', 1)[-1] == 'wav'])
-    for wav in default_waves:
-        # First upload the wav in the backend and in S3
+    default_tas = sorted([n for n in os.listdir(TAS_DEFAULT_DIR)
+                            if n.rsplit('.', 1)[-1] == 'ta'])
+    for ta in default_tas:
+        # First upload the ta in the backend and in S3
         fichiers_url = settings.BACKEND_DOMAIN + '/fichiers'
         r = requests.post(fichiers_url, auth=AUTH,
-                          json={'titre': wav, 'mime': 'audio/wav'})
+                          json={'titre': ta, 'mime': 'application/ta'})
         assert r.status_code == 201, r.text
-        path = WAVES_DEFAULT_DIR + '/' + wav
+        path = TAS_DEFAULT_DIR + '/' + ta
         fichier_id = ObjectId(r.json()['_id'])
         r = requests.post(r.json()['s3_signed_url'],
                           files={'file': open(path, 'rb')})
@@ -48,15 +48,18 @@ def init_env(fake_s3, request):
 
 
 @pytest.mark.slow
-def test_tadaridaD(init_env):
+def test_tadaridaC(init_env):
     # Run tadaridaD on each fichier
     for fichier_id, donnee_id in init_env:
-        assert tadaridaD(str(fichier_id)) == 0
+        assert tadaridaC(str(fichier_id)) == 0
         fichiers = db.fichiers.find({'lien_donnee': donnee_id})
         assert fichiers.count() == 2, list(fichiers)
-        fichier_wav = next((f for f in fichiers if f['mime'] == 'audio/wav'), None)
         fichier_ta = next((f for f in fichiers if f['mime'] == 'application/ta'), None)
+        fichier_tc = next((f for f in fichiers if f['mime'] == 'application/tc'), None)
         assert fichier_ta
-        assert fichier_wav
+        assert fichier_tc
         assert (fichier_ta['titre'].rsplit('.', 1)[0] ==
-                fichier_wav['titre'].rsplit('.', 1)[0])
+                fichier_tc['titre'].rsplit('.', 1)[0])
+        # TODO check observations in donnee
+        donnee = db.donnees.find_one(donnee_id)
+        assert donnee
