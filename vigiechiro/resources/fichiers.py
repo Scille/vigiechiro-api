@@ -157,13 +157,18 @@ def fichier_create():
     # Remaining fields are unexpected
     if payload.keys():
         abort(422, {f: 'unknown field' for f in payload.keys()})
+    delay_work = None
     if mime in ALLOWED_MIMES_PHOTOS:
         path = 'photos/'
     elif mime in ALLOWED_MIMES_TA:
+        from ..scripts import tadaridaC
+        delay_work = tadaridaC.delay
         path = 'ta/'
     elif mime in ALLOWED_MIMES_TC:
         path = 'tc/'
     elif mime in ALLOWED_MIMES_WAV:
+        from ..scripts import tadaridaD
+        delay_work = tadaridaD.delay
         path = 'wav/'
     else:
         path = 'others/'
@@ -182,9 +187,12 @@ def fichier_create():
     if lien_protocole:
         payload['lien_protocole'] = lien_protocole
     if multipart:
-        return _s3_create_multipart(payload)
+        result = _s3_create_multipart(payload)
     else:
-        return _s3_create_singlepart(payload)
+        result = _s3_create_singlepart(payload)
+    if delay_work:
+        delay_work(result[0]['_id'])
+    return result
 
 
 def _s3_create_singlepart(payload):

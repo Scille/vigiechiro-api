@@ -21,6 +21,7 @@ from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
 from .utilisateurs import utilisateurs as utilisateurs_resource
 from .donnees import donnees as donnees_resource
 
+
 def _validate_site(context, site):
     print('validating site : {}'.format(fichier))
     if site['observateur'] != g.request_user['_id']:
@@ -171,18 +172,8 @@ def create_participation(site_id):
         donnee = donnees_resource.insert({'participation': document['_id'],
                                           'proprietaire': payload['observateur'],
                                           'publique': g.request_user['donnees_publiques']})
-        for fichier in fichiers:
-            if fichier['mime'] in ALLOWED_MIMES_WAV:
-                current_app.data.db.fichiers.update({'_id': fichier['_id']},
-                                                    {'$set': {'lien_donnee': donnee['_id'],
-                                                     'require_process': 'tadarida_d'}}, multi=True)
-            elif fichier['mime'] in ALLOWED_MIMES_TA:
-                current_app.data.db.fichiers.update({'_id': fichier['_id']},
-                                                    {'$set': {'lien_donnee': donnee['_id'],
-                                                     'require_process': 'tadarida_c'}}, multi=True)
-            elif fichier['mime'] in ALLOWED_MIMES_TC:
-                current_app.data.db.fichiers.update({'_id': fichier['_id']},
-                                                    {'$set': {'lien_donnee': donnee['_id']}}, multi=True)
+        current_app.data.db.fichiers.update({'_id': {'$in': [f['_id'] for f in fichiers]}},
+                                            {'$set': {'lien_donnee': donnee['_id']}}, multi=True)
     # Finally create corresponding actuality
     create_actuality_nouvelle_participation(document)
     return document, 201

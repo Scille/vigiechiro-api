@@ -49,36 +49,23 @@ SCHEMA = {
     'participation': relation('participations', required=True),
     'proprietaire': relation('utilisateurs', required=True),
     'publique': {'type': 'boolean'},
-    # 'date_fichier': {'type': 'date', 'required': True},
-    # 'probleme': {'type': 'string'},
-    # 'sous_probleme': {'type': 'string'},
-    # 'taux_echantillonnage': {'type': 'integer'},
-    # 'duree': {'type': 'integer'},
-    # 'detection': {
-    #     'type': 'dict',
-    #     'schema': {
-    #         'fichier': relation('fichiers', required=True),
-    #         'version': {'type': 'string', 'required': True},
-    #         'origine': choice(['OBSERVATEUR', 'SERVEUR'], required=True),
-    #     },
-    # },
     'observations': {
         'type': 'list',
         'schema': {
             'type': 'dict',
             'schema': {
-                'temps_debut': {'type': 'integer', 'required': True},
-                'temps_fin': {'type': 'integer', 'required': True},
-                'frequence_mediane': {'type': 'integer', 'required': True},
+                'temps_debut': {'type': 'float', 'required': True},
+                'temps_fin': {'type': 'float', 'required': True},
+                'frequence_mediane': {'type': 'float', 'required': True},
                 'tadarida_taxon': relation('taxons', required=True),
-                'tadarida_probabilite': {'type': 'integer', 'required': True},
+                'tadarida_probabilite': {'type': 'float', 'required': True},
                 'tadarida_taxon_autre': {
                     'type': 'list',
                     'schema': {
                         'type': 'dict',
                         'schema': {
                             'taxon': relation('taxons', required=True),
-                            'probabilite': {'type': 'integer', 'required': True}
+                            'probabilite': {'type': 'float', 'required': True}
                         }
                     }
                 },
@@ -207,9 +194,12 @@ def create_donnee(participation_id):
 def update_donnee(donnee_id):
     payload = get_payload({'commentaire': False, 'observations': False})
     donnee_resource = donnees.get_resource(donnee_id)
+    # Only admin (in fact script) can change that
+    is_admin = g.request_user['role'] == 'Administrateur'
+    if 'observations' in payload and not is_admin:
+        abort(403)
     # Only owner and admin can edit
-    if (g.request_user['_id'] != donnee_resource['proprietaire'] and
-        g.request_user['role'] != 'Administrateur'):
+    if not is_admin and g.request_user['_id'] != donnee_resource['proprietaire']:
         abort(403)
     return donnees.update(donnee_id, payload), 200
 

@@ -18,7 +18,34 @@ db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
 
 
 @pytest.fixture
-def init_env(fake_s3, request):
+def taxons(request):
+    ids = []
+    for taxon in ["Antius", "Antped", "Antsor", "Aposyl", "Barbar", "Barsan",
+                  "Cansp.", "Cicorn", "Confus", "criq", "Cympud", "Cyrscu",
+                  "Decalb", "Epheph", "Eptser", "Eumbor", "Eupcha", "Hypsav",
+                  "Inssp1", "Inssp2", "Inssp5", "Lepbos", "Leppun", "mamm",
+                  "Metroe", "Micagr", "Minsch", "Mussp", "Myoalc", "Myobec",
+                  "Myocap", "Myodau", "Myoema", "MyoGT", "Myomys", "Myonat",
+                  "noise", "Nyclas", "Nyclei", "Nycnoc", "Phafal", "Phanan",
+                  "Phofem", "Phogri", "piaf", "Pipkuh", "Pipnat", "Pippip",
+                  "Pippyg", "Plaaff", "Plaalb", "Plafal", "Plaint", "Plasab",
+                  "Pleaur", "Pleaus", "Plemac", "Poepal", "Pteger", "Ptepon",
+                  "Ratnor", "Rhieur", "Rhifer", "Rhihip", "Rusnit", "Sepsep",
+                  "Tadten", "Testes", "Tetarg", "Tetpyg", "Tetvir", "Thycor",
+                  "Tyllil", "Urorug", "Vesmur", "Yerray", "Zeuabb"]:
+        r = requests.post('{}/taxons'.format(settings.BACKEND_DOMAIN),
+                          json={'libelle_court': taxon, 'libelle_long': taxon},
+                          auth=AUTH)
+        assert r.status_code == 201, r.text
+        ids.append(r.json()['_id'])
+    def finalizer():
+        db.taxons.remove({'_id': {'$in': ids}})
+    request.addfinalizer(finalizer)
+    return ids
+
+
+@pytest.fixture
+def init_env(taxons, fake_s3, request):
     r = requests.get('{}/moi'.format(settings.BACKEND_DOMAIN), auth=AUTH)
     assert r.status_code == 200, r.text
     my_id = r.json()['_id']

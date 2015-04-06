@@ -42,7 +42,7 @@ def _make_taxon_observation(taxon_name, taxon_proba):
         logging.warning('cannot retreive taxon {} in backend, skipping it'.format(
             taxon_name))
         return None
-    return {'taxon': r.json()['_id'], 'probabilite': taxon_proba}
+    return {'taxon': r.json()['_items'][0]['_id'], 'probabilite': taxon_proba}
 
 
 @celery_app.task
@@ -116,29 +116,31 @@ def tadaridaC(fichier_id):
     with open(output_path, 'r') as fd:
         reader = csv.reader(fd)
         headers = next(reader)
-        taxons = {}
         for line in reader:
+            taxons = []
+            obs = {}
             for head, cell in zip(headers, line):
-                obs = {}
                 if head in ['Group.1', 'Ordre', 'VersionD', 'VersionC']:
                     continue
                 elif head == 'FreqM':
-                    obs['frequence_mediane'] = cell
+                    obs['frequence_mediane'] = float(cell)
                 elif head == 'TDeb':
-                    obs['temps_debut'] = cell
+                    obs['temps_debut'] = float(cell)
                 elif head == 'TFin':
-                    obs['temps_fin'] = cell
+                    obs['temps_fin'] = float(cell)
                 elif float(cell) > MIN_PROBA_TAXON:
                     # Intersting taxon
                     taxon = _make_taxon_observation(head, float(cell))
                     if taxon:
                         taxons.append(taxon)
-                # Sort taxons by proba and retrieve taxon' resources in backend
-                taxons = sorted(taxons, key=lambda x: x['probabilite'])
-                if len(taxons):
-                    obs['tadarida_taxon'], obs['tadarida_probabilite'] = taxons.pop()
-                    obs['tadarida_taxon_autre'] = list(reversed(taxons))
-                    payload['observations'].append(obs)
+            # Sort taxons by proba and retrieve taxon' resources in backend
+            taxons = sorted(taxons, key=lambda x: x['probabilite'])
+            if len(taxons):
+                main_taxon = taxons.pop()
+                obs['tadarida_taxon'] = main_taxon['taxon']
+                obs['tadarida_probabilite'] = main_taxon['probabilite']
+                obs['tadarida_taxon_autre'] = list(reversed(taxons))
+                payload['observations'].append(obs)
     r = requests.patch('{}/donnees/{}'.format(BACKEND_DOMAIN, fichier['lien_donnee']),
                        json=payload, auth=AUTH)
     if r.status_code != 200:
