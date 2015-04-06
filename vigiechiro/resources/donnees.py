@@ -188,10 +188,10 @@ def list_participation_donnees(participation_id):
 @requires_auth(roles='Observateur')
 def create_donnee(participation_id):
     participation = get_resource('participations', participation_id)
-    # Only owner and admin can edit
     payload = get_payload({'commentaire': False, 'observations': False})
     payload['participation'] = participation_id
     payload['proprietaire'] = participation['observateur']
+    # Only owner and admin can edit
     if g.request_user['_id'] != participation['observateur']:
         if g.request_user['role'] != 'Administrateur':
             abort(403)
@@ -200,6 +200,18 @@ def create_donnee(participation_id):
     else:
         payload['publique'] = g.request_user.get('donnees_publiques', False)
     return donnees.insert(payload), 201
+
+
+@donnees.route('/donnees/<objectid:donnee_id>', methods=['PATCH'])
+@requires_auth(roles='Observateur')
+def update_donnee(donnee_id):
+    payload = get_payload({'commentaire': False, 'observations': False})
+    donnee_resource = donnees.get_resource(donnee_id)
+    # Only owner and admin can edit
+    if (g.request_user['_id'] != donnee_resource['proprietaire'] and
+        g.request_user['role'] != 'Administrateur'):
+        abort(403)
+    return donnees.update(donnee_id, payload), 200
 
 
 @donnees.route('/donnees/<objectid:donnee_id>/observations/<int:observation_id>', methods=['PATCH'])

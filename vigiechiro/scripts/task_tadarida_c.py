@@ -10,12 +10,14 @@ import os
 import tempfile
 import subprocess
 import requests
+import csv
 
 from .celery import celery_app
 from .. import settings
 from ..resources.fichiers import ALLOWED_MIMES_TA
 
 
+MIN_PROBA_TAXON = 0.05
 TADARIDA_C = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaC'
 BACKEND_DOMAIN = settings.BACKEND_DOMAIN
 AUTH = (settings.SCRIPT_WORKER_TOKEN, None)
@@ -27,6 +29,20 @@ def _create_working_dir(subdirs):
     for subdir in subdirs:
         os.mkdir(wdir + '/' + subdir)
     return wdir
+
+
+def _make_taxon_observation(taxon_name, taxon_proba):
+    r = requests.get('{}/taxons'.format(BACKEND_DOMAIN),
+        params={'q': taxon_name}, auth=AUTH)
+    if r.status_code != 200:
+        logging.warning('retreiving taxon {} in backend, error {}: {}'.format(
+            taxon_name, r.status_code, r.text))
+        return None
+    if r.json()['_meta']['total'] == 0:
+        logging.warning('cannot retreive taxon {} in backend, skipping it'.format(
+            taxon_name))
+        return None
+    return {'taxon': r.json()['_id'], 'probabilite': taxon_proba}
 
 
 @celery_app.task
@@ -94,6 +110,40 @@ def tadaridaC(fichier_id):
     r = requests.post(s3_signed_url, files={'file': open(output_path, 'rb')})
     if r.status_code != 200:
         logging.error('post to s3 {} error {} : {}'.format(s3_signed_url, r.status_code, r.text))
+        return 1
+    # Update the donnee according to the .tc
+    payload = {'observations': []}
+    with open(output_path, 'r') as fd:
+        reader = csv.reader(fd)
+        headers = next(reader)
+        taxons = {}
+        for line in reader:
+            for head, cell in zip(headers, line):
+                obs = {}
+                if head in ['Group.1', 'Ordre', 'VersionD', 'VersionC']:
+                    continue
+                elif head == 'FreqM':
+                    obs['frequence_mediane'] = cell
+                elif head == 'TDeb':
+                    obs['temps_debut'] = cell
+                elif head == 'TFin':
+                    obs['temps_fin'] = cell
+                elif float(cell) > MIN_PROBA_TAXON:
+                    # Intersting taxon
+                    taxon = _make_taxon_observation(head, float(cell))
+                    if taxon:
+                        taxons.append(taxon)
+                # Sort taxons by proba and retrieve taxon' resources in backend
+                taxons = sorted(taxons, key=lambda x: x['probabilite'])
+                if len(taxons):
+                    obs['tadarida_taxon'], obs['tadarida_probabilite'] = taxons.pop()
+                    obs['tadarida_taxon_autre'] = list(reversed(taxons))
+                    payload['observations'].append(obs)
+    r = requests.patch('{}/donnees/{}'.format(BACKEND_DOMAIN, fichier['lien_donnee']),
+                       json=payload, auth=AUTH)
+    if r.status_code != 200:
+        logging.warning('updating donnee {}, error {}: {}'.format(
+            fichier['lien_donnee'], r.status_code, r.text))
         return 1
     # Notify the upload to the backend
     r = requests.post(BACKEND_DOMAIN + '/fichiers/' + tc_data['_id'], auth=AUTH)

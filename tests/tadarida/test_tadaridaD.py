@@ -3,6 +3,7 @@ import pytest
 import requests
 from pymongo import MongoClient
 from bson import ObjectId
+from uuid import uuid4
 
 from vigiechiro import settings
 from vigiechiro.scripts import tadaridaD
@@ -18,6 +19,9 @@ db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
 
 @pytest.fixture
 def init_env(fake_s3, request):
+    r = requests.get('{}/moi'.format(settings.BACKEND_DOMAIN), auth=AUTH)
+    assert r.status_code == 200, r.text
+    my_id = r.json()['_id']
     fichiers_ids = []
     donnees_ids = []
     default_waves = sorted([n for n in os.listdir(WAVES_DEFAULT_DIR)
@@ -36,7 +40,7 @@ def init_env(fake_s3, request):
         r = requests.post(fichiers_url + '/' + str(fichier_id), auth=AUTH)
         assert r.status_code == 200, r.text
         # Now create a corresponding empty donnee
-        donnee_id = db.donnees.insert({})
+        donnee_id = db.donnees.insert({'_etag': uuid4().hex, 'proprietaire': ObjectId(my_id)})
         db.fichiers.update({'_id': fichier_id}, {'$set': {'lien_donnee': donnee_id}})
         donnees_ids.append(donnee_id)
         fichiers_ids.append(fichier_id)
