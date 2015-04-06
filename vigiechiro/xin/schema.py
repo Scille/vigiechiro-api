@@ -307,15 +307,18 @@ class GenericValidator(SchemaRunner):
         # Dynamic init of generic types
         self._run_type_factory(int, 'integer')
         self._run_type_factory(str, 'string')
-        self._run_type_factory(float, 'float')
         self._run_type_factory(bool, 'boolean')
-        self._run_type_factory(float, 'float')
 
     def _run_type_factory(self, type, type_name):
         def validate(context):
             if not isinstance(context.value, type):
                 context.add_error(ERROR_BAD_TYPE % type_name)
         setattr(self, '_run_type_' + type_name, validate)
+
+    def _run_type_float(self, context):
+        if (not isinstance(context.value, float) and
+            not isinstance(context.value, int)):
+            context.add_error(ERROR_BAD_TYPE % 'float')
 
     def _run_attribute_readonly(self, context):
         if context.schema['read_only']:
