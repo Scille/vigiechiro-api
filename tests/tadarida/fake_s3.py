@@ -53,7 +53,19 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         f = self.send_head()
         if f:
             f.close()
- 
+
+    def do_OPTIONS(self):
+        """Serve a OPTIONS request."""
+        self.send_response(200)
+        self.send_header("Location", self.path + "/")
+        self.send_header("Access-Control-Allow-Credentials", "true")
+        self.send_header("Access-Control-Allow-Headers", "ACCEPT, CONTENT-TYPE, AUTHORIZATION, IF-MATCH, CACHE-CONTROL")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS, HEAD, POST")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Max-Age", "21600")
+        self.send_header("Allow", "GET, OPTIONS, HEAD, POST")
+        self.end_headers()
+
     def do_POST(self):
         """Serve a POST request."""
         r, info = self.deal_post_data()
