@@ -47,6 +47,8 @@ def _make_taxon_observation(taxon_name, taxon_proba):
 
 @celery_app.task
 def tadaridaC(fichier_id):
+    if not isinstance(fichier_id, str):
+        fichier_id = str(fichier_id)
     wdir_path = _create_working_dir(['tas'])
     # Retreive the fichier resource
     r = requests.get(BACKEND_DOMAIN + '/fichiers/' + fichier_id, auth=AUTH)

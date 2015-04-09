@@ -31,6 +31,8 @@ def _create_working_dir(subdirs):
 
 @celery_app.task
 def tadaridaD(fichier_id):
+    if not isinstance(fichier_id, str):
+        fichier_id = str(fichier_id)
     wdir_path = _create_working_dir(['waves'])
     # Retreive the fichier resource
     r = requests.get(BACKEND_DOMAIN + '/fichiers/' + fichier_id, auth=AUTH)
