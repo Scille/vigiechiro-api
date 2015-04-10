@@ -60,10 +60,10 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Location", self.path + "/")
         self.send_header("Access-Control-Allow-Credentials", "true")
         self.send_header("Access-Control-Allow-Headers", "ACCEPT, CONTENT-TYPE, AUTHORIZATION, IF-MATCH, CACHE-CONTROL")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS, HEAD, POST")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS, HEAD, POST, PUT")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Max-Age", "21600")
-        self.send_header("Allow", "GET, OPTIONS, HEAD, POST")
+        self.send_header("Allow", "GET, OPTIONS, HEAD, POST, PUT")
         self.end_headers()
 
     def do_POST(self):
@@ -93,7 +93,10 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if f:
             self.copyfile(f, self.wfile)
             f.close()
-        
+
+    def do_PUT(self):
+        self.do_POST()
+
     def deal_post_data(self):
         content_type = self.headers['content-type']
         if not content_type:
