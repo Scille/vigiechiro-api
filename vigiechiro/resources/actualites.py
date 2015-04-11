@@ -48,10 +48,12 @@ def _create_actuality(document):
 def create_actuality_nouveau_site(site):
     site_id = site['_id']
     sujet_id = site['observateur']
+    protocole_id = site['protocole']
     document = {'action': 'NOUVEAU_SITE',
                 'site': site_id,
                 'sujet': sujet_id,
-                'resources': [site_id, sujet_id]}
+                'protocole': protocole_id,
+                'resources': [site_id, sujet_id, protocole_id]}
     return _create_actuality(document)
 
 
