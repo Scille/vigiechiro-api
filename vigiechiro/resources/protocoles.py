@@ -9,7 +9,7 @@ from flask import g, request
 from datetime import datetime
 
 from ..xin import Resource
-from ..xin.tools import jsonify, abort, dict_projection
+from ..xin.tools import jsonify, abort, dict_projection, get_params
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import (Paginator, get_lookup_from_q, get_payload,
@@ -93,10 +93,10 @@ def list_user_protocoles():
 def _check_macro_protocole_type_site(payload):
     if payload.get('macro_protocole', False):
         if payload.get('type_site', None):
-            abort(422, 'macro protocole should not contain a type_site')
+            abort(422, {'type_site': 'macro protocole should not contain a type_site'})
     else:
         if not payload.get('type_site', None):
-            abort(422, 'non macro protocole must contain a type_site')
+            abort(422, {'type_site': 'non macro protocole must contain a type_site'})
 
 
 @protocoles.route('/protocoles', methods=['POST'])
@@ -130,13 +130,13 @@ def edit_protocole(protocole_id):
 def list_protocole_users(protocole_id):
     lookup = {'protocoles.protocole': protocole_id}
     pagination = Paginator()
-    if 'type' in request.args and request.args['type'] != 'TOUS':
-        if request.args['type'] == 'A_VALIDER':
-            lookup['protocoles.valide'] = {'$ne': True}
-        elif request.args['type'] == 'VALIDES':
-            lookup['protocoles.valide'] = True
-        else:
-            abort(422, 'bad url param type')
+    val_type = get_params({'protocole': False, 'type': False}).get('type', 'TOUS')
+    if val_type == 'A_VALIDER':
+        lookup['protocoles.valide'] = {'$ne': True}
+    elif val_type == 'VALIDES':
+        lookup['protocoles.valide'] = True
+    elif val_type != 'TOUS':
+        abort(422, {'type': 'bad param type'})
     found = utilisateurs_resource.find(lookup or None,
                                        skip=pagination.skip,
                                        limit=pagination.max_results)
@@ -168,6 +168,9 @@ def user_join_protocole(protocole_id):
     inscription = {'protocole': protocole_id,
                    'date_inscription': datetime.utcnow(),
                    'valide': False}
+    # Autovalidation for admin
+    if g.request_user['role'] == 'Administrateur':
+        inscription['valide'] = True
     payload = {'protocoles': [inscription]}
     # User automatically follow the protocole
     mongo_update = {'$push': {'protocoles': inscription},
