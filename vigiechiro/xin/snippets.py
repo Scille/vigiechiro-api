@@ -6,7 +6,7 @@ from .tools import jsonify, parse_id
 
 class Paginator:
     """Pagination heavy lifting"""
-    def __init__(self, max_results_limit=20, args=None):
+    def __init__(self, max_results_limit=100, args=None):
         args = args if args else request.args
         # Check request params
         try:
