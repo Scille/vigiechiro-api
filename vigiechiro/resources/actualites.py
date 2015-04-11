@@ -144,13 +144,18 @@ def get_user_actualites():
 def get_actualites_validations():
     pagination = Paginator()
     lookup = {'action': 'INSCRIPTION_PROTOCOLE'}
-    if 'type' in request.args and request.args['type'] != 'TOUS':
-        if request.args['type'] == 'A_VALIDER':
-            lookup['date_validation'] = {'$exists': False}
-        elif request.args['type'] == 'VALIDES':
-            lookup['date_validation'] = {'$exists': True}
-        else:
-            abort(422, 'bad url param type')
+    params = get_params({'protocole': False, 'type': False})
+    if 'protocole' in params:
+        lookup['protocole'] = parse_id(lookup['protocole'])
+        if not lookup['protocole']:
+            abort(422, {'protocole': 'Bad ObjectId'})
+    val_type = params.get('type', 'TOUS')
+    if val_type == 'A_VALIDER':
+        lookup['date_validation'] = {'$exists': False}
+    elif val_type == 'VALIDES':
+        lookup['date_validation'] = {'$exists': True}
+    elif val_type != 'TOUS':
+        abort(422, {'type': 'bad param type'})
     expend = ['sujet', 'protocole']
     found = actualites.find(lookup, sort=[('_updated', -1)],
                             expend=expend, skip=pagination.skip,
