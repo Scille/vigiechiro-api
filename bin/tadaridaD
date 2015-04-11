@@ -1,2 +1,4 @@
 #! /bin/sh
-LD_LIBRARY_PATH=`pwd`/tadaridaD_src/ ./tadaridaD_src/tadaridaD
+
+TADARIDAD_DIR=`dirname $0`/tadaridaD_src
+LD_LIBRARY_PATH=$TADARIDAD_DIR $TADARIDAD_DIR/tadaridaD $@
