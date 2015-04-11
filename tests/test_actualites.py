@@ -53,7 +53,7 @@ def test_actualites(clean_actualites, observateur,
 
 @pytest.mark.slow
 def test_list_protocole_users(clean_actualites, protocoles_base,
-                              observateur, administrateur):
+                              observateur, validateur, administrateur):
     protocole = protocoles_base[1]
     protocole_id = str(protocole['_id'])
     another_protocole = protocoles_base[2]
@@ -62,19 +62,19 @@ def test_list_protocole_users(clean_actualites, protocoles_base,
     r = observateur.put('/moi/protocoles/' + protocole_id)
     assert r.status_code == 200, r.text
     sleep(1)
-    r = administrateur.put('/moi/protocoles/' + protocole_id)
+    r = validateur.put('/moi/protocoles/' + protocole_id)
     assert r.status_code == 200, r.text
     sleep(1)
     # Join another protocole
     r = observateur.put('/moi/protocoles/' + another_protocole_id)
     assert r.status_code == 200, r.text
     sleep(1)
-    # Validate protocole only for the admin
+    # Validate protocole only for the validateur
     validate_url = '/protocoles/{}/observateurs/{}'.format(
-        protocole_id, administrateur.user_id)
+        protocole_id, validateur.user_id)
     r = administrateur.put(validate_url)
     assert r.status_code == 200, r.text
-    administrateur.update_user()
+    validateur.update_user()
     observateur.update_user()
     sleep(1)
     # Reject the protocle for the observateur
@@ -89,12 +89,12 @@ def test_list_protocole_users(clean_actualites, protocoles_base,
     assert not [i for i in items if i.get('action', None) != 'INSCRIPTION_PROTOCOLE']
     # List of element :
     # - observateur is rejected from protocole
-    # - administrateur is validated in protocole
+    # - validateur is validated in protocole
     # - observateur has joined another_protocole
     assert items[0]['sujet']['_id'] == observateur.user_id
     assert items[0]['protocole']['_id'] == protocole_id
     assert 'date_refus' in items[0]
-    assert items[1]['sujet']['_id'] == administrateur.user_id
+    assert items[1]['sujet']['_id'] == validateur.user_id
     assert items[1]['protocole']['_id'] == protocole_id
     assert 'date_validation' in items[1]
     assert items[2]['sujet']['_id'] == observateur.user_id
