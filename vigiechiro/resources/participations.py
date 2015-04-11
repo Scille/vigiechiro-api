@@ -20,6 +20,7 @@ from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
 from .donnees import donnees as donnees_resource
+from ..scripts import tadaridaD, tadaridaC
 
 
 def _validate_site(context, site):
@@ -64,10 +65,6 @@ SCHEMA = {
                 'date': {'type': 'datetime', 'required': True},
             }
         }
-    },
-    'pieces_jointes': {
-        'type': 'set',
-        'schema': relation('fichiers', validator=_validate_piece_jointe, expend=False)
     },
     'configuration': {
         'type': 'dict',
@@ -137,7 +134,7 @@ def display_participation(participation_id):
 def create_participation(site_id):
     payload = get_payload({'date_debut': False, 'date_fin': False,
                            'commentaire': False, 'meteo': False,
-                           'configuration': False, 'donnees': False})
+                           'configuration': False})
     payload['observateur'] = g.request_user['_id']
     payload['site'] = site_id
     # Other inputs sanity check
@@ -153,25 +150,8 @@ def create_participation(site_id):
                    if p['protocole'] == protocole_id), None)
     if not joined:
         abort(422, {'site': 'not registered to corresponding protocole'})
-    donnees_fichiers = [get_resource('fichiers', d) for d in payload.pop('donnees', [])]
-    if next((d for d in donnees_fichiers if not d), None):
-        abort(422, {'donnees': 'some ObjectIds are invalid fichiers resources'})
     # Create the participation
     document = participations.insert(payload)
-    # Given a list of fichiers and a participation, generate the donnees
-    # and link the fichiers to them
-    donnees = {}
-    for fichier in donnees_fichiers:
-        basename = fichier['titre'].rsplit('.', 1)[0]
-        if basename not in donnees:
-            donnees[basename] = []
-        donnees[basename].append(fichier)
-    for basename, fichiers in donnees.items():
-        donnee = donnees_resource.insert({'participation': document['_id'],
-                                          'proprietaire': payload['observateur'],
-                                          'publique': g.request_user['donnees_publiques']})
-        current_app.data.db.fichiers.update({'_id': {'$in': [f['_id'] for f in fichiers]}},
-                                            {'$set': {'lien_donnee': donnee['_id']}}, multi=True)
     # Finally create corresponding actuality
     create_actuality_nouvelle_participation(document)
     return document, 201
@@ -220,11 +200,64 @@ def edit_participation(participation_id):
 def add_pieces_jointes(participation_id):
     participation_resource = participations.get_resource(participation_id)
     _check_edit_access(participation_resource)
-    payload = get_payload({'pieces_jointes': True})
-    if not payload['pieces_jointes']:
-        abort(422, {'pieces_jointes': 'no given pieces jointes to add'})
-    payload['pieces_jointes'] += participation_resource.get('pieces_jointes', [])
-    return participations.update(participation_id, payload)
+    to_link_participation = []
+    to_link_donnees = {}
+    def add_to_link_donnees(pj_data):
+        basename = pj_data['titre'].rsplit('.', 1)[0]
+        if basename not in to_link_donnees:
+            to_link_donnees[basename] = []
+        to_link_donnees[basename].append(pj_data['_id'])
+    delay_tasks = []
+    errors = {}
+    # For each pj, check existance, make sure it is not linked to something
+    # else, link to the participation/donnee, create a new donnee if needed
+    # and finally trigger tadarida async process if needed
+    for pj_id in get_payload({'pieces_jointes': True})['pieces_jointes']:
+        pj_data = get_resource('fichiers', pj_id)
+        if not pj_data:
+            errors[pj_id] = 'invalid fichiers resource objectid'
+            break
+        pj_id = pj_data['_id']
+        for link in 'lien_donnee', 'lien_participation', 'lien_protocole':
+            if link in pj_data:
+                errors[pj_id] = 'fichiers already linked (has a `{}` field)'.format(link)
+                break
+        to_link_participation.append(pj_id)
+        if pj_data['mime'] in ALLOWED_MIMES_WAV:
+            add_to_link_donnees(pj_data)
+            delay_tasks.append(lambda: tadaridaD.delay(pj_id))
+        elif pj_data['mime'] in ALLOWED_MIMES_TA:
+            add_to_link_donnees(pj_data)
+            delay_tasks.append(lambda: tadaridaC.delay(pj_id))
+        elif pj_data['mime'] in ALLOWED_MIMES_TC:
+            add_to_link_donnees(pj_data)
+        elif pj_data['mime'] not in ALLOWED_MIMES_PHOTOS:
+            errors[pj_id] = 'fichier has invalid mime type'
+    if errors:
+        abort(422, {'pieces_jointes': errors})
+    # If we are here, everything is ok, we can start altering the bdd
+    if to_link_participation:
+        current_app.data.db.fichiers.update({'_id': {'$in': to_link_participation}},
+                                            {'$set': {'lien_participation': participation_id}},
+                                            multi=True)
+    for basename, to_link in to_link_donnees.items():
+        donnee = current_app.data.db.donnees.find_one({'titre': basename})
+        if not donnee:
+            donnee_id = current_app.data.db.donnees.insert({
+                'titre': basename,
+                'participation': participation_id,
+                'proprietaire': participation_resource['observateur'],
+                'publique': utilisateurs_resource.get_resource(
+                    participation_resource['observateur']).get('donnees_publiques', False)
+            })
+        else:
+            donnee_id = donnee['_id']
+        current_app.data.db.fichiers.update({'_id': {'$in': to_link}},
+                                            {'$set': {'lien_donnee': donnee_id}},
+                                            multi=True)
+    for task in delay_tasks:
+        task()
+    return {}, 200
 
 
 @participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['GET'])
@@ -232,12 +265,35 @@ def add_pieces_jointes(participation_id):
 def get_pieces_jointes(participation_id):
     participation_resource = participations.find_one(participation_id)
     _check_read_access(participation_resource)
-    pj_ids = participation_resource.get('pieces_jointes', [])
-    if not pj_ids:
-        return {'pieces_jointes': []}
-    else:
-        lookup = {'_id': {'$in': list(pj_ids)}}
-        return {'pieces_jointes': list(current_app.data.db.fichiers.find(lookup))}
+    pagination = Paginator()
+    params = get_url_params({'ta': {'type': bool}, 'tc': {'type': bool},
+                             'wav': {'type': bool}, 'photos': {'type': bool}})
+    lookup = {'lien_participation': participation_id}
+    lookup.update(get_lookup_from_q() or {})
+    for rule, value in params.items():
+        mimes = []
+        if rule == 'ta':
+            mimes = ALLOWED_MIMES_TA
+        elif rule == 'tc':
+            mimes = ALLOWED_MIMES_TC
+        elif rule == 'wav':
+            mimes = ALLOWED_MIMES_WAV
+        else:
+            mimes = ALLOWED_MIMES_PHOTOS
+        if 'mime' not in lookup:
+            lookup['mime'] = {}
+        if value:
+            if '$in' not in lookup['mime']:
+                lookup['mime']['$in'] = []
+            lookup['mime']['$in'] += mimes
+        else:
+            if '$in' not in lookup['mime']:
+                lookup['mime']['$nin'] = []
+            lookup['mime']['$in'] += mimes
+    found = fichiers_resource.find(lookup,
+                                   skip=pagination.skip,
+                                   limit=pagination.max_results)
+    return pagination.make_response(*found)
 
 
 @participations.route('/participations/<objectid:participation_id>/messages', methods=['PUT'])

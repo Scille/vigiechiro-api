@@ -56,9 +56,9 @@ SCHEMA = {
     'disponible': {'type': 'boolean'},
     's3_id': {'type': 'string', 'postonly': True},
     's3_upload_multipart_id': {'type': 'string', 'postonly': True},
-    'require_process': choice(['tadarida_d', 'tadarida_c']),
     'lien_protocole': relation('protocoles'),
-    'lien_donnee': relation('donnees', validator=_validate_donnee)
+    'lien_donnee': relation('donnees', validator=_validate_donnee),
+    'lien_participation': relation('participation', validator=_validate_participation)
 }
 
 
@@ -147,12 +147,11 @@ def fichier_create():
     mime = payload.pop('mime')
     multipart = payload.pop('multipart', False)
     lien_donnee = payload.pop('lien_donnee', None)
+    lien_participation = payload.pop('lien_participation', None)
     lien_protocole = payload.pop('lien_protocole', None)
     if g.request_user['role'] == 'Administrateur':
         proprietaire = payload.pop('proprietaire', g.request_user['_id'])
-        require_process = payload.pop('require_process', None)
     else:
-        require_process = None
         proprietaire = g.request_user['_id']
     # Remaining fields are unexpected
     if payload.keys():
@@ -161,14 +160,10 @@ def fichier_create():
     if mime in ALLOWED_MIMES_PHOTOS:
         path = 'photos/'
     elif mime in ALLOWED_MIMES_TA:
-        from ..scripts import tadaridaC
-        delay_work = tadaridaC.delay
         path = 'ta/'
     elif mime in ALLOWED_MIMES_TC:
         path = 'tc/'
     elif mime in ALLOWED_MIMES_WAV:
-        from ..scripts import tadaridaD
-        delay_work = tadaridaD.delay
         path = 'wav/'
     else:
         path = 'others/'
@@ -180,10 +175,10 @@ def fichier_create():
         # Add uuid to make sure the file name is unique
         's3_id': path + titre + '.' + uuid.uuid4().hex
     }
-    if require_process:
-        payload['require_process'] = require_process
     if lien_donnee:
         payload['lien_donnee'] = lien_donnee
+    if lien_participation:
+        payload['lien_participation'] = lien_participation
     if lien_protocole:
         payload['lien_protocole'] = lien_protocole
     if multipart:

@@ -88,11 +88,15 @@ def test_donnees(participation_ready, observateur):
         wav_ids.append(res['_id'])
     participations_url = '/sites/{}/participations'.format(site['_id'])
     r = observateur.post(participations_url,
-                         json={'date_debut': format_datetime(datetime.utcnow()),
-                               'donnees': wav_ids + ta_ids})
+                         json={'date_debut': format_datetime(datetime.utcnow())})
     assert r.status_code == 201, r.text
+    participation_id = r.json()['_id']
+    # Add pieces_jointes to the participation now
+    r = observateur.put('/participations/{}/pieces_jointes'.format(participation_id),
+        json={'pieces_jointes': wav_ids + ta_ids})
+    assert r.status_code == 200, r.text
     # Now check the donnees generated
-    r = observateur.get('/participations/{}/donnees'.format(r.json()['_id']))
+    r = observateur.get('/participations/{}/donnees'.format(participation_id))
     assert r.status_code == 200, r.text
     donnees = r.json()['_items']
     assert len(donnees) == 2, r.json()
@@ -133,7 +137,7 @@ def test_participation(participation_ready, file_uploaded, observateur_other):
     # Finally display all the pieces_jointes
     r = observateur.get(pieces_jointes_url)
     assert r.status_code == 200, r.text
-    pieces_jointes = r.json()['pieces_jointes']
+    pieces_jointes = r.json()['_items']
     assert len(pieces_jointes) == len(photos_ids)
 
 
