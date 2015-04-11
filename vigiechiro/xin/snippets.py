@@ -83,6 +83,8 @@ def get_url_params(params_spec=None, args=None):
     if isinstance(params_spec, list):
         params_spec = {a: {} for a in params_spec}
     for param, config in params_spec.items():
+        if isinstance(config, bool):
+            config = {'required': config}
         if param not in args:
             if config.get('required', False):
                 errors[param] = 'missing required param'

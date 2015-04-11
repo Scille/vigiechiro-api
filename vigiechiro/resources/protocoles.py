@@ -13,7 +13,7 @@ from ..xin.tools import jsonify, abort, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import (Paginator, get_lookup_from_q, get_payload,
-                            get_if_match, get_params)
+                            get_if_match, get_url_params)
 
 from .actualites import (create_actuality_validation_protocole,
                          create_actuality_inscription_protocole,
@@ -130,7 +130,7 @@ def edit_protocole(protocole_id):
 def list_protocole_users(protocole_id):
     lookup = {'protocoles.protocole': protocole_id}
     pagination = Paginator()
-    val_type = get_params({'protocole': False, 'type': False}).get('type', 'TOUS')
+    val_type = get_url_params({'protocole': False, 'type': False}).get('type', 'TOUS')
     if val_type == 'A_VALIDER':
         lookup['protocoles.valide'] = {'$ne': True}
     elif val_type == 'VALIDES':

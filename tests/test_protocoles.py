@@ -147,12 +147,10 @@ def test_list_protocole_users(protocoles_base, observateur, administrateur):
     # Join another protocole
     r = observateur.put('/moi/protocoles/' + another_protocole_id)
     assert r.status_code == 200, r.text
-    # Validate protocole only for the admin
-    validate_url = '/protocoles/{}/observateurs/{}'.format(
-        protocole_id, administrateur.user_id)
-    r = administrateur.put(validate_url)
-    assert r.status_code == 200, r.text
+    # Admin should be automatically validate while joining a protocole
     administrateur.update_user()
+    for protocole in administrateur.user['protocoles']:
+        assert protocole.get('valide', None) == True
     observateur.update_user()
     # Now try to get back the list of user registered to the protocole
     users_protocole_url = '/protocoles/{}/observateurs'.format(protocole_id)

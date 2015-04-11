@@ -11,7 +11,7 @@ from datetime import datetime
 from ..xin import Resource, DocumentException
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
-from ..xin.snippets import Paginator, get_params
+from ..xin.snippets import Paginator, get_url_params
 
 
 SCHEMA = {
@@ -146,7 +146,7 @@ def get_user_actualites():
 def get_actualites_validations():
     pagination = Paginator()
     lookup = {'action': 'INSCRIPTION_PROTOCOLE'}
-    params = get_params({'protocole': False, 'type': False})
+    params = get_url_params({'protocole': False, 'type': False})
     if 'protocole' in params:
         lookup['protocole'] = parse_id(lookup['protocole'])
         if not lookup['protocole']:

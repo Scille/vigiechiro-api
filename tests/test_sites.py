@@ -180,10 +180,6 @@ def test_same_grille_stoc_site(administrateur, protocole_point_fixe):
     protocole_id = str(protocole['_id'])
     r = administrateur.put('/moi/protocoles/{}'.format(protocole_id))
     assert r.status_code == 200, r.text
-    # Validate the user
-    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
-                           protocole_id, administrateur.user_id))
-    assert r.status_code == 200, r.text
     site_payload = {
         'protocole': protocole_id,
         'commentaire': 'My little site',
@@ -205,10 +201,6 @@ def test_naming_autoinc(administrateur, protocoles_base):
     protocole = protocoles_base[1]
     protocole_id = str(protocole['_id'])
     r = administrateur.put('/moi/protocoles/{}'.format(protocole_id))
-    assert r.status_code == 200, r.text
-    # Validate the user
-    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
-                           protocole_id, administrateur.user_id))
     assert r.status_code == 200, r.text
     # Create a new site
     r = administrateur.post('/sites', json={'protocole': protocole_id})
