@@ -99,6 +99,8 @@ def tadaridaC(fichier_id):
                   'mime': 'application/tc',
                   'proprietaire': str(fichier['proprietaire']),
                   'lien_donnee': str(fichier['lien_donnee'])}
+    if 'lien_participation' in fichier:
+        tc_payload['lien_participation'] = str(fichier['lien_participation'])
     r = requests.post(BACKEND_DOMAIN + '/fichiers', json=tc_payload, auth=AUTH)
     if r.status_code != 201:
         logging.error("{}'s .tc backend post {} error {} : {}".format(
@@ -107,9 +109,10 @@ def tadaridaC(fichier_id):
     tc_data = r.json()
     tc_fichier_info = '{} ({})'.format(tc_data['_id'], tc_data['titre'])
     logging.info("Registered {}'s .ta as {}".format(fichier_info, tc_fichier_info))
-    # Then post it to s3 with the signed url
+    # Then put it to s3 with the signed url
     s3_signed_url = tc_data['s3_signed_url']
-    r = requests.post(s3_signed_url, files={'file': open(output_path, 'rb')})
+    with open(output_path, 'rb') as fd:
+        r = requests.put(s3_signed_url, headers={'Content-Type': tc_payload['mime']}, data=fd)
     if r.status_code != 200:
         logging.error('post to s3 {} error {} : {}'.format(s3_signed_url, r.status_code, r.text))
         return 1

@@ -243,13 +243,13 @@ def add_pieces_jointes(participation_id):
     for basename, to_link in to_link_donnees.items():
         donnee = current_app.data.db.donnees.find_one({'titre': basename})
         if not donnee:
-            donnee_id = current_app.data.db.donnees.insert({
+            donnee_id = donnees_resource.insert({
                 'titre': basename,
                 'participation': participation_id,
                 'proprietaire': participation_resource['observateur'],
                 'publique': utilisateurs_resource.get_resource(
                     participation_resource['observateur']).get('donnees_publiques', False)
-            })
+            })['_id']
         else:
             donnee_id = donnee['_id']
         current_app.data.db.fichiers.update({'_id': {'$in': to_link}},

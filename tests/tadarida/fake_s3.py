@@ -99,31 +99,36 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
     def deal_post_data(self):
         content_type = self.headers['content-type']
-        if not content_type:
-            return (False, "Content-Type header doesn't contain boundary")
-        boundary = content_type.split("=")[1].encode()
         remainbytes = int(self.headers['content-length'])
-        line = self.rfile.readline()
-        remainbytes -= len(line)
-        if not boundary in line:
-            return (False, "Content NOT begin with boundary")
-        line = self.rfile.readline()
-        remainbytes -= len(line)
-        filename = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line.decode())[0]
-        if not filename:
-            return (False, "Can't find out file name...")
-        key = self.headers.get('key', None)
-        if key:
-            fn = os.getcwd() + '/' + key.replace('${filename}', filename)
+        multipart = content_type.startswith('multipart/form-data;')
+        if multipart:
+            if not content_type:
+                return (False, "Content-Type header doesn't contain boundary")
+            boundary = content_type.split("=")[1].encode()
+            line = self.rfile.readline()
+            remainbytes -= len(line)
+            if not boundary in line:
+                return (False, "Content NOT begin with boundary")
+            line = self.rfile.readline()
+            remainbytes -= len(line)
+            filename = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line.decode())[0]
+            if not filename:
+                return (False, "Can't find out file name...")
+            key = self.headers.get('key', None)
+            if key:
+                fn = os.getcwd() + '/' + key.replace('${filename}', filename)
+            else:
+                fn = self.translate_path(self.path)
+            os.makedirs(os.path.split(fn)[0], exist_ok=True)
+            line = self.rfile.readline()
+            remainbytes -= len(line)
         else:
             fn = self.translate_path(self.path)
-        os.makedirs(os.path.split(fn)[0], exist_ok=True)
-        line = self.rfile.readline()
-        remainbytes -= len(line)
-        if not content_type.startswith('multipart/form-data;'):
+            os.makedirs(os.path.split(fn)[0], exist_ok=True)
             line = self.rfile.readline()
             remainbytes -= len(line)
         try:
+            print('file output ===>', fn)
             out = open(fn, 'wb')
         except IOError:
             return (False, "Can't create file to write, do you have permission to write?")
@@ -133,7 +138,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         while remainbytes > 0:
             line = self.rfile.readline()
             remainbytes -= len(line)
-            if boundary in line:
+            if multipart and boundary in line:
                 preline = preline[0:-1]
                 if preline.endswith(b'\r'):
                     preline = preline[0:-1]

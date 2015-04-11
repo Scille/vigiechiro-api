@@ -14,6 +14,7 @@ import requests
 from .celery import celery_app
 from .. import settings
 from ..resources.fichiers import ALLOWED_MIMES_WAV
+from .task_tadarida_c import tadaridaC
 
 
 TADARIDA_D = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD'
@@ -83,6 +84,8 @@ def tadaridaD(fichier_id):
                   'mime': 'application/ta',
                   'proprietaire': str(fichier['proprietaire']),
                   'lien_donnee': str(fichier['lien_donnee'])}
+    if 'lien_participation' in fichier:
+        ta_payload['lien_participation'] = str(fichier['lien_participation'])
     r = requests.post(BACKEND_DOMAIN + '/fichiers', json=ta_payload, auth=AUTH)
     if r.status_code != 201:
         logging.error("{}'s .ta backend post {} error {} : {}".format(
@@ -91,11 +94,12 @@ def tadaridaD(fichier_id):
     ta_data = r.json()
     ta_fichier_info = '{} ({})'.format(ta_data['_id'], ta_data['titre'])
     logging.info("Registered {}'s .ta as {}".format(fichier_info, ta_fichier_info))
-    # Then post it to s3 with the signed url
+    # Then put it to s3 with the signed url
     s3_signed_url = ta_data['s3_signed_url']
-    r = requests.post(s3_signed_url, files={'file': open(output_path, 'rb')})
+    with open(output_path, 'rb') as fd:
+        r = requests.put(s3_signed_url, headers={'Content-Type': ta_payload['mime']}, data=fd)
     if r.status_code != 200:
-        logging.error('post to s3 {} error {} : {}'.format(s3_signed_url, r.status_code, r.text))
+        logging.error('put to s3 {} error {} : {}'.format(s3_signed_url, r.status_code, r.text))
         return 1
     # Notify the upload to the backend
     r = requests.post(BACKEND_DOMAIN + '/fichiers/' + ta_data['_id'], auth=AUTH)
@@ -103,4 +107,6 @@ def tadaridaD(fichier_id):
         logging.error('Notify end upload for {} error {} : {}'.format(
             ta_data['_id'], r.status_code, r.text))
         return 1
+    # Finally trigger a tadaridaC run
+    tadaridaC.delay(ta_data['_id'])
     return 0

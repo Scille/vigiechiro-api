@@ -58,7 +58,7 @@ SCHEMA = {
     's3_upload_multipart_id': {'type': 'string', 'postonly': True},
     'lien_protocole': relation('protocoles'),
     'lien_donnee': relation('donnees', validator=_validate_donnee),
-    'lien_participation': relation('participation', validator=_validate_participation)
+    'lien_participation': relation('participations', validator=_validate_participation)
 }
 
 
