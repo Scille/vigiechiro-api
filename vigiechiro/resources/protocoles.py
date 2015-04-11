@@ -9,11 +9,11 @@ from flask import g, request
 from datetime import datetime
 
 from ..xin import Resource
-from ..xin.tools import jsonify, abort, dict_projection, get_params
+from ..xin.tools import jsonify, abort, dict_projection
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import (Paginator, get_lookup_from_q, get_payload,
-                            get_if_match)
+                            get_if_match, get_params)
 
 from .actualites import (create_actuality_validation_protocole,
                          create_actuality_inscription_protocole,
