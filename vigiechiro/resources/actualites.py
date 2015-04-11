@@ -12,6 +12,7 @@ from ..xin import Resource, DocumentException
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator
+from ..xin.tools import get_params
 
 
 SCHEMA = {
