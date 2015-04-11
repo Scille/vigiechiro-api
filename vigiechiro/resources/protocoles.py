@@ -112,7 +112,7 @@ def create_protocole():
 @protocoles.route('/protocoles/<objectid:protocole_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def display_protocole(protocole_id):
-    return jsonify(**protocoles.get_resource(protocole_id))
+    return protocoles.find_one({'_id': protocole_id})
 
 
 @protocoles.route('/protocoles/<objectid:protocole_id>', methods=['PATCH'])
