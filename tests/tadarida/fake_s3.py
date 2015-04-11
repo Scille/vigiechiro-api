@@ -128,7 +128,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             line = self.rfile.readline()
             remainbytes -= len(line)
         try:
-            print('file output ===>', fn)
             out = open(fn, 'wb')
         except IOError:
             return (False, "Can't create file to write, do you have permission to write?")
