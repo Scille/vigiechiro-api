@@ -16,7 +16,7 @@ from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator, get_payload, get_resource, get_url_params
 
-from .actualites import create_actuality_nouveau_site
+from .actualites import create_actuality_nouveau_site, create_actuality_verrouille_site
 from .protocoles import check_configuration_participation
 
 
@@ -184,7 +184,9 @@ def create_site():
                                           routier_count['protocole_routier_count'])
     inserted_payload = sites.insert(payload)
     # Finally create corresponding actuality
-    create_actuality_nouveau_site(inserted_payload)
+    create_actuality_nouveau_site(inserted_payload['_id'],
+                                  inserted_payload['observateur'],
+                                  inserted_payload['protocole'])
     return inserted_payload, 201
 
 
@@ -213,6 +215,8 @@ def edit_site(site_id):
         abort(403)
     check_configuration_participation(payload)
     result = sites.update(site_id, payload)
+    if payload.get('verrouille', None) == True:
+        create_actuality_verrouille_site(site_id, site_resource['observateur'])
     return result
 
 

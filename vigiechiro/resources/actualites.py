@@ -44,24 +44,21 @@ def _create_actuality(document):
         return None
 
 
-def create_actuality_nouveau_site(site):
-    site_id = site['_id']
-    sujet_id = site['observateur']
-    protocole_id = site['protocole']
+def create_actuality_nouveau_site(site_id, observateur_id, protocole_id):
     document = {'action': 'NOUVEAU_SITE',
                 'site': site_id,
-                'sujet': sujet_id,
+                'sujet': observateur_id,
                 'protocole': protocole_id,
-                'resources': [site_id, sujet_id, protocole_id]}
+                'resources': [site_id, observateur_id, protocole_id]}
     return _create_actuality(document)
 
 
-def create_actuality_verrouille_site(site, utilisateur):
+def create_actuality_verrouille_site(site_id, utilisateur_id):
     # Update previously created NOUVEAU_SITE actuality to
     # notify the lock date
     lookup = {'action': 'NOUVEAU_SITE',
-              'sujet': utilisateur['_id'],
-              'site': site['_id']}
+              'sujet': utilisateur_id,
+              'site': site_id}
     try:
         result = actualites.update(lookup,
                                    {'date_validation': datetime.utcnow()},
