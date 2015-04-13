@@ -179,6 +179,10 @@ def user_join_protocole(protocole_id):
         mongo_update=mongo_update, payload=payload)
     # Finally create corresponding actuality
     create_actuality_inscription_protocole(protocole_resource, g.request_user)
+    # Autovalidation actuality for admin
+    if g.request_user['role'] == 'Administrateur':
+      user_resource = utilisateurs_resource.get_resource(g.request_user.get('_id'))
+      create_actuality_validation_protocole({'_id': protocole_id}, user_resource)
     return jsonify(**inscription)
 
 
