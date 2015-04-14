@@ -12,6 +12,7 @@ from ..xin import Resource, DocumentException
 from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import Paginator, get_url_params
+from ..xin.tools import parse_id
 
 
 SCHEMA = {
@@ -145,7 +146,7 @@ def get_actualites_validations():
     lookup = {'action': 'INSCRIPTION_PROTOCOLE'}
     params = get_url_params({'protocole': False, 'type': False})
     if 'protocole' in params:
-        lookup['protocole'] = parse_id(lookup['protocole'])
+        lookup['protocole'] = parse_id(params['protocole'])
         if not lookup['protocole']:
             abort(422, {'protocole': 'Bad ObjectId'})
     val_type = params.get('type', 'TOUS')
