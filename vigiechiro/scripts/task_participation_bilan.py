@@ -12,7 +12,7 @@ from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN
 
 
 AUTH = (SCRIPT_WORKER_TOKEN, None)
-
+ORDER_NAMES = [('Chiro', 'chiropteres'), ('Ortho', 'orthopteres')]
 
 def _list_donnees(participation_id):
     processed = 0
@@ -47,9 +47,9 @@ class Bilan:
             order_name = self.taxon_to_order_name[taxon_id]
         else:
             def recursive_order_find(taxon):
-                for order_name in ['chiroptere', 'ortoptere']:
-                    if (taxon['libelle_long'] == order_name
-                        or taxon['libelle_court'] == order_name):
+                for order_name_compare, order_name in ORDER_NAMES:
+                    if (taxon['libelle_long'] == order_name_compare
+                        or taxon['libelle_court'] == order_name_compare):
                         return order_name
                 for parent_id in taxon.get('parents', []):
                     r = requests.get(BACKEND_DOMAIN + '/taxons/{}'.format(taxon_id), auth=AUTH)
