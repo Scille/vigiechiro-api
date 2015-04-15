@@ -77,7 +77,7 @@ def test_pieces_jointes_access(participation_ready, file_uploaded,
 
 def test_donnees(participation_ready, observateur):
     observateur, protocole, site = participation_ready
-    tadarida_file_template = "Car170517-2014-Pass1-C1_1_140702_225107_{:0>3}.{}"
+    tadarida_file_template = "Car170517-2014-Pass1-C1-1_20140702_225107_{:0>3}.{}"
     ta_ids = []
     for i, mime in enumerate(['application/ta', 'application/tac']):
         res = custom_upload_file({'titre': tadarida_file_template.format(i, 'ta'), 'mime': mime}, observateur)

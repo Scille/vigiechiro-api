@@ -161,10 +161,16 @@ def fichier_create():
         path = 'photos/'
     elif mime in ALLOWED_MIMES_TA:
         path = 'ta/'
+        if not validate_donnee_name(titre):
+            abort(422, {'titre': 'invalid name ' + titre })
     elif mime in ALLOWED_MIMES_TC:
         path = 'tc/'
+        if not validate_donnee_name(titre):
+            abort(422, {'titre': 'invalid name'})
     elif mime in ALLOWED_MIMES_WAV:
         path = 'wav/'
+        if not validate_donnee_name(titre):
+            abort(422, {'titre': 'invalid name ' + titre})
     else:
         path = 'others/'
     payload = {
