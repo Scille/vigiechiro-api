@@ -17,10 +17,6 @@ from authomatic.extras.flask import FlaskAuthomatic
 from .tools import jsonify
 from .. import settings
 
-# Temporary fix, see https://github.com/peterhudec/authomatic/issues/92
-from authomatic.providers.oauth2 import Google
-setattr(Google, "_x_use_authorization_header", False)
-
 
 def get_request_user():
     """Return the current user or an empty dict if anonymous user"""
