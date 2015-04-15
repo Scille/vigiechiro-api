@@ -16,7 +16,7 @@ from ..xin.snippets import Paginator, get_payload, get_resource, get_url_params
 from ..xin.schema import relation, choice
 
 from .utilisateurs import utilisateurs as utilisateurs_resource
-
+from ..scripts import participation_generate_bilan
 
 def validate_donnee_name(name):
     allow_extensions = ['wav', 'ta', 'tc', 'tac', 'tcc']
@@ -189,7 +189,10 @@ def create_donnee(participation_id):
             ).get('donnees_publiques', False)
     else:
         payload['publique'] = g.request_user.get('donnees_publiques', False)
-    return donnees.insert(payload), 201
+    result = donnees.insert(payload)
+    if 'observations' in payload:
+        participation_generate_bilan.delay(participation_id)
+    return result, 201
 
 
 @donnees.route('/donnees/<objectid:donnee_id>', methods=['PATCH'])
@@ -204,7 +207,11 @@ def update_donnee(donnee_id):
     # Only owner and admin can edit
     if not is_admin and g.request_user['_id'] != donnee_resource['proprietaire']:
         abort(403)
-    return donnees.update(donnee_id, payload), 200
+    result =  donnees.update(donnee_id, payload)
+    if 'observations' in payload:
+        assert not isinstance(donnee_resource['participation'], dict), 'BUG ! data should not be expended !'
+        participation_generate_bilan.delay(donnee_resource['participation'])
+    return result, 200
 
 
 @donnees.route('/donnees/<objectid:donnee_id>/observations/<int:observation_id>', methods=['PATCH'])
@@ -247,6 +254,8 @@ def edit_observation(donnee_id, observation_id):
         abort(422, {f: 'unknown field' for f in payload.keys()})
     result = donnees.update(donnee_id, payload={'observations': [observation]},
                             mongo_update={'$set': mongo_update_observation})
+    assert not isinstance(donnee_resource['participation'], dict), 'BUG ! data should not be expended !'
+    participation_generate_bilan.delay(donnee_resource['participation'])
     return result
 
 

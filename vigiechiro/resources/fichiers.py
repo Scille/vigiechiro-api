@@ -30,7 +30,6 @@ from ..xin.auth import requires_auth
 from ..xin.schema import relation, choice
 from ..xin.snippets import get_payload
 from .utilisateurs import utilisateurs as utilisateurs_resource
-from .donnees import validate_donnee_name
 
 
 ALLOWED_MIMES_PHOTOS = ['image/bmp', 'image/png', 'image/jpg', 'image/jpeg']
@@ -157,6 +156,7 @@ def fichier_create():
     if payload.keys():
         abort(422, {f: 'unknown field' for f in payload.keys()})
     delay_work = None
+    from .donnees import validate_donnee_name
     if mime in ALLOWED_MIMES_PHOTOS:
         path = 'photos/'
     elif mime in ALLOWED_MIMES_TA:
@@ -329,7 +329,6 @@ def s3_access_file(file_id):
         sign = _sign_request(verb='GET', object_name=object_name)
     else:
         sign = {'signed_url': settings.DEV_FAKE_S3_URL + '/' + object_name}
-        print('redirect', sign['signed_url'])
     if redirection:
         return redirect(sign['signed_url'], code=302)
     else:

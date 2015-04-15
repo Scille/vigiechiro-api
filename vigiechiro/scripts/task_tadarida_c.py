@@ -1,10 +1,8 @@
-#! /usr/bin/env python3
-
 """
 Tadarida-C task worker
 """
 
-import logging; logging.basicConfig(level=logging.INFO)
+import logging
 import sys
 import os
 import tempfile
