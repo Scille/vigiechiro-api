@@ -209,8 +209,7 @@ def update_donnee(donnee_id):
         abort(403)
     result =  donnees.update(donnee_id, payload)
     if 'observations' in payload:
-        assert not isinstance(donnee_resource['participation'], dict), 'BUG ! data should not be expended !'
-        participation_generate_bilan.delay(donnee_resource['participation'])
+        participation_generate_bilan.delay(donnee_resource['participation']['_id'])
     return result, 200
 
 
@@ -254,8 +253,7 @@ def edit_observation(donnee_id, observation_id):
         abort(422, {f: 'unknown field' for f in payload.keys()})
     result = donnees.update(donnee_id, payload={'observations': [observation]},
                             mongo_update={'$set': mongo_update_observation})
-    assert not isinstance(donnee_resource['participation'], dict), 'BUG ! data should not be expended !'
-    participation_generate_bilan.delay(donnee_resource['participation'])
+    participation_generate_bilan.delay(donnee_resource['participation']['_id'])
     return result
 
 
