@@ -209,7 +209,9 @@ def update_donnee(donnee_id):
         abort(403)
     result =  donnees.update(donnee_id, payload)
     if 'observations' in payload:
-        participation_generate_bilan.delay(donnee_resource['participation']['_id'])
+        if isinstance(donnee_resource['participation'], dict):
+            import pdb; pdb.set_trace()
+        participation_generate_bilan.delay(donnee_resource['participation'])
     return result, 200
 
 
@@ -253,7 +255,9 @@ def edit_observation(donnee_id, observation_id):
         abort(422, {f: 'unknown field' for f in payload.keys()})
     result = donnees.update(donnee_id, payload={'observations': [observation]},
                             mongo_update={'$set': mongo_update_observation})
-    participation_generate_bilan.delay(donnee_resource['participation']['_id'])
+    if isinstance(donnee_resource['participation'], dict):
+        import pdb; pdb.set_trace()
+    participation_generate_bilan.delay(donnee_resource['participation'])
     return result
 
 

@@ -67,7 +67,9 @@ def init_env(taxons, fake_s3, request):
         r = requests.post(fichiers_url + '/' + str(fichier_id), auth=AUTH)
         assert r.status_code == 200, r.text
         # Now create a corresponding empty donnee
-        donnee_id = db.donnees.insert({'_etag': uuid4().hex, 'proprietaire': ObjectId(my_id)})
+        participation_id = db.participations.insert({})
+        donnee_id = db.donnees.insert({'_etag': uuid4().hex, 'proprietaire': ObjectId(my_id),
+                                       'participation': participation_id})
         db.fichiers.update({'_id': fichier_id}, {'$set': {'lien_donnee': donnee_id}})
         donnees_ids.append(donnee_id)
         fichiers_ids.append(fichier_id)
