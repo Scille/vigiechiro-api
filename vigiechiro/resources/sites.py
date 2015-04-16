@@ -37,7 +37,13 @@ SCHEMA = {
     'commentaire': {'type': 'string'},
     'grille_stoc': relation('grille_stoc', postonly=True),
     'verrouille': {'type': 'boolean'},
-    'coordonnee': {'type': 'point'},
+    'tracet': {
+        'type': 'dict',
+        'schema': {
+            'chemin': {'type': 'linestring'},
+            'origine': {'type': 'point'}
+        }
+    },
     'url_cartographie': {'type': 'url'},
     'largeur': {'type': 'number'},
     'localites': {
@@ -145,7 +151,11 @@ def list_protocole_sites(protocole_id):
 @sites.route('/sites', methods=['POST'])
 @requires_auth(roles='Observateur')
 def create_site():
-    payload = get_payload({'protocole', 'commentaire', 'grille_stoc', 'justification_non_aleatoire'})
+    payload = get_payload({'protocole',
+                           'commentaire',
+                           'grille_stoc',
+                           'tracet',
+                           'justification_non_aleatoire'})
     payload['observateur'] = g.request_user['_id']
     # Get protocole resource
     protocole_resource = get_resource('protocoles',

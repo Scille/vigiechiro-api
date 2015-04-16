@@ -471,13 +471,13 @@ class GenericValidator(SchemaRunner):
 
     def _run_type_point(self, context):
         try:
-            Point(value)
+            Point(context.value)
         except TypeError as e:
             context.add_error("Point not correct %s: %s" % (value, e))
 
-    def _run_type_linestring(self, field, value):
+    def _run_type_linestring(self, context):
         try:
-            LineString(value)
+            LineString(context.value)
         except TypeError:
             context.add_error("LineString not correct %s " % value)
 
