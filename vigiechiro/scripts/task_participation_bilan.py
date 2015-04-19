@@ -16,7 +16,7 @@ ORDER_NAMES = [('Chiro', 'chiropteres'), ('Ortho', 'orthopteres')]
 
 def _list_donnees(participation_id):
     processed = 0
-    page = 0
+    page = 1
     max_results = 100
     while True:
         r = requests.get(BACKEND_DOMAIN + '/participations/{}/donnees'.format(participation_id),
