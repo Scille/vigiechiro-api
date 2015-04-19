@@ -81,7 +81,7 @@ def tadaridaC(fichier_id):
     # Run tadarida
     ret = subprocess.call([TADARIDA_C, 'tas'], cwd=wdir_path)
     if ret:
-        logging.error('Error in running tadaridaD : returns {}'.format(ret))
+        logging.error('Error in running tadaridaC : returns {}'.format(ret))
         return 1
     # A output.tc file should have been generated
     output_path = wdir_path + '/tas/output.tc'

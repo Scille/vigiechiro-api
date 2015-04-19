@@ -84,6 +84,45 @@ SCHEMA = {
             # 'piste0_expansion': {'type': 'custom_code'},
             # 'piste1_expansion': {'type': 'custom_code'}
         }
+    },
+    'bilan': {
+        'type': 'dict',
+        'schema': {
+            'problemes': {'type': 'integer'},
+            'autre': {
+                'type': 'list',
+                'schema': {
+                    'type': 'dict',
+                    'schema': {
+                        'taxon': relation('taxons', required=True),
+                        'nb_contact_min': {'type': 'integer', 'required': True},
+                        'nb_contact_max': {'type': 'integer', 'required': True}
+                    }
+                }
+            },
+            'chiropteres': {
+                'type': 'list',
+                'schema': {
+                    'type': 'dict',
+                    'schema': {
+                        'taxon': relation('taxons', required=True),
+                        'nb_contact_min': {'type': 'integer', 'required': True},
+                        'nb_contact_max': {'type': 'integer', 'required': True}
+                    }
+                }
+            },
+            'orthopteres': {
+                'type': 'list',
+                'schema': {
+                    'type': 'dict',
+                    'schema': {
+                        'taxon': relation('taxons', required=True),
+                        'nb_contact_min': {'type': 'integer', 'required': True},
+                        'nb_contact_max': {'type': 'integer', 'required': True}
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -190,7 +229,7 @@ def edit_participation(participation_id):
     _check_edit_access(participation_resource)
     payload = get_payload({'date_debut': False, 'date_fin': False,
                            'commentaire': False, 'meteo': False,
-                           'configuration': False})
+                           'configuration': False, 'bilan': False})
     document = participations.update(participation_id, payload)
     return document
 

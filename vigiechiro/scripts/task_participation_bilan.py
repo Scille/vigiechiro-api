@@ -70,7 +70,7 @@ class Bilan:
         order = self.bilan_order[order_name]
         if taxon_id not in order:
             order[taxon_id] = {'contact_max': 0, 'contact_min': 0}
-        return self.bilan_order[order]
+        return self.bilan_order[order_name]
 
     def add_contact_min(self, taxon, proba):
         if proba > 0.75:
@@ -84,8 +84,9 @@ class Bilan:
     def generate_payload(self):
         payload = {'problemes': self.problemes}
         for order_name, order in self.bilan_order.items():
-            payload[order_name] = [{'taxon': taxon, 'nb_contact_min': d[0], 'nb_contact_max': d[1]}
-                                   for taxon, data in order.items()]
+            # import pdb; pdb.set_trace()
+            payload[order_name] = [{'taxon': taxon, 'nb_contact_min': d['contact_min'], 'nb_contact_max': d['contact_max']}
+                                   for taxon, d in order.items()]
         return payload
 
 
@@ -101,9 +102,10 @@ def participation_generate_bilan(participation_id):
             bilan.problemes += 1
         for observation in donnee.get('observations', []):
             bilan.add_contact_max(observation['tadarida_taxon'], observation['tadarida_probabilite'])
-            for taxon, proba in observation.get('tadarida_taxon_autre', []).items():
-                bilan.add_contact_min(taxon, proba)
+            for obs in observation.get('tadarida_taxon_autre', []):
+                bilan.add_contact_min(obs['taxon'], obs['probabilite'])
     # Update the participation
+    logging.info('participation {}, bilan : {}'.format(participation_id, bilan.generate_payload()))
     r = requests.patch(BACKEND_DOMAIN + '/participations/' + participation_id,
                        json={'bilan': bilan.generate_payload()}, auth=AUTH)
     if r.status_code != 200:
