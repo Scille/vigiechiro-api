@@ -12,7 +12,7 @@ from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN
 
 
 AUTH = (SCRIPT_WORKER_TOKEN, None)
-ORDER_NAMES = [('Chiro', 'chiropteres'), ('Ortho', 'orthopteres')]
+ORDER_NAMES = [('Chiroptera', 'chiropteres'), ('Orthoptera', 'orthopteres')]
 
 def _list_donnees(participation_id):
     processed = 0
@@ -47,18 +47,18 @@ class Bilan:
             order_name = self.taxon_to_order_name[taxon_id]
         else:
             def recursive_order_find(taxon):
+                print("recursive on {}".format(taxon))
                 for order_name_compare, order_name in ORDER_NAMES:
                     if (taxon['libelle_long'] == order_name_compare
                         or taxon['libelle_court'] == order_name_compare):
                         return order_name
                 for parent_id in taxon.get('parents', []):
-                    r = requests.get(BACKEND_DOMAIN + '/taxons/{}'.format(taxon_id), auth=AUTH)
+                    r = requests.get(BACKEND_DOMAIN + '/taxons/{}'.format(parent_id), auth=AUTH)
                     if r.status_code != 200:
                         logging.error('Retrieving taxon {} error {} : {}'.format(
-                            taxon_id, r.status_code, r.text))
+                            parent_id, r.status_code, r.text))
                         return 1
                     parent = r.json()
-                    get_taxon(parent_id)
                     order = recursive_order_find(parent)
                     if order != 'autre':
                         return order
@@ -109,6 +109,7 @@ def participation_generate_bilan(participation_id):
     r = requests.patch(BACKEND_DOMAIN + '/participations/' + participation_id,
                        json={'bilan': bilan.generate_payload()}, auth=AUTH)
     if r.status_code != 200:
-        logging.error('Cannot update bilan for participation {}'.format(participation_id))
+        logging.error('Cannot update bilan for participation {}, error {} : {}'.format(
+            participation_id, r.status_code, r.text))
         return 1
     return 0
