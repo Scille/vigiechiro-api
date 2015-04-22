@@ -49,6 +49,7 @@ def validate_donnee_name(name):
 SCHEMA = {
     'titre': {'type': 'string'},
     'commentaire': {'type': 'string'},
+    'probleme': {'type': 'string'},
     'participation': relation('participations', required=True),
     'proprietaire': relation('utilisateurs', required=True),
     'publique': {'type': 'boolean'},
@@ -198,7 +199,7 @@ def create_donnee(participation_id):
 @donnees.route('/donnees/<objectid:donnee_id>', methods=['PATCH'])
 @requires_auth(roles='Observateur')
 def update_donnee(donnee_id):
-    payload = get_payload({'commentaire': False, 'observations': False})
+    payload = get_payload({'commentaire': False, 'probleme': False, 'observations': False})
     donnee_resource = donnees.get_resource(donnee_id)
     # Only admin (in fact script) can change that
     is_admin = g.request_user['role'] == 'Administrateur'

@@ -759,6 +759,7 @@ Sinon : tous les observateurs
 Nom                      |  Type   | Description
 -------------------------|---------|-------------
  commentaire                           | string  |  non   |
+ probleme                              | string  |  non   |
  observations                          | list    |  non   | liste des observations faites
  observations[x].temps_debut           | float   |  oui   |
  observations[x].temps_fin             | float   |  oui   |
