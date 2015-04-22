@@ -68,22 +68,7 @@ SCHEMA = {
     },
     'configuration': {
         'type': 'dict',
-        'schema': {
-            'detecteur_enregistreur_numero_serie': {'type': 'string'},
-            # TODO : create the custom_code type (dynamically
-            # parametrized regex)
-            # 'detecteur_enregistreur_type': {'type': 'custom_code'},
-            'micro0_position': choice(['SOL', 'CANOPEE']),
-            'micro0_numero_serie': {'type': 'string'},
-            # 'micro0_type': {'type': 'custom_code'},
-            'micro0_hauteur': {'type': 'integer'},
-            'micro1_position': choice(['SOL', 'CANOPEE']),
-            'micro1_numero_serie': {'type': 'string'},
-            # 'micro1_type': {'type': 'custom_code'},
-            'micro1_hauteur': {'type': 'integer'},
-            # 'piste0_expansion': {'type': 'custom_code'},
-            # 'piste1_expansion': {'type': 'custom_code'}
-        }
+        'keyschema': {'type': 'string'}
     },
     'bilan': {
         'type': 'dict',
