@@ -148,6 +148,22 @@ def list_protocole_sites(protocole_id):
     return _sites_generic_list(params)
 
 
+@sites.route('/protocoles/<objectid:protocole_id>/sites/grille_stoc', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_protocole_sites_grille_stoc(protocole_id):
+    """Return a list of sites with grille_stoc for a protocol"""
+    items = sites.find({"protocole": protocole_id}, {"grille_stoc": 1})
+    return {'_items': [i for i in items[0]]}
+
+
+@sites.route('/protocoles/<objectid:protocole_id>/sites/tracet', methods=['GET'])
+@requires_auth(roles='Observateur')
+def list_protocole_sites_tracet(protocole_id):
+    """Return a list of sites with tracet for a protocol"""
+    items = sites.find({"protocole": protocole_id}, {"tracet": 1})
+    return {'_items': [i for i in items[0]]}
+
+
 @sites.route('/sites', methods=['POST'])
 @requires_auth(roles='Observateur')
 def create_site():
