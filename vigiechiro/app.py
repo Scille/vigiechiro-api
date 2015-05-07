@@ -1,8 +1,11 @@
 #! /usr/bin/env python3
 
 import redis
-from flask import Flask
+import requests
+from os.path import abspath, dirname
+from flask import Flask, send_from_directory, make_response
 from flask.ext.pymongo import PyMongo
+from flask.ext.cache import Cache
 from hirefire.procs.celery import CeleryProc
 
 from . import settings
@@ -12,6 +15,7 @@ from .xin.auth import auth_factory
 from .xin.tools import ObjectIdConverter
 from .scripts.celery import celery_app
 from .scripts.hirefire import build_hirefire_blueprint
+
 
 def make_json_app(app):
     from flask import Flask, jsonify
@@ -41,22 +45,45 @@ def make_json_app(app):
 def init_app():
     app = Flask(__name__)
     app.config.from_pyfile('settings.py')
+    # Configure static hosting of the front
+    if app.config['FRONTEND_HOSTED']:
+        cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+        app.root_path = abspath(dirname(__file__) + '/..')
+        redirect_url = app.config['FRONTEND_HOSTED_REDIRECT_URL']
+
+        @app.route('/')
+        @app.route('/<path:path>')
+        @cache.cached(timeout=600)
+        def host_front(path='index.html'):
+            if redirect_url:
+                target = '{}/{}'.format(redirect_url, path)
+                r = requests.get(target)
+                if r.status_code != 200:
+                    app.logger.error('cannot fetch {}, error {} : {}'.format(
+                        target, r.status_code, r.data))
+                response = make_response(r.content, r.status_code)
+                for key, value in r.headers.items():
+                    response.headers[key] = value
+                return response
+            return send_from_directory('static', path)
     app.data = PyMongo(app)
     app.redis = redis.StrictRedis(host=settings.REDIS_HOST,
                                   port=settings.REDIS_PORT, db=0)
     # Add objectid as url variable type
     app.url_map.converters['objectid'] = ObjectIdConverter
+    url_prefix = app.config['BACKEND_URL_PREFIX']
     app.register_blueprint(auth_factory(settings.AUTHOMATIC.keys(),
-                                        mock_provider=settings.DEV_FAKE_AUTH))
-    app.register_blueprint(resources.utilisateurs)
-    app.register_blueprint(resources.taxons)
-    app.register_blueprint(resources.protocoles)
-    app.register_blueprint(resources.fichiers)
-    app.register_blueprint(resources.grille_stoc)
-    app.register_blueprint(resources.actualites)
-    app.register_blueprint(resources.sites)
-    app.register_blueprint(resources.participations)
-    app.register_blueprint(resources.donnees)
+                                        mock_provider=settings.DEV_FAKE_AUTH),
+                           url_prefix=url_prefix)
+    app.register_blueprint(resources.utilisateurs, url_prefix=url_prefix)
+    app.register_blueprint(resources.taxons, url_prefix=url_prefix)
+    app.register_blueprint(resources.protocoles, url_prefix=url_prefix)
+    app.register_blueprint(resources.fichiers, url_prefix=url_prefix)
+    app.register_blueprint(resources.grille_stoc, url_prefix=url_prefix)
+    app.register_blueprint(resources.actualites, url_prefix=url_prefix)
+    app.register_blueprint(resources.sites, url_prefix=url_prefix)
+    app.register_blueprint(resources.participations, url_prefix=url_prefix)
+    app.register_blueprint(resources.donnees, url_prefix=url_prefix)
     make_json_app(app)
     # Init hirefire
     worker_proc = CeleryProc(name='worker', queues=['celery'], app=celery_app)

@@ -178,7 +178,7 @@ def test_join_protocole(observateur, administrateur, protocoles_base):
     for bad_protocole_id in ['dummy', observateur.user_id,
                              '549b444b13adf218427fb681']:
         r = observateur.put(protocole_url.format(bad_protocole_id))
-        assert r.status_code in [404, 422], r.text
+        assert r.status_code in [404, 405, 422], r.text
     # Try to manualy add a protocole to myself
     r = observateur.patch('/moi',
                           json={'protocoles': [{'protocole': protocole_id}]})

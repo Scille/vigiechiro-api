@@ -28,20 +28,19 @@ ROLE_RULES = {
     'Administrateur': ['Lecteur', 'Observateur', 'Validateur',
                        'Administrateur']}
 
-# TODO : replace role by this enum system
-class Roles(Enum):
-    Lecteur = 0
-    Observateur = 1
-    Validateur = 2
-    Administrateur = 3
-
 
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
-FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN', 'http://localhost:9000')
+BACKEND_URL_PREFIX = environ.get('BACKEND_URL_PREFIX', '')
+assert not BACKEND_URL_PREFIX or BACKEND_URL_PREFIX.startswith('/')
+FRONTEND_HOSTED = environ.get('FRONTEND_HOSTED', False)
+FRONTEND_HOSTED_REDIRECT_URL = environ.get('FRONTEND_HOSTED_REDIRECT_URL', '')
 PORT = int(environ.get('BACKEND_PORT', 8080))
 BACKEND_DOMAIN = environ.get(
-    'BACKEND_DOMAIN', 'http://localhost:{}'.format(PORT))
+    'BACKEND_DOMAIN', 'http://localhost:{}{}'.format(PORT, BACKEND_URL_PREFIX))
+FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN',
+    'http://localhost:%s' % PORT if FRONTEND_HOSTED else 'http://localhost:9000')
+
 
 ### Redis ###
 REDIS_PORT = environ.get('REDIS_PORT', 6379)
