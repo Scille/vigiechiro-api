@@ -20,7 +20,7 @@ from .. import settings
 
 ### HACK ###
 
-# Heroku router make https requests being received as http
+# Heroku router makes https requests being received as http
 from authomatic.adapters import WerkzeugAdapter
 from flask import make_response, session
 from authomatic import Authomatic
