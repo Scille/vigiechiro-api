@@ -30,7 +30,6 @@ class FlaskAuthomatic(Authomatic):
     class ForceHTTPSWerkzeugAdapter(WerkzeugAdapter):
         @property
         def url(self):
-            import pdb; pdb.set_trace()
             import re
             return re.sub(r'^http://', 'https://', self.request.base_url)
 
