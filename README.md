@@ -64,3 +64,13 @@ Pour configurer l'authentification via Oauth, les variables d'environnement suiv
  - `FACEBOOK_API_KEY` & `FACEBOOK_API_SECRET` pour Facebook
 
 Pour émuler l'authentification, `DEV_FAKE_AUTH` peut être mis à `true`
+
+
+
+## Heroku
+
+Configurer heroku pour utiliser le multi buildpack (python/r)
+
+```
+heroku buildpacks:set https://github.com/ddollar/heroku-buildpack-multi.git\#331b02 -a vigiechiro
+```
