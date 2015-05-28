@@ -16,7 +16,7 @@ from .task_tadarida_c import tadaridaC
 
 
 TADARIDA_D = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD'
-TADARIDA_D_CONCURENCY = settings.TADARIDA_D_CONCURENCY
+TADARIDA_D_CONCURRENCY = settings.TADARIDA_D_CONCURRENCY
 BACKEND_DOMAIN = settings.BACKEND_DOMAIN
 AUTH = (settings.SCRIPT_WORKER_TOKEN, None)
 
@@ -66,7 +66,7 @@ def tadaridaD(fichier_id):
         return 1
     logging.info('Got back file {}, running tadaridaD on it'.format(fichier_info))
     # Run tadarida
-    ret = subprocess.call([TADARIDA_D, '-t', TADARIDA_D_CONCURENCY, 'waves'], cwd=wdir_path)
+    ret = subprocess.call([TADARIDA_D, '-t', TADARIDA_D_CONCURRENCY, 'waves'], cwd=wdir_path)
     if ret:
         logging.error('Error in running tadaridaD : returns {}'.format(ret))
         return 1
