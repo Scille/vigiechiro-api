@@ -80,7 +80,7 @@ def _sign_request(**kwargs):
     verb = kwargs.pop('verb', 'GET')
     content_md5 = kwargs.pop('content_md5', '')
     content_type = kwargs.pop('content_type', '')
-    expires = kwargs.pop('expires', int(time.time() + 10))
+    expires = kwargs.pop('expires', int(time.time() + 3600))
     amz_headers = kwargs.pop('amz_headers', '')
     params = kwargs.pop('params', {})
     sign_head = kwargs.pop('sign_head', {})
