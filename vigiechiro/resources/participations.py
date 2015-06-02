@@ -249,10 +249,10 @@ def add_pieces_jointes(participation_id):
         to_link_participation.append(pj_id)
         if pj_data['mime'] in ALLOWED_MIMES_WAV:
             add_to_link_donnees(pj_data)
-            delay_tasks.append(lambda: tadaridaD.delay(pj_id))
+            delay_tasks.append(lambda pj_id=pj_id: tadaridaD.delay(pj_id))
         elif pj_data['mime'] in ALLOWED_MIMES_TA:
             add_to_link_donnees(pj_data)
-            delay_tasks.append(lambda: tadaridaC.delay(pj_id))
+            delay_tasks.append(lambda pj_id=pj_id: tadaridaC.delay(pj_id))
         elif pj_data['mime'] in ALLOWED_MIMES_TC:
             add_to_link_donnees(pj_data)
         elif pj_data['mime'] not in ALLOWED_MIMES_PHOTOS:
