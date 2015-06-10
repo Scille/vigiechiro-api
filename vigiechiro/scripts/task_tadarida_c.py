@@ -16,7 +16,7 @@ from pymongo import MongoClient
 from .celery import celery_app
 from .. import settings
 from ..resources.fichiers import fichiers, ALLOWED_MIMES_TA
-from .task_participation_bilan import participation_generate_bilan
+from .task_participation import participation_generate_bilan
 
 
 MIN_PROBA_TAXON = 0.05
@@ -195,16 +195,15 @@ def _tadaridaC_process_batch(db, batch):
     logger.info('Got back files, running tadaridaC on them')
     # Run tadarida
     ret = subprocess.call([TADARIDA_C, 'tas'], cwd=wdir_path)
+    fichiers_process_done = [f['_id'] for _, f in fichiers_per_titre.items()]
     if ret:
         logger.error('Error in running tadaridaC : returns {}'.format(ret))
         # TODO: tadaridaC provide error if file is empty leading to error loop
-        fichiers_process_done = [f['_id'] for _, f in fichiers_per_titre.items()]
         logger.info('Mark as done fichiers {}'.format(fichiers_process_done))
         db.fichiers.update({'_id': {'$in': fichiers_process_done}},
                            {'$unset': {'_async_process': True}}, multi=True)
         return 1
     to_make_bilan = set()
-    fichiers_process_done = []
     # Each .ta should have it .tc now
     for titre, fichier in fichiers_per_titre.items():
         output_name = titre.rsplit('.', 1)[0] + '.tc'
@@ -284,7 +283,7 @@ def _tadaridaC_process_batch(db, batch):
                 fichier['lien_donnee'], r.status_code, r.text))
             continue
         to_make_bilan.add(r.json()['participation']['_id'])
-        fichiers_process_done.append(fichier['_id'])
+        # fichiers_process_done.append(fichier['_id'])
     # Remove the async process request from the original fichiers
     logger.info('Mark as done fichiers {}'.format(fichiers_process_done))
     db.fichiers.update({'_id': {'$in': fichiers_process_done}},

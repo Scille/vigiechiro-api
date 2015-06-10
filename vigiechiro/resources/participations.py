@@ -20,7 +20,7 @@ from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
 from .donnees import donnees as donnees_resource
-from ..scripts import tadaridaD, tadaridaC, tadaridaC_batch
+from ..scripts import tadaridaD, tadaridaC, participation_pj_link_donnees
 
 
 def _validate_site(context, site):
@@ -227,21 +227,29 @@ def add_pieces_jointes(participation_id):
     to_link_participation = []
     to_link_donnees = {}
     async_process_tadaridaC = []
+    async_process_tadaridaD = []
     def add_to_link_donnees(pj_data):
         basename = pj_data['titre'].rsplit('.', 1)[0]
         if basename not in to_link_donnees:
             to_link_donnees[basename] = []
         to_link_donnees[basename].append(pj_data['_id'])
-    delay_tasks = []
+    # delay_tasks = []
     errors = {}
     # For each pj, check existance, make sure it is not linked to something
     # else, link to the participation/donnee, create a new donnee if needed
     # and finally trigger tadarida async process if needed
-    for pj_id in get_payload({'pieces_jointes': True})['pieces_jointes']:
-        pj_data = get_resource('fichiers', pj_id)
-        if not pj_data:
-            errors[pj_id] = 'invalid fichiers resource objectid'
-            break
+    pjs_ids_str =  get_payload({'pieces_jointes': True})['pieces_jointes']
+    pjs_ids = []
+    for pj_id_str in pjs_ids_str:
+        pj_id = parse_id(pj_id_str)
+        if pj_id is not None:
+            pjs_ids.append(pj_id)
+    pjs = [pj for pj in current_app.data.db.fichiers.find({'_id': {'$in': pjs_ids}})]
+    pjs_ids_str_found = {str(pj['_id']) for pj in pjs}
+    for pj_id_str in pjs_ids_str:
+        if pj_id_str not in pjs_ids_str_found:
+            errors[pj_id_str] = 'invalid fichiers resource objectid'
+    for pj_data in pjs:
         pj_id = pj_data['_id']
         for link in 'lien_donnee', 'lien_participation', 'lien_protocole':
             if link in pj_data:
@@ -249,7 +257,8 @@ def add_pieces_jointes(participation_id):
                 break
         if pj_data['mime'] in ALLOWED_MIMES_WAV:
             add_to_link_donnees(pj_data)
-            delay_tasks.append(lambda pj_id=pj_id: tadaridaD.delay(pj_id))
+            # delay_tasks.append(lambda pj_id=pj_id: tadaridaD.delay(pj_id))
+            async_process_tadaridaD.append(pj_id)
         elif pj_data['mime'] in ALLOWED_MIMES_TA:
             add_to_link_donnees(pj_data)
             # TadaridaC has a heavy bootstraping cost, hence we use batch
@@ -274,24 +283,12 @@ def add_pieces_jointes(participation_id):
                                             {'$set': {'lien_participation': participation_id,
                                                       '_async_process': 'tadaridaC'}},
                                             multi=True)
-    for basename, to_link in to_link_donnees.items():
-        donnee = current_app.data.db.donnees.find_one({
-            'titre': basename, 'participation': participation_id})
-        if not donnee:
-            donnee_id = donnees_resource.insert({
-                'titre': basename,
-                'participation': participation_id,
-                'proprietaire': participation_resource['observateur'],
-                'publique': utilisateurs_resource.get_resource(
-                    participation_resource['observateur']).get('donnees_publiques', False)
-            })['_id']
-        else:
-            donnee_id = donnee['_id']
-        current_app.data.db.fichiers.update({'_id': {'$in': to_link}},
-                                            {'$set': {'lien_donnee': donnee_id}},
-                                            multi=True)
-    for task in delay_tasks:
-        task()
+    participation_pj_link_donnees.delay(participation_id,
+        participation_resource['observateur'],
+        utilisateurs_resource.get_resource(
+            participation_resource['observateur']).get(
+                'donnees_publiques', False),
+        to_link_donnees, async_process_tadaridaD)
     return {}, 200
 
 
