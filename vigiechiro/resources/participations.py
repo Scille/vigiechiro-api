@@ -253,7 +253,7 @@ def add_pieces_jointes(participation_id):
         pj_id = pj_data['_id']
         for link in 'lien_donnee', 'lien_participation', 'lien_protocole':
             if link in pj_data:
-                errors[pj_id] = 'fichiers already linked (has a `{}` field)'.format(link)
+                errors[str(pj_id)] = 'fichiers already linked (has a `{}` field)'.format(link)
                 break
         if pj_data['mime'] in ALLOWED_MIMES_WAV:
             add_to_link_donnees(pj_data)
