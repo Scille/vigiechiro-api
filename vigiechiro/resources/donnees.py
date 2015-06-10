@@ -217,7 +217,6 @@ def update_donnee(donnee_id):
 @donnees.route('/donnees/<objectid:donnee_id>/observations/<int:observation_id>', methods=['PATCH'])
 @requires_auth(roles='Observateur')
 def edit_observation(donnee_id, observation_id):
-    import pdb; pdb.set_trace()
     donnee_resource = donnees.get_resource(donnee_id)
     # Retrieve observation
     observations = donnee_resource.get('observations', [])
