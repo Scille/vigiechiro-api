@@ -3,6 +3,8 @@ Tadarida-C task worker
 """
 
 import logging
+logger = logging.getLogger()
+logger.setLevel(logging.WARNING)
 import sys
 import os
 import tempfile
@@ -25,7 +27,7 @@ AUTH = (settings.SCRIPT_WORKER_TOKEN, None)
 
 def _create_working_dir(subdirs):
     wdir  = tempfile.mkdtemp()
-    logging.info('working in directory {}'.format(wdir))
+    logger.info('working in directory {}'.format(wdir))
     for subdir in subdirs:
         os.mkdir(wdir + '/' + subdir)
     return wdir
@@ -35,11 +37,11 @@ def _make_taxon_observation(taxon_name, taxon_proba):
     r = requests.get('{}/taxons'.format(BACKEND_DOMAIN),
         params={'q': taxon_name}, auth=AUTH)
     if r.status_code != 200:
-        logging.warning('retreiving taxon {} in backend, error {}: {}'.format(
+        logger.warning('retreiving taxon {} in backend, error {}: {}'.format(
             taxon_name, r.status_code, r.text))
         return None
     if r.json()['_meta']['total'] == 0:
-        logging.warning('cannot retreive taxon {} in backend, skipping it'.format(
+        logger.warning('cannot retreive taxon {} in backend, skipping it'.format(
             taxon_name))
         return None
     return {'taxon': r.json()['_items'][0]['_id'], 'probabilite': taxon_proba}
@@ -53,20 +55,20 @@ def tadaridaC(fichier_id):
     # Retreive the fichier resource
     r = requests.get(BACKEND_DOMAIN + '/fichiers/' + fichier_id, auth=AUTH)
     if r.status_code != 200:
-        logging.error('Cannot retreive fichier {}'.format(fichier_id))
+        logger.error('Cannot retreive fichier {}'.format(fichier_id))
         return 1
     fichier = r.json()
     fichier_info = '{} ({})'.format(fichier['_id'], fichier['titre'])
     if fichier['mime'] not in ALLOWED_MIMES_TA:
-        logging.error('Fichier {} is not a ta file (mime: {})'.format(
+        logger.error('Fichier {} is not a ta file (mime: {})'.format(
             fichier_info, fichier['mime']))
         return 1
     if 'lien_donnee' not in fichier:
-        logging.error('{} must have a lien_donnee in order to link '
+        logger.error('{} must have a lien_donnee in order to link '
                       'the generated .tc to something'.format(fichier_info))
         return 1
     # Download the file
-    logging.info('Downloading file {}'.format(fichier_info))
+    logger.info('Downloading file {}'.format(fichier_info))
     r = requests.get('{}/fichiers/{}/acces'.format(BACKEND_DOMAIN, fichier_id),
         params={'redirection': True}, stream=True, auth=AUTH)
     input_path = wdir_path + '/tas/' + fichier['titre']
@@ -76,20 +78,20 @@ def tadaridaC(fichier_id):
                 f.write(chunk)
                 f.flush()
     if r.status_code != 200:
-        logging.error('Cannot get back file {} : {}, {}'.format(
+        logger.error('Cannot get back file {} : {}, {}'.format(
             fichier_info, r.status_code, r.text))
         return 1
-    logging.info('Got back file {}, running tadaridaC on it'.format(fichier_info))
+    logger.info('Got back file {}, running tadaridaC on it'.format(fichier_info))
     # Run tadarida
     ret = subprocess.call([TADARIDA_C, 'tas'], cwd=wdir_path)
     if ret:
-        logging.error('Error in running tadaridaC : returns {}'.format(ret))
+        logger.error('Error in running tadaridaC : returns {}'.format(ret))
         return 1
     # A output.tc file should have been generated
     output_path = wdir_path + '/tas/' + fichier['titre'].rsplit('.', 1)[0] + '.tc'
     output_name = output_path.split('/')[-1]
     if not os.path.exists(output_path):
-        logging.warning("{} hasn't been created, hence {} has"
+        logger.warning("{} hasn't been created, hence {} has"
                         " not been processed".format(
                             output_name, fichier_info))
         return 1
@@ -102,18 +104,18 @@ def tadaridaC(fichier_id):
         tc_payload['lien_participation'] = str(fichier['lien_participation'])
     r = requests.post(BACKEND_DOMAIN + '/fichiers', json=tc_payload, auth=AUTH)
     if r.status_code != 201:
-        logging.error("{}'s .tc backend post {} error {} : {}".format(
+        logger.error("{}'s .tc backend post {} error {} : {}".format(
             fichier_info, tc_payload, r.status_code, r.text))
         return 1
     tc_data = r.json()
     tc_fichier_info = '{} ({})'.format(tc_data['_id'], tc_data['titre'])
-    logging.info("Registered {}'s .ta as {}".format(fichier_info, tc_fichier_info))
+    logger.info("Registered {}'s .ta as {}".format(fichier_info, tc_fichier_info))
     # Then put it to s3 with the signed url
     s3_signed_url = tc_data['s3_signed_url']
     with open(output_path, 'rb') as fd:
         r = requests.put(s3_signed_url, headers={'Content-Type': tc_payload['mime']}, data=fd)
     if r.status_code != 200:
-        logging.error('post to s3 {} error {} : {}'.format(s3_signed_url, r.status_code, r.text))
+        logger.error('post to s3 {} error {} : {}'.format(s3_signed_url, r.status_code, r.text))
         return 1
     # Update the donnee according to the .tc
     payload = {'observations': []}
@@ -148,13 +150,13 @@ def tadaridaC(fichier_id):
     r = requests.patch('{}/donnees/{}'.format(BACKEND_DOMAIN, fichier['lien_donnee']),
                        json=payload, auth=AUTH)
     if r.status_code != 200:
-        logging.warning('updating donnee {}, error {}: {}'.format(
+        logger.warning('updating donnee {}, error {}: {}'.format(
             fichier['lien_donnee'], r.status_code, r.text))
         return 1
     # Notify the upload to the backend
     r = requests.post(BACKEND_DOMAIN + '/fichiers/' + tc_data['_id'], auth=AUTH)
     if r.status_code != 200:
-        logging.error('Notify end upload for {} error {} : {}'.format(
+        logger.error('Notify end upload for {} error {} : {}'.format(
             tc_data['_id'], r.status_code, r.text))
         return 1
     return 0
@@ -168,15 +170,15 @@ def _tadaridaC_process_batch(db, batch):
         # Add fichier_info among the real data for easier logging
         fichier['fichier_info'] = '{} ({})'.format(fichier['_id'], fichier['titre'])
         if fichier['mime'] not in ALLOWED_MIMES_TA:
-            logging.error('Fichier {} is not a ta file (mime: {})'.format(
+            logger.error('Fichier {} is not a ta file (mime: {})'.format(
                 fichier['fichier_info'], fichier['mime']))
         if 'lien_donnee' not in fichier:
-            logging.error('{} must have a lien_donnee in order to link '
+            logger.error('{} must have a lien_donnee in order to link '
                           'the generated .tc to something'.format(
                               fichier['fichier_info']))
         fichiers_per_titre[fichier['titre']] = fichier
     # Download the files
-    logging.info('Downloading {} files'.format(len(fichiers_per_titre)))
+    logger.info('Downloading {} files'.format(len(fichiers_per_titre)))
     for titre, fichier in fichiers_per_titre.items():
         r = requests.get('{}/fichiers/{}/acces'.format(
             BACKEND_DOMAIN, fichier['_id']), params={'redirection': True},
@@ -188,16 +190,16 @@ def _tadaridaC_process_batch(db, batch):
                     f.write(chunk)
                     f.flush()
         if r.status_code != 200:
-            logging.error('Cannot get back file {} : {}, {}'.format(
+            logger.error('Cannot get back file {} : {}, {}'.format(
                 fichiers['fichier_info'], r.status_code, r.text))
-    logging.info('Got back files, running tadaridaC on them')
+    logger.info('Got back files, running tadaridaC on them')
     # Run tadarida
     ret = subprocess.call([TADARIDA_C, 'tas'], cwd=wdir_path)
     if ret:
-        logging.error('Error in running tadaridaC : returns {}'.format(ret))
+        logger.error('Error in running tadaridaC : returns {}'.format(ret))
         # TODO: tadaridaC provide error if file is empty leading to error loop
         fichiers_process_done = [f['_id'] for _, f in fichiers_per_titre.items()]
-        logging.info('Mark as done fichiers {}'.format(fichiers_process_done))
+        logger.info('Mark as done fichiers {}'.format(fichiers_process_done))
         db.fichiers.update({'_id': {'$in': fichiers_process_done}},
                            {'$unset': {'_async_process': True}}, multi=True)
         return 1
@@ -208,7 +210,7 @@ def _tadaridaC_process_batch(db, batch):
         output_name = titre.rsplit('.', 1)[0] + '.tc'
         output_path = wdir_path + '/tas/' + output_name
         if not os.path.exists(output_path):
-            logging.warning("{} hasn't been created, hence {} has"
+            logger.warning("{} hasn't been created, hence {} has"
                             " not been processed".format(
                                 output_name, fichier['fichier_info']))
             continue
@@ -221,12 +223,12 @@ def _tadaridaC_process_batch(db, batch):
             tc_payload['lien_participation'] = str(fichier['lien_participation'])
         r = requests.post(BACKEND_DOMAIN + '/fichiers', json=tc_payload, auth=AUTH)
         if r.status_code != 201:
-            logging.error("{}'s .tc backend post {} error {} : {}".format(
+            logger.error("{}'s .tc backend post {} error {} : {}".format(
                 fichier['fichier_info'], tc_payload, r.status_code, r.text))
             continue
         tc_data = r.json()
         tc_fichier_info = '{} ({})'.format(tc_data['_id'], tc_data['titre'])
-        logging.info("Registered {}'s .ta as {}".format(
+        logger.info("Registered {}'s .ta as {}".format(
             fichier['fichier_info'], tc_fichier_info))
         # Then put it to s3 with the signed url
         s3_signed_url = tc_data['s3_signed_url']
@@ -234,13 +236,13 @@ def _tadaridaC_process_batch(db, batch):
             r = requests.put(s3_signed_url,
                 headers={'Content-Type': tc_payload['mime']}, data=fd)
         if r.status_code != 200:
-            logging.error('post to s3 {} error {} : {}'.format(
+            logger.error('post to s3 {} error {} : {}'.format(
                 s3_signed_url, r.status_code, r.text))
             continue
         # Notify the upload to the backend
         r = requests.post(BACKEND_DOMAIN + '/fichiers/' + tc_data['_id'], auth=AUTH)
         if r.status_code != 200:
-            logging.error('Notify end upload for {} error {} : {}'.format(
+            logger.error('Notify end upload for {} error {} : {}'.format(
                 tc_data['_id'], r.status_code, r.text))
             continue
         # Update the donnee according to the .tc
@@ -278,17 +280,17 @@ def _tadaridaC_process_batch(db, batch):
         r = requests.patch('{}/donnees/{}'.format(BACKEND_DOMAIN, fichier['lien_donnee']),
                            json=payload, auth=AUTH, params={'no_bilan': True})
         if r.status_code != 200:
-            logging.warning('updating donnee {}, error {}: {}'.format(
+            logger.warning('updating donnee {}, error {}: {}'.format(
                 fichier['lien_donnee'], r.status_code, r.text))
             continue
         to_make_bilan.add(r.json()['participation']['_id'])
         fichiers_process_done.append(fichier['_id'])
     # Remove the async process request from the original fichiers
-    logging.info('Mark as done fichiers {}'.format(fichiers_process_done))
+    logger.info('Mark as done fichiers {}'.format(fichiers_process_done))
     db.fichiers.update({'_id': {'$in': fichiers_process_done}},
                        {'$unset': {'_async_process': True}}, multi=True)
     # Finally trigger the needed bilan generations
-    logging.info('Schedule bilan regeneration for participations {}'.format(
+    logger.info('Schedule bilan regeneration for participations {}'.format(
         to_make_bilan))
     for participation_id in to_make_bilan:
         participation_generate_bilan.delay(participation_id)

@@ -5,6 +5,8 @@ Participation bilan task worker
 """
 
 import logging
+logger = logging.getLogger()
+logger.setLevel(logging.WARNING)
 import requests
 
 from .celery import celery_app
@@ -24,7 +26,7 @@ def _list_donnees(participation_id):
         r = requests.get(BACKEND_DOMAIN + '/participations/{}/donnees'.format(participation_id),
             auth=AUTH, params={'page': page, 'max_results': max_results})
         if r.status_code != 200:
-            logging.warning("retreiving participation {}'s donnees, error {}: {}".format(
+            logger.warning("retreiving participation {}'s donnees, error {}: {}".format(
                 participation_id, r.status_code, r.text))
             return None
         result = r.json()
@@ -48,14 +50,14 @@ class Bilan:
         self.problemes = 0
 
     def _define_taxon_order(self, taxon):
-        logging.info("Lookuping for taxon order for {}".format(
+        logger.info("Lookuping for taxon order for {}".format(
             taxon['_id'], taxon['libelle_court']))
         taxon_id = taxon['_id']
         if taxon_id in self.taxon_to_order_name:
             order_name = self.taxon_to_order_name[taxon_id]
         else:
             def recursive_order_find(taxon):
-                logging.info("Recursive lookup on taxon {} ({})".format(
+                logger.info("Recursive lookup on taxon {} ({})".format(
                     taxon['_id'], taxon['libelle_court']))
                 for order_name_compare, order_name in ORDER_NAMES:
                     if (taxon['libelle_long'] == order_name_compare
@@ -64,7 +66,7 @@ class Bilan:
                 for parent_id in taxon.get('parents', []):
                     r = requests.get(BACKEND_DOMAIN + '/taxons/{}'.format(parent_id), auth=AUTH)
                     if r.status_code != 200:
-                        logging.error('Retrieving taxon {} error {} : {}'.format(
+                        logger.error('Retrieving taxon {} error {} : {}'.format(
                             parent_id, r.status_code, r.text))
                         return 1
                     parent = r.json()
@@ -113,11 +115,11 @@ def participation_generate_bilan(participation_id):
             for obs in observation.get('tadarida_taxon_autre', []):
                 bilan.add_contact_min(obs['taxon'], obs['probabilite'])
     # Update the participation
-    logging.info('participation {}, bilan : {}'.format(participation_id, bilan.generate_payload()))
+    logger.info('participation {}, bilan : {}'.format(participation_id, bilan.generate_payload()))
     r = requests.patch(BACKEND_DOMAIN + '/participations/' + participation_id,
                        json={'bilan': bilan.generate_payload()}, auth=AUTH)
     if r.status_code != 200:
-        logging.error('Cannot update bilan for participation {}, error {} : {}'.format(
+        logger.error('Cannot update bilan for participation {}, error {} : {}'.format(
             participation_id, r.status_code, r.text))
         return 1
     return 0

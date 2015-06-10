@@ -2,6 +2,7 @@
 
 import redis
 import requests
+import logging
 from os.path import abspath, dirname
 from flask import Flask, send_from_directory, make_response
 from flask.ext.pymongo import PyMongo
@@ -45,6 +46,10 @@ def make_json_app(app):
 def init_app():
     app = Flask(__name__)
     app.config.from_pyfile('settings.py')
+    if not app.config.get('DEBUG', False):
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        app.logger.addHandler(stream_handler)
     # Configure static hosting of the front
     if app.config['FRONTEND_HOSTED']:
         cache = Cache(app, config={'CACHE_TYPE': 'simple'})
