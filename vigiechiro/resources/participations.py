@@ -20,7 +20,7 @@ from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
 from .donnees import donnees as donnees_resource
-from ..scripts import tadaridaD, tadaridaC
+from ..scripts import tadaridaD, tadaridaC, tadaridaC_batch
 
 
 def _validate_site(context, site):
@@ -226,6 +226,7 @@ def add_pieces_jointes(participation_id):
     _check_edit_access(participation_resource)
     to_link_participation = []
     to_link_donnees = {}
+    async_process_tadaridaC = []
     def add_to_link_donnees(pj_data):
         basename = pj_data['titre'].rsplit('.', 1)[0]
         if basename not in to_link_donnees:
@@ -246,17 +247,21 @@ def add_pieces_jointes(participation_id):
             if link in pj_data:
                 errors[pj_id] = 'fichiers already linked (has a `{}` field)'.format(link)
                 break
-        to_link_participation.append(pj_id)
         if pj_data['mime'] in ALLOWED_MIMES_WAV:
             add_to_link_donnees(pj_data)
             delay_tasks.append(lambda pj_id=pj_id: tadaridaD.delay(pj_id))
         elif pj_data['mime'] in ALLOWED_MIMES_TA:
             add_to_link_donnees(pj_data)
-            delay_tasks.append(lambda pj_id=pj_id: tadaridaC.delay(pj_id))
+            # TadaridaC has a heavy bootstraping cost, hence we use batch
+            # processing instead of per-file
+            # delay_tasks.append(lambda pj_id=pj_id: tadaridaC.delay(pj_id))
+            async_process_tadaridaC.append(pj_id)
+            continue
         elif pj_data['mime'] in ALLOWED_MIMES_TC:
             add_to_link_donnees(pj_data)
         elif pj_data['mime'] not in ALLOWED_MIMES_PHOTOS:
             errors[pj_id] = 'fichier has invalid mime type'
+        to_link_participation.append(pj_id)
     if errors:
         abort(422, {'pieces_jointes': errors})
     # If we are here, everything is ok, we can start altering the bdd
@@ -264,8 +269,14 @@ def add_pieces_jointes(participation_id):
         current_app.data.db.fichiers.update({'_id': {'$in': to_link_participation}},
                                             {'$set': {'lien_participation': participation_id}},
                                             multi=True)
+    if async_process_tadaridaC:
+        current_app.data.db.fichiers.update({'_id': {'$in': async_process_tadaridaC}},
+                                            {'$set': {'lien_participation': participation_id,
+                                                      '_async_process': 'tadaridaC'}},
+                                            multi=True)
     for basename, to_link in to_link_donnees.items():
-        donnee = current_app.data.db.donnees.find_one({'titre': basename})
+        donnee = current_app.data.db.donnees.find_one({
+            'titre': basename, 'participation': participation_id})
         if not donnee:
             donnee_id = donnees_resource.insert({
                 'titre': basename,

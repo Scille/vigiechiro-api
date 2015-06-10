@@ -9,10 +9,12 @@ import tempfile
 import subprocess
 import requests
 import csv
+from pymongo import MongoClient
 
 from .celery import celery_app
 from .. import settings
-from ..resources.fichiers import ALLOWED_MIMES_TA
+from ..resources.fichiers import fichiers, ALLOWED_MIMES_TA
+from .task_participation_bilan import participation_generate_bilan
 
 
 MIN_PROBA_TAXON = 0.05
@@ -84,9 +86,8 @@ def tadaridaC(fichier_id):
         logging.error('Error in running tadaridaC : returns {}'.format(ret))
         return 1
     # A output.tc file should have been generated
-    output_path = wdir_path + '/tas/output.tc'
-    # output.tc is too generic, rename it according to original .ta file
-    output_name = fichier['titre'].rsplit('.', 1)[0] + '.tc'
+    output_path = wdir_path + '/tas/' + fichier['titre'].rsplit('.', 1)[0] + '.tc'
+    output_name = output_path.split('/')[-1]
     if not os.path.exists(output_path):
         logging.warning("{} hasn't been created, hence {} has"
                         " not been processed".format(
@@ -157,3 +158,149 @@ def tadaridaC(fichier_id):
             tc_data['_id'], r.status_code, r.text))
         return 1
     return 0
+
+
+def _tadaridaC_process_batch(db, batch):
+    wdir_path = _create_working_dir(['tas'])
+    # Sanity check
+    fichiers_per_titre = {}
+    for fichier in batch:
+        # Add fichier_info among the real data for easier logging
+        fichier['fichier_info'] = '{} ({})'.format(fichier['_id'], fichier['titre'])
+        if fichier['mime'] not in ALLOWED_MIMES_TA:
+            logging.error('Fichier {} is not a ta file (mime: {})'.format(
+                fichier['fichier_info'], fichier['mime']))
+        if 'lien_donnee' not in fichier:
+            logging.error('{} must have a lien_donnee in order to link '
+                          'the generated .tc to something'.format(
+                              fichier['fichier_info']))
+        fichiers_per_titre[fichier['titre']] = fichier
+    # Download the files
+    logging.info('Downloading {} files'.format(len(fichiers_per_titre)))
+    for titre, fichier in fichiers_per_titre.items():
+        r = requests.get('{}/fichiers/{}/acces'.format(
+            BACKEND_DOMAIN, fichier['_id']), params={'redirection': True},
+            stream=True, auth=AUTH)
+        input_path = wdir_path + '/tas/' + titre
+        with open(input_path, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk: # filter out keep-alive new chunks
+                    f.write(chunk)
+                    f.flush()
+        if r.status_code != 200:
+            logging.error('Cannot get back file {} : {}, {}'.format(
+                fichiers['fichier_info'], r.status_code, r.text))
+    logging.info('Got back files, running tadaridaC on them')
+    # Run tadarida
+    ret = subprocess.call([TADARIDA_C, 'tas'], cwd=wdir_path)
+    if ret:
+        logging.error('Error in running tadaridaC : returns {}'.format(ret))
+        # TODO: tadaridaC provide error if file is empty leading to error loop
+        fichiers_process_done = [f['_id'] for _, f in fichiers_per_titre.items()]
+        logging.info('Mark as done fichiers {}'.format(fichiers_process_done))
+        db.fichiers.update({'_id': {'$in': fichiers_process_done}},
+                           {'$unset': {'_async_process': True}}, multi=True)
+        return 1
+    to_make_bilan = set()
+    fichiers_process_done = []
+    # Each .ta should have it .tc now
+    for titre, fichier in fichiers_per_titre.items():
+        output_name = titre.rsplit('.', 1)[0] + '.tc'
+        output_path = wdir_path + '/tas/' + output_name
+        if not os.path.exists(output_path):
+            logging.warning("{} hasn't been created, hence {} has"
+                            " not been processed".format(
+                                output_name, fichier['fichier_info']))
+            continue
+        # Add the .tc as a fichier in the backend and upload it to S3
+        tc_payload = {'titre': output_name,
+                      'mime': 'application/tc',
+                      'proprietaire': str(fichier['proprietaire']),
+                      'lien_donnee': str(fichier['lien_donnee'])}
+        if 'lien_participation' in fichier:
+            tc_payload['lien_participation'] = str(fichier['lien_participation'])
+        r = requests.post(BACKEND_DOMAIN + '/fichiers', json=tc_payload, auth=AUTH)
+        if r.status_code != 201:
+            logging.error("{}'s .tc backend post {} error {} : {}".format(
+                fichier['fichier_info'], tc_payload, r.status_code, r.text))
+            continue
+        tc_data = r.json()
+        tc_fichier_info = '{} ({})'.format(tc_data['_id'], tc_data['titre'])
+        logging.info("Registered {}'s .ta as {}".format(
+            fichier['fichier_info'], tc_fichier_info))
+        # Then put it to s3 with the signed url
+        s3_signed_url = tc_data['s3_signed_url']
+        with open(output_path, 'rb') as fd:
+            r = requests.put(s3_signed_url,
+                headers={'Content-Type': tc_payload['mime']}, data=fd)
+        if r.status_code != 200:
+            logging.error('post to s3 {} error {} : {}'.format(
+                s3_signed_url, r.status_code, r.text))
+            continue
+        # Notify the upload to the backend
+        r = requests.post(BACKEND_DOMAIN + '/fichiers/' + tc_data['_id'], auth=AUTH)
+        if r.status_code != 200:
+            logging.error('Notify end upload for {} error {} : {}'.format(
+                tc_data['_id'], r.status_code, r.text))
+            continue
+        # Update the donnee according to the .tc
+        payload = {'observations': []}
+        with open(output_path, 'r') as fd:
+            reader = csv.reader(fd)
+            headers = next(reader)
+            for line in reader:
+                taxons = []
+                obs = {}
+                for head, cell in zip(headers, line):
+                    if head in ['Group.1', 'Ordre', 'VersionD', 'VersionC']:
+                        continue
+                    elif head == 'FreqM':
+                        obs['frequence_mediane'] = float(cell)
+                    elif head == 'TDeb':
+                        obs['temps_debut'] = float(cell)
+                    elif head == 'TFin':
+                        obs['temps_fin'] = float(cell)
+                    elif float(cell) > MIN_PROBA_TAXON:
+                        # Intersting taxon
+                        taxon = _make_taxon_observation(head, float(cell))
+                        if taxon:
+                            taxons.append(taxon)
+                # Sort taxons by proba and retrieve taxon' resources in backend
+                taxons = sorted(taxons, key=lambda x: x['probabilite'])
+                if len(taxons):
+                    main_taxon = taxons.pop()
+                    obs['tadarida_taxon'] = main_taxon['taxon']
+                    obs['tadarida_probabilite'] = main_taxon['probabilite']
+                    obs['tadarida_taxon_autre'] = list(reversed(taxons))
+                    payload['observations'].append(obs)
+        # Force no bilan generation, given we will ask manually for them
+        # not to trigger it multiple time
+        r = requests.patch('{}/donnees/{}'.format(BACKEND_DOMAIN, fichier['lien_donnee']),
+                           json=payload, auth=AUTH, params={'no_bilan': True})
+        if r.status_code != 200:
+            logging.warning('updating donnee {}, error {}: {}'.format(
+                fichier['lien_donnee'], r.status_code, r.text))
+            continue
+        to_make_bilan.add(r.json()['participation']['_id'])
+        fichiers_process_done.append(fichier['_id'])
+    # Remove the async process request from the original fichiers
+    logging.info('Mark as done fichiers {}'.format(fichiers_process_done))
+    db.fichiers.update({'_id': {'$in': fichiers_process_done}},
+                       {'$unset': {'_async_process': True}}, multi=True)
+    # Finally trigger the needed bilan generations
+    logging.info('Schedule bilan regeneration for participations {}'.format(
+        to_make_bilan))
+    for participation_id in to_make_bilan:
+        participation_generate_bilan.delay(participation_id)
+    return 0
+
+ 
+@celery_app.task
+def tadaridaC_batch():
+    db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+    batch_size = 500
+    while True:
+        batch = db.fichiers.find({'_async_process': 'tadaridaC'}, limit=batch_size)
+        if not batch.count():
+            break
+        _tadaridaC_process_batch(db, batch)

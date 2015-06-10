@@ -191,7 +191,7 @@ def create_donnee(participation_id):
     else:
         payload['publique'] = g.request_user.get('donnees_publiques', False)
     result = donnees.insert(payload)
-    if 'observations' in payload:
+    if 'observations' in payload and not request.args.get('no_bilan', False):
         participation_generate_bilan.delay(participation_id)
     return result, 201
 
@@ -209,9 +209,7 @@ def update_donnee(donnee_id):
     if not is_admin and g.request_user['_id'] != donnee_resource['proprietaire']:
         abort(403)
     result =  donnees.update(donnee_id, payload)
-    if 'observations' in payload:
-        if isinstance(donnee_resource['participation'], dict):
-            import pdb; pdb.set_trace()
+    if 'observations' in payload and not request.args.get('no_bilan', False):
         participation_generate_bilan.delay(donnee_resource['participation'])
     return result, 200
 
@@ -256,9 +254,8 @@ def edit_observation(donnee_id, observation_id):
         abort(422, {f: 'unknown field' for f in payload.keys()})
     result = donnees.update(donnee_id, payload={'observations': [observation]},
                             mongo_update={'$set': mongo_update_observation})
-    if isinstance(donnee_resource['participation'], dict):
-        import pdb; pdb.set_trace()
-    participation_generate_bilan.delay(donnee_resource['participation'])
+    if not request.args.get('no_bilan', False):
+        participation_generate_bilan.delay(donnee_resource['participation'])
     return result
 
 

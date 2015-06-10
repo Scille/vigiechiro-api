@@ -9,10 +9,12 @@ import requests
 
 from .celery import celery_app
 from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN
+from pymongo import MongoClient
 
 
 AUTH = (SCRIPT_WORKER_TOKEN, None)
 ORDER_NAMES = [('Chiroptera', 'chiropteres'), ('Orthoptera', 'orthopteres')]
+
 
 def _list_donnees(participation_id):
     processed = 0
@@ -36,18 +38,25 @@ def _list_donnees(participation_id):
 
 
 class Bilan:
+
+    # Keep it global to save ressources if the worker as more than one task
+    taxon_to_order_name = {}
+
     def __init__(self):
         self.bilan_order = {}
         self.taxon_to_order_name = {}
         self.problemes = 0
 
     def _define_taxon_order(self, taxon):
+        logging.info("Lookuping for taxon order for {}".format(
+            taxon['_id'], taxon['libelle_court']))
         taxon_id = taxon['_id']
         if taxon_id in self.taxon_to_order_name:
             order_name = self.taxon_to_order_name[taxon_id]
         else:
             def recursive_order_find(taxon):
-                print("recursive on {}".format(taxon))
+                logging.info("Recursive lookup on taxon {} ({})".format(
+                    taxon['_id'], taxon['libelle_court']))
                 for order_name_compare, order_name in ORDER_NAMES:
                     if (taxon['libelle_long'] == order_name_compare
                         or taxon['libelle_court'] == order_name_compare):
@@ -84,7 +93,6 @@ class Bilan:
     def generate_payload(self):
         payload = {'problemes': self.problemes}
         for order_name, order in self.bilan_order.items():
-            # import pdb; pdb.set_trace()
             payload[order_name] = [{'taxon': taxon, 'nb_contact_min': d['contact_min'], 'nb_contact_max': d['contact_max']}
                                    for taxon, d in order.items()]
         return payload

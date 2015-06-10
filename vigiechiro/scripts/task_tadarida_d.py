@@ -82,7 +82,8 @@ def tadaridaD(fichier_id):
     ta_payload = {'titre': output_name,
                   'mime': 'application/ta',
                   'proprietaire': str(fichier['proprietaire']),
-                  'lien_donnee': str(fichier['lien_donnee'])}
+                  'lien_donnee': str(fichier['lien_donnee']),
+                  '_async_process': 'tadaridaC'}
     if 'lien_participation' in fichier:
         ta_payload['lien_participation'] = str(fichier['lien_participation'])
     r = requests.post(BACKEND_DOMAIN + '/fichiers', json=ta_payload, auth=AUTH)
@@ -106,6 +107,4 @@ def tadaridaD(fichier_id):
         logging.error('Notify end upload for {} error {} : {}'.format(
             ta_data['_id'], r.status_code, r.text))
         return 1
-    # Finally trigger a tadaridaC run
-    tadaridaC.delay(ta_data['_id'])
     return 0

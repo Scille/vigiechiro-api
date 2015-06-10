@@ -1,3 +1,3 @@
 from .task_tadarida_d import tadaridaD
-from .task_tadarida_c import tadaridaC
+from .task_tadarida_c import tadaridaC, tadaridaC_batch
 from .task_participation_bilan import participation_generate_bilan

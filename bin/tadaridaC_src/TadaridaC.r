@@ -196,8 +196,12 @@ if (nrow(ProbEspN2a)>0)
 IdTot2=cbind(IdTot,VersionD=CTP$Version[1],VersionC=Version)
 
 #ecriture fichier tc
-fichierid=paste(tadir,"output.tc", sep="/")
-write.csv(IdTot2,fichierid,row.names=FALSE)
+for (i in 1:nlevels(IdTot2$Group.1))
+  {
+  fichierid=paste(tadir,'/',substr(levels(IdTot2$Group.1)[i],1,(nchar(levels(IdTot2$Group.1)[i])-4)),".tc", sep="")
+  write.csv(subset(IdTot2,IdTot2$Group.1==levels(IdTot2$Group.1)[i]),fichierid,row.names=FALSE)  
+}
+
 
 #nettoie tous les objets sauf ClassifEsp3
 rm(list=setdiff(ls(), "ClassifEsp3"))

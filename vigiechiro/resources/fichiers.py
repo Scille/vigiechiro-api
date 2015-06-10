@@ -57,7 +57,8 @@ SCHEMA = {
     's3_upload_multipart_id': {'type': 'string', 'postonly': True},
     'lien_protocole': relation('protocoles'),
     'lien_donnee': relation('donnees', validator=_validate_donnee),
-    'lien_participation': relation('participations', validator=_validate_participation)
+    'lien_participation': relation('participations', validator=_validate_participation),
+    '_async_process': {'type': 'string'}
 }
 
 
@@ -148,6 +149,7 @@ def fichier_create():
     lien_donnee = payload.pop('lien_donnee', None)
     lien_participation = payload.pop('lien_participation', None)
     lien_protocole = payload.pop('lien_protocole', None)
+    async_process = payload.pop('_async_process', None)
     if g.request_user['role'] == 'Administrateur':
         proprietaire = payload.pop('proprietaire', g.request_user['_id'])
     else:
@@ -179,8 +181,10 @@ def fichier_create():
         'proprietaire': proprietaire,
         'disponible': False,
         # Add uuid to make sure the file name is unique
-        's3_id': path + titre + '.' + uuid.uuid4().hex
+        's3_id': path + titre + '.' + uuid.uuid4().hex,
     }
+    if async_process:
+        payload['_async_process'] = async_process
     if lien_donnee:
         payload['lien_donnee'] = lien_donnee
     if lien_participation:
