@@ -305,3 +305,13 @@ def tadaridaC_batch():
         if not batch.count():
             break
         _tadaridaC_process_batch(db, batch)
+
+
+@celery_app.task
+def tadaridaC_batch_watcher():
+    db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+    batch = db.fichiers.find({'_async_process': 'tadaridaC'}, limit=1)
+    count = batch.count()
+    if count:
+        logger.info('Trigger tadaridaC batch for %s elements' % count)
+        tadaridaC_batch.delay()

@@ -129,39 +129,6 @@ def participation_generate_bilan(participation_id):
     return 0
 
 
-# @celery_app.task
-# def participation_pj_link_donnees(participation_id, proprietaire_id, publique,
-#                                   to_link_donnees, async_process_tadaridD):
-#     from ..app import app as flask_app
-#     from ..resources.donnees import donnees
-#     from flask import current_app
-#     with flask_app.app_context():
-#         # db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
-#         donnees_db = current_app.data.db['donnees']
-#         fichiers_db = current_app.data.db['fichiers']
-#         for basename, to_link in to_link_donnees.items():
-#             donnee = donnees_db.find_one({
-#                 'titre': basename, 'participation': participation_id})
-#             if not donnee:
-#                 payload = {
-#                     'titre': basename,
-#                     'participation': participation_id,
-#                     'proprietaire': proprietaire_id,
-#                     'publique': publique            
-#                 }
-#                 donnee = donnees.insert(payload)
-#                 logger.info('creating donnee {} ({})'.format(
-#                     donnee['_id'], basename))
-#             donnee_id = donnee['_id']
-#             logger.info('Settings files {} to donnee {}'.format(to_link, donnee_id))
-#             fichiers_db.update({'_id': {'$in': to_link}},
-#                                {'$set': {'lien_donnee': donnee_id}}, multi=True)
-#         from .task_tadarida_d import tadaridaD
-#         for fichier_id in async_process_tadaridD:
-#             tadaridaD.delay(fichier_id)
-#         return 0
-
-
 def _participation_add_pj(participation, pjs, publique):
     from ..resources.donnees import donnees
     participation_id = participation['_id']
@@ -233,6 +200,7 @@ def _participation_add_pj(participation, pjs, publique):
         fichiers_db.update({'_id': {'$in': to_link}},
                            {'$set': {'lien_donnee': donnee_id}}, multi=True)
     from .task_tadarida_d import tadaridaD
+    logger.info('Trigger tadaridaD for %s ficiers'.format(len(async_process_tadaridaD)))
     for fichier_id in async_process_tadaridaD:
         tadaridaD.delay(fichier_id)
     return 0
