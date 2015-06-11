@@ -20,7 +20,7 @@ from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
 from .donnees import donnees as donnees_resource
-from ..scripts import tadaridaD, tadaridaC, participation_pj_link_donnees
+from ..scripts import tadaridaD, tadaridaC, participation_add_pj
 
 
 def _validate_site(context, site):
@@ -224,71 +224,21 @@ def edit_participation(participation_id):
 def add_pieces_jointes(participation_id):
     participation_resource = participations.get_resource(participation_id)
     _check_edit_access(participation_resource)
-    to_link_participation = []
-    to_link_donnees = {}
-    async_process_tadaridaC = []
-    async_process_tadaridaD = []
-    def add_to_link_donnees(pj_data):
-        basename = pj_data['titre'].rsplit('.', 1)[0]
-        if basename not in to_link_donnees:
-            to_link_donnees[basename] = []
-        to_link_donnees[basename].append(pj_data['_id'])
-    # delay_tasks = []
     errors = {}
-    # For each pj, check existance, make sure it is not linked to something
-    # else, link to the participation/donnee, create a new donnee if needed
-    # and finally trigger tadarida async process if needed
     pjs_ids_str =  get_payload({'pieces_jointes': True})['pieces_jointes']
     pjs_ids = []
     for pj_id_str in pjs_ids_str:
         pj_id = parse_id(pj_id_str)
-        if pj_id is not None:
-            pjs_ids.append(pj_id)
-    pjs = [pj for pj in current_app.data.db.fichiers.find({'_id': {'$in': pjs_ids}})]
-    pjs_ids_str_found = {str(pj['_id']) for pj in pjs}
-    for pj_id_str in pjs_ids_str:
-        if pj_id_str not in pjs_ids_str_found:
-            errors[pj_id_str] = 'invalid fichiers resource objectid'
-    for pj_data in pjs:
-        pj_id = pj_data['_id']
-        for link in 'lien_donnee', 'lien_participation', 'lien_protocole':
-            if link in pj_data:
-                errors[str(pj_id)] = 'fichiers already linked (has a `{}` field)'.format(link)
-                break
-        if pj_data['mime'] in ALLOWED_MIMES_WAV:
-            add_to_link_donnees(pj_data)
-            # delay_tasks.append(lambda pj_id=pj_id: tadaridaD.delay(pj_id))
-            async_process_tadaridaD.append(pj_id)
-        elif pj_data['mime'] in ALLOWED_MIMES_TA:
-            add_to_link_donnees(pj_data)
-            # TadaridaC has a heavy bootstraping cost, hence we use batch
-            # processing instead of per-file
-            # delay_tasks.append(lambda pj_id=pj_id: tadaridaC.delay(pj_id))
-            async_process_tadaridaC.append(pj_id)
+        if pj_id is None:
+            errors[pj_id_str] = 'Invalid ObjectId'
             continue
-        elif pj_data['mime'] in ALLOWED_MIMES_TC:
-            add_to_link_donnees(pj_data)
-        elif pj_data['mime'] not in ALLOWED_MIMES_PHOTOS:
-            errors[pj_id] = 'fichier has invalid mime type'
-        to_link_participation.append(pj_id)
+        pjs_ids.append(pj_id)
     if errors:
         abort(422, {'pieces_jointes': errors})
-    # If we are here, everything is ok, we can start altering the bdd
-    if to_link_participation:
-        current_app.data.db.fichiers.update({'_id': {'$in': to_link_participation}},
-                                            {'$set': {'lien_participation': participation_id}},
-                                            multi=True)
-    if async_process_tadaridaC:
-        current_app.data.db.fichiers.update({'_id': {'$in': async_process_tadaridaC}},
-                                            {'$set': {'lien_participation': participation_id,
-                                                      '_async_process': 'tadaridaC'}},
-                                            multi=True)
-    participation_pj_link_donnees.delay(participation_id,
-        participation_resource['observateur'],
+    participation_add_pj.delay(participation_id, pjs_ids,
         utilisateurs_resource.get_resource(
             participation_resource['observateur']).get(
-                'donnees_publiques', False),
-        to_link_donnees, async_process_tadaridaD)
+                'donnees_publiques', False))
     return {}, 200
 
 

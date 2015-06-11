@@ -9,10 +9,13 @@ logger = logging.getLogger()
 logger.setLevel(logging.WARNING)
 import requests
 from pymongo import MongoClient
+from flask import current_app
 
 from .celery import celery_app
 from .. import settings
 from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN
+from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
+                                  ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 
 
 AUTH = (SCRIPT_WORKER_TOKEN, None)
@@ -126,34 +129,124 @@ def participation_generate_bilan(participation_id):
     return 0
 
 
-@celery_app.task
-def participation_pj_link_donnees(participation_id, proprietaire_id, publique,
-                                  to_link_donnees, async_process_tadaridD):
-    from ..app import app as flask_app
+# @celery_app.task
+# def participation_pj_link_donnees(participation_id, proprietaire_id, publique,
+#                                   to_link_donnees, async_process_tadaridD):
+#     from ..app import app as flask_app
+#     from ..resources.donnees import donnees
+#     from flask import current_app
+#     with flask_app.app_context():
+#         # db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+#         donnees_db = current_app.data.db['donnees']
+#         fichiers_db = current_app.data.db['fichiers']
+#         for basename, to_link in to_link_donnees.items():
+#             donnee = donnees_db.find_one({
+#                 'titre': basename, 'participation': participation_id})
+#             if not donnee:
+#                 payload = {
+#                     'titre': basename,
+#                     'participation': participation_id,
+#                     'proprietaire': proprietaire_id,
+#                     'publique': publique            
+#                 }
+#                 donnee = donnees.insert(payload)
+#                 logger.info('creating donnee {} ({})'.format(
+#                     donnee['_id'], basename))
+#             donnee_id = donnee['_id']
+#             logger.info('Settings files {} to donnee {}'.format(to_link, donnee_id))
+#             fichiers_db.update({'_id': {'$in': to_link}},
+#                                {'$set': {'lien_donnee': donnee_id}}, multi=True)
+#         from .task_tadarida_d import tadaridaD
+#         for fichier_id in async_process_tadaridD:
+#             tadaridaD.delay(fichier_id)
+#         return 0
+
+
+def _participation_add_pj(participation, pjs, publique):
     from ..resources.donnees import donnees
-    from flask import current_app
-    with flask_app.app_context():
-        # db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
-        donnees_db = current_app.data.db['donnees']
-        fichiers_db = current_app.data.db['fichiers']
-        for basename, to_link in to_link_donnees.items():
+    participation_id = participation['_id']
+    to_link_donnees = {}
+    async_process_tadaridaC = []
+    async_process_tadaridaD = []
+    no_process = []
+    def add_to_link_donnees(pj_data):
+        basename = pj_data['titre'].rsplit('.', 1)[0]
+        if basename not in to_link_donnees:
+            to_link_donnees[basename] = []
+        to_link_donnees[basename].append(pj_data['_id'])
+    for pj_data in pjs:
+        pj_id = pj_data['_id']
+        for link in 'lien_donnee', 'lien_participation', 'lien_protocole':
+            if link in pj_data:
+                logger.warning("Fichiers %s already linked to %s with"
+                               " a `%s` field" % (pj_id, pj['link'], link))
+                continue
+        if pj_data['mime'] in ALLOWED_MIMES_WAV:
+            add_to_link_donnees(pj_data)
+            async_process_tadaridaD.append(pj_id)
+        elif pj_data['mime'] in ALLOWED_MIMES_TA:
+            add_to_link_donnees(pj_data)
+            async_process_tadaridaC.append(pj_id)
+            continue
+        elif pj_data['mime'] in ALLOWED_MIMES_TC:
+            add_to_link_donnees(pj_data)
+            no_process.append(pj_id)
+        elif pj_data['mime'] not in ALLOWED_MIMES_PHOTOS:
+            logger.warning("Fichier %s has invalid mime %s" % (pj_id, pj['mime']))
+    # If we are here, everything is ok, we can start altering the bdd
+    simple_link = no_process + async_process_tadaridaD
+    if simple_link:
+        current_app.data.db.fichiers.update(
+            {'_id': {'$in': simple_link}},
+            {'$set': {'lien_participation': participation_id}},
+            multi=True)
+    # TadaridaC has a heavy bootstraping cost, hence we use batch
+    # processing instead of per-file
+    if async_process_tadaridaC:
+        current_app.data.db.fichiers.update(
+            {'_id': {'$in': async_process_tadaridaC}},
+            {'$set': {'lien_participation': participation_id,
+                      '_async_process': 'tadaridaC'}},
+            multi=True)
+    # Now retrieve or create the donnees
+    donnees_db = current_app.data.db['donnees']
+    fichiers_db = current_app.data.db['fichiers']
+    donnees_per_titre = {}
+    for basename, to_link in to_link_donnees.items():
+        donnee = donnees_per_titre.get(basename, None)
+        if not donnee:
             donnee = donnees_db.find_one({
                 'titre': basename, 'participation': participation_id})
-            if not donnee:
-                payload = {
-                    'titre': basename,
-                    'participation': participation_id,
-                    'proprietaire': proprietaire_id,
-                    'publique': publique            
-                }
-                donnee = donnees.insert(payload)
-                logger.info('creating donnee {} ({})'.format(
-                    donnee['_id'], basename))
-            donnee_id = donnee['_id']
-            logger.info('Settings files {} to donnee {}'.format(to_link, donnee_id))
-            fichiers_db.update({'_id': {'$in': to_link}},
-                               {'$set': {'lien_donnee': donnee_id}}, multi=True)
-        from .task_tadarida_d import tadaridaD
-        for fichier_id in async_process_tadaridD:
-            tadaridaD.delay(fichier_id)
-        return 0
+        if not donnee:
+            payload = {
+                'titre': basename,
+                'participation': participation_id,
+                'proprietaire': participation['observateur'],
+                'publique': publique
+            }
+            donnee = donnees.insert(payload)
+            logger.info('creating donnee {} ({})'.format(
+                donnee['_id'], basename))
+        donnees_per_titre[basename] = donnee
+        donnee_id = donnee['_id']
+        logger.info('Settings files {} to donnee {}'.format(to_link, donnee_id))
+        fichiers_db.update({'_id': {'$in': to_link}},
+                           {'$set': {'lien_donnee': donnee_id}}, multi=True)
+    from .task_tadarida_d import tadaridaD
+    for fichier_id in async_process_tadaridaD:
+        tadaridaD.delay(fichier_id)
+    return 0
+
+
+@celery_app.task
+def participation_add_pj(participation_id, pjs_ids, publique):
+    from ..app import app as flask_app
+    from ..resources.participations import participations
+    with flask_app.app_context():
+        participation = participations.get_resource(participation_id)
+        pjs = [pj for pj in current_app.data.db.fichiers.find({'_id': {'$in': pjs_ids}})]
+        pjs_ids_found = {pj['_id'] for pj in pjs}
+        for pj_id in pjs_ids:
+            if pj_id not in pjs_ids_found:
+                logger.warning("Fichiers %s doesn't exsits" % pj_id)
+        return _participation_add_pj(participation, pjs, publique)

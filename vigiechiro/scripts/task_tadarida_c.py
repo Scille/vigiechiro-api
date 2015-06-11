@@ -190,8 +190,8 @@ def _tadaridaC_process_batch(db, batch):
                     f.write(chunk)
                     f.flush()
         if r.status_code != 200:
-            logger.error('Cannot get back file {} : {}, {}'.format(
-                fichiers['fichier_info'], r.status_code, r.text))
+            logger.error('Cannot get back file {} : error {}'.format(
+                fichier['fichier_info'], r.status_code))
     logger.info('Got back files, running tadaridaC on them')
     # Run tadarida
     ret = subprocess.call([TADARIDA_C, 'tas'], cwd=wdir_path)
