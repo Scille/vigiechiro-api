@@ -4,7 +4,7 @@ Tadarida-C task worker
 
 import logging
 logger = logging.getLogger()
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.INFO)
 import sys
 import os
 import tempfile
