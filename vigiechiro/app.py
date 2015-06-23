@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-import redis
 import requests
 import logging
 from os.path import abspath, dirname
@@ -72,8 +71,6 @@ def init_app():
                 return response
             return send_from_directory('static', path)
     app.data = PyMongo(app)
-    app.redis = redis.StrictRedis(host=settings.REDIS_HOST,
-                                  port=settings.REDIS_PORT, db=0)
     # Add objectid as url variable type
     app.url_map.converters['objectid'] = ObjectIdConverter
     url_prefix = app.config['BACKEND_URL_PREFIX']
