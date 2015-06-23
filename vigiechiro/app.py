@@ -8,6 +8,7 @@ from flask import Flask, send_from_directory, make_response
 from flask.ext.pymongo import PyMongo
 from flask.ext.cache import Cache
 from hirefire.procs.celery import CeleryProc
+from hirefire.contrib.flask.blueprint import build_hirefire_blueprint
 
 from . import settings
 from . import resources
@@ -15,7 +16,6 @@ from . import resources
 from .xin.auth import auth_factory
 from .xin.tools import ObjectIdConverter
 from .scripts.celery import celery_app
-from .scripts.hirefire import build_hirefire_blueprint
 
 
 def make_json_app(app):

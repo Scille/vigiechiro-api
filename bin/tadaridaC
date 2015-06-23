@@ -24,7 +24,7 @@ fi
 
 if ( ! [ -f $TADARIDAC_LEARNER_NAME ] )
 then
-    echo 'Retrieving tadaridaC learder'
+    echo 'Retrieving tadaridaC learner'
     wget $TADARIDAC_LEARNER_URL -O $TADARIDAC_LEARNER_NAME -nv
 fi
 

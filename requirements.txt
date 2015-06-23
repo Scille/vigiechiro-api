@@ -18,7 +18,7 @@ requests==2.6.0
 six==1.9.0
 
 # 3rd party services
-HireFire==0.2.2
+HireFire==0.3
 newrelic==2.50.0.39
 
 # Application server
