@@ -20,7 +20,7 @@ from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
 from .donnees import donnees as donnees_resource
-from ..scripts import tadaridaD, tadaridaC, participation_add_pj
+from ..scripts import tadaridaD, tadaridaC, process_participation
 
 
 def _validate_site(context, site):
@@ -69,6 +69,16 @@ SCHEMA = {
     'configuration': {
         'type': 'dict',
         'keyschema': {'type': 'string'}
+    },
+    'logs': {
+        'type': 'list',
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'status': {'type': 'string'},
+                'message': {'type': 'string'}
+            }
+        }
     },
     'bilan': {
         'type': 'dict',
@@ -235,7 +245,7 @@ def add_pieces_jointes(participation_id):
         pjs_ids.append(pj_id)
     if errors:
         abort(422, {'pieces_jointes': errors})
-    participation_add_pj.delay(participation_id, pjs_ids,
+    process_participation.delay(participation_id, pjs_ids,
         utilisateurs_resource.get_resource(
             participation_resource['observateur']).get(
                 'donnees_publiques', False))

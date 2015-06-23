@@ -1,3 +1,5 @@
+
+
 #! /usr/bin/env python3
 
 """
@@ -5,21 +7,57 @@ Participation bilan task worker
 """
 
 import logging
-logger = logging.getLogger()
-logger.setLevel(logging.WARNING)
+logging.basicConfig()
+logger = logging.getLogger('task')
+logger.setLevel(logging.INFO)
+from uuid import uuid4
+import csv
+import shutil
+import tempfile
+import subprocess
 import requests
+import os
 from pymongo import MongoClient
-from flask import current_app
+from flask import current_app, g
 
 from .celery import celery_app
 from .. import settings
-from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN
+from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_CONCURRENCY
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 
 
-AUTH = (SCRIPT_WORKER_TOKEN, None)
+MIN_PROBA_TAXON = 0.05
+TADARIDA_C = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaC'
+TADARIDA_D = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD'
 ORDER_NAMES = [('Chiroptera', 'chiropteres'), ('Orthoptera', 'orthopteres')]
+AUTH = (SCRIPT_WORKER_TOKEN, None)
+
+
+def _create_working_dir(subdirs=()):
+    wdir  = tempfile.mkdtemp()
+    for subdir in subdirs:
+        os.mkdir(wdir + '/' + subdir)
+    return wdir
+
+
+NAME_TO_TAXON = {}
+def _get_taxon(taxon_name):
+    taxon = NAME_TO_TAXON.get(taxon_name)
+    if not taxon:
+        r = requests.get('{}/taxons'.format(BACKEND_DOMAIN),
+            params={'q': taxon_name}, auth=AUTH)
+        if r.status_code != 200:
+            logger.warning('retreiving taxon {} in backend, error {}: {}'.format(
+                taxon_name, r.status_code, r.text))
+            return None
+        if r.json()['_meta']['total'] == 0:
+            logger.warning('cannot retreive taxon {} in backend, skipping it'.format(
+                taxon_name))
+            return None
+        taxon = r.json()['_items'][0]
+        NAME_TO_TAXON[taxon_name] = taxon
+    return taxon
 
 
 def _list_donnees(participation_id):
@@ -104,7 +142,6 @@ class Bilan:
         return payload
 
 
-
 @celery_app.task
 def participation_generate_bilan(participation_id):
     if not isinstance(participation_id, str):
@@ -129,92 +166,289 @@ def participation_generate_bilan(participation_id):
     return 0
 
 
-def _participation_add_pj(participation, pjs, publique):
-    from ..resources.donnees import donnees
-    participation_id = participation['_id']
-    to_link_donnees = {}
-    async_process_tadaridaC = []
-    async_process_tadaridaD = []
-    no_process = []
-    def add_to_link_donnees(pj_data):
-        basename = pj_data['titre'].rsplit('.', 1)[0]
-        if basename not in to_link_donnees:
-            to_link_donnees[basename] = []
-        to_link_donnees[basename].append(pj_data['_id'])
-    for pj_data in pjs:
-        pj_id = pj_data['_id']
-        for link in 'lien_donnee', 'lien_participation', 'lien_protocole':
-            if link in pj_data:
-                logger.warning("Fichiers %s already linked to %s with"
-                               " a `%s` field" % (pj_id, pj['link'], link))
-                continue
-        if pj_data['mime'] in ALLOWED_MIMES_WAV:
-            add_to_link_donnees(pj_data)
-            async_process_tadaridaD.append(pj_id)
-        elif pj_data['mime'] in ALLOWED_MIMES_TA:
-            add_to_link_donnees(pj_data)
-            async_process_tadaridaC.append(pj_id)
-            continue
-        elif pj_data['mime'] in ALLOWED_MIMES_TC:
-            add_to_link_donnees(pj_data)
-            no_process.append(pj_id)
-        elif pj_data['mime'] not in ALLOWED_MIMES_PHOTOS:
-            logger.warning("Fichier %s has invalid mime %s" % (pj_id, pj['mime']))
-    # If we are here, everything is ok, we can start altering the bdd
-    simple_link = no_process + async_process_tadaridaD
-    if simple_link:
-        current_app.data.db.fichiers.update(
-            {'_id': {'$in': simple_link}},
-            {'$set': {'lien_participation': participation_id}},
-            multi=True)
-    # TadaridaC has a heavy bootstraping cost, hence we use batch
-    # processing instead of per-file
-    if async_process_tadaridaC:
-        current_app.data.db.fichiers.update(
-            {'_id': {'$in': async_process_tadaridaC}},
-            {'$set': {'lien_participation': participation_id,
-                      '_async_process': 'tadaridaC'}},
-            multi=True)
-    # Now retrieve or create the donnees
-    donnees_db = current_app.data.db['donnees']
-    fichiers_db = current_app.data.db['fichiers']
-    donnees_per_titre = {}
-    for basename, to_link in to_link_donnees.items():
-        donnee = donnees_per_titre.get(basename, None)
-        if not donnee:
-            donnee = donnees_db.find_one({
-                'titre': basename, 'participation': participation_id})
-        if not donnee:
-            payload = {
-                'titre': basename,
-                'participation': participation_id,
-                'proprietaire': participation['observateur'],
-                'publique': publique
-            }
-            donnee = donnees.insert(payload)
-            logger.info('creating donnee {} ({})'.format(
-                donnee['_id'], basename))
-        donnees_per_titre[basename] = donnee
-        donnee_id = donnee['_id']
-        logger.info('Settings files {} to donnee {}'.format(to_link, donnee_id))
-        fichiers_db.update({'_id': {'$in': to_link}},
-                           {'$set': {'lien_donnee': donnee_id}}, multi=True)
-    from .task_tadarida_d import tadaridaD
-    logger.info('Trigger tadaridaD for %s ficiers'.format(len(async_process_tadaridaD)))
-    for fichier_id in async_process_tadaridaD:
-        tadaridaD.delay(fichier_id)
-    return 0
-
-
 @celery_app.task
-def participation_add_pj(participation_id, pjs_ids, publique):
+def process_participation(participation_id, pjs_ids, publique):
     from ..app import app as flask_app
-    from ..resources.participations import participations
+    wdir = _create_working_dir(('D', 'C'))
     with flask_app.app_context():
-        participation = participations.get_resource(participation_id)
+        g.request_user = {'role': 'Administrateur'}
+        participation = Participation(participation_id, pjs_ids, publique)
+        run_tadaridaD(wdir + '/D', participation)
+        run_tadaridaC(wdir + '/C', participation)
+        participation.save()
+        shutil.rmtree(wdir)
+        participation_generate_bilan(participation_id)
+
+
+class Fichier:
+    def __init__(self, fichier=None, **kwargs):
+        if fichier:
+            self.id = fichier['_id']
+            self.titre = fichier['titre']
+            self.mime = fichier['mime']
+        else:
+            self.id = kwargs.get('id')
+            self.titre = kwargs.get('titre')
+            self.mime = kwargs.get('mime', self.DEFAULT_MIME)
+            self.data_path = kwargs.get('path')
+        self.doc = fichier
+
+    @property
+    def basename(self):
+        if self.titre:
+            return self.titre.rsplit('.', 1)[0]
+
+    def fetch_data(self, path=''):
+        if not self.doc and not self.data_path:
+            raise ValueError('No data to fetch')
+        if self.doc:
+            r = requests.get('{}/fichiers/{}/acces'.format(
+                BACKEND_DOMAIN, self.id), params={'redirection': True},
+                stream=True, auth=AUTH)
+            data_path = '/'.join((path, self.doc['titre']))
+            with open(data_path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk: # filter out keep-alive new chunks
+                        f.write(chunk)
+                        f.flush()
+            if r.status_code != 200:
+               logger.error('Cannot get back file {} : error {}'.format(
+                    fichier['fichier_info'], r.status_code))
+        elif self.data_path:
+            data_path = '/'.join((path, self.titre))
+            os.link(self.data_path, data_path)
+        return data_path
+
+    def save(self, donnee_id, participation_id, proprietaire_id):
+        if self.id:
+            # Fichier already in database, nothing to do...
+            return
+        from ..resources.fichiers import fichiers as f_resource, _sign_request
+        payload = {'titre': self.titre,
+                   'mime': self.mime,
+                   'proprietaire': proprietaire_id,
+                   'lien_donnee': donnee_id,
+                   'lien_participation': participation_id,
+                   's3_id': self.S3_DIR + self.titre + '.' + uuid4().hex,
+                   'disponible': True}
+        # Upload the fichier to S3
+        sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
+                             content_type=payload['mime'])
+        with open(self.data_path, 'rb') as fd:
+            r = requests.put(sign['signed_url'],
+                             headers={'Content-Type': self.mime}, data=fd)
+        if r.status_code != 200:
+            logger.error('Uploading to S3 {} error {} : {}'.format(
+                payload, r.status_code, r.text))
+            return 1
+        # Then store it representation in database
+        inserted = f_resource.insert(payload)
+        self.id = inserted['_id']
+        logger.info('Fichier created: {} ({})'.format(self.id, self.titre))
+
+
+class FichierWav(Fichier):
+    DEFAULT_MIME = 'audio/wav'
+    S3_DIR = 'wav/'
+
+
+class FichierTA(Fichier):
+    DEFAULT_MIME = 'application/ta'
+    S3_DIR = 'ta/'
+
+
+class FichierTC(Fichier):
+    DEFAULT_MIME = 'application/tc'
+    S3_DIR = 'tc/'
+
+
+class Donnee:
+    def __init__(self, basename):
+        self.basename = basename
+        self.observations = []
+        self.id = None
+        self.wav = None
+        self.tc = None
+        self.ta = None
+
+    def insert(self, fichier):
+        fichier.donnee = self
+        if isinstance(fichier, FichierWav):
+            self.wav = fichier
+        elif isinstance(fichier, FichierTA):
+            self.ta = fichier
+        elif isinstance(fichier, FichierTC):
+            self.tc = fichier
+            # TODO: update the donnee here
+
+    def _build_observations(self):
+        if not self.tc or not self.tc.data_path:
+            return
+        with open(self.tc.data_path, 'r') as fd:
+            reader = csv.reader(fd)
+            headers = next(reader)
+            for line in reader:
+                taxons = []
+                obs = {}
+                for head, cell in zip(headers, line):
+                    if head in ['Group.1', 'Ordre', 'VersionD', 'VersionC']:
+                        continue
+                    elif head == 'FreqM':
+                        obs['frequence_mediane'] = float(cell)
+                    elif head == 'TDeb':
+                        obs['temps_debut'] = float(cell)
+                    elif head == 'TFin':
+                        obs['temps_fin'] = float(cell)
+                    elif float(cell) > MIN_PROBA_TAXON:
+                        # Intersting taxon
+                        taxon = {'taxon': _get_taxon(head)['_id'],
+                                 'probabilite': float(cell)}
+                        if taxon:
+                            taxons.append(taxon)
+                # Sort taxons by proba and retrieve taxon' resources in backend
+                taxons = sorted(taxons, key=lambda x: x['probabilite'])
+                if len(taxons):
+                    main_taxon = taxons.pop()
+                    obs['tadarida_taxon'] = main_taxon['taxon']
+                    obs['tadarida_probabilite'] = main_taxon['probabilite']
+                    obs['tadarida_taxon_autre'] = list(reversed(taxons))
+                    self.observations.append(obs)
+
+
+    def save(self, participation_id, proprietaire_id, publique):
+        if self.id:
+            return
+        from ..resources.donnees import donnees as d_resource
+        self._build_observations()
+        payload = {
+            'titre': self.basename,
+            'participation': participation_id,
+            'proprietaire': proprietaire_id,
+            'publique': publique,
+            'observations': self.observations
+        }
+        inserted = d_resource.insert(payload)
+        self.id = inserted['_id']
+        logger.info('Creating donnee {} ({})'.format(self.id, self.basename))
+        for fichier in (self.wav, self.tc, self.ta):
+            if not fichier:
+                continue
+            fichier.save(donnee_id=self.id, participation_id=participation_id,
+                         proprietaire_id=proprietaire_id)
+
+
+class Participation:
+
+    def __init__(self, participation_id, pjs_ids, publique):
+        from ..resources.participations import participations as p_resource
+        self.participation = p_resource.get_resource(participation_id)
+        self.publique = publique
+        self.donnees = {}
+        self.logs = []
+        self._load_pjs(pjs_ids)
+
+    def _load_pjs(self, pjs_ids):
+        # Register those data as part of the participation
+        ret = current_app.data.db.fichiers.update({'_id': {'$in': pjs_ids}},
+            {'$set': {'lien_participation': self.participation['_id']}}, multi=True)
         pjs = [pj for pj in current_app.data.db.fichiers.find({'_id': {'$in': pjs_ids}})]
         pjs_ids_found = {pj['_id'] for pj in pjs}
         for pj_id in pjs_ids:
             if pj_id not in pjs_ids_found:
-                logger.warning("Fichiers %s doesn't exsits" % pj_id)
-        return _participation_add_pj(participation, pjs, publique)
+                logger.warning("Fichier %s doesn't exist" % pj_id)
+        for pj in pjs:
+            if pj['mime'] in ALLOWED_MIMES_WAV:
+                obj = FichierWav(fichier=pj)
+            elif pj['mime'] in ALLOWED_MIMES_TC:
+                obj = FichierTC(fichier=pj)
+            elif pj['mime'] in ALLOWED_MIMES_TA:
+                obj = FichierTA(fichier=pj)
+            self._insert_file_obj(obj)
+
+    def add_log(self, message, level='info'):
+        self.logs.append({'level': level, 'message': message})
+
+    def get_tas(self):
+        for d in self.donnees.values():
+            if d.ta:
+                yield d.ta
+
+    def get_tcs(self):
+        for d in self.donnees.values():
+            if d.tc:
+                yield d.tc
+
+    def get_waves(self):
+        for d in self.donnees.values():
+            if d.wav:
+                yield d.wav
+
+    def save(self):
+        for d in self.donnees.values():
+            d.save(self.participation['_id'],
+                   self.participation['observateur'],
+                   self.publique)
+
+    def _insert_file_obj(self, obj):
+        if obj.basename not in self.donnees:
+            self.donnees[obj.basename] = Donnee(obj.basename)
+        self.donnees[obj.basename].insert(obj)
+
+    def add_raw_file(self, path):
+        titre = path.rsplit('/', 1)[-1]
+        ext = titre.rsplit('.', 1)[-1]
+        if ext == 'ta':
+            obj = FichierTA(titre=titre, path=path)
+        elif ext == 'tc':
+            obj = FichierTC(titre=titre, path=path)
+        elif ext == 'wav':
+            obj = FichierWav(titre=titre, path=path)
+        self._insert_file_obj(obj)
+
+
+def run_tadaridaD(wdir_path, participation):
+    logger.info('Working in %s' % wdir_path)
+    for fichier in  participation.get_waves():
+        fichier.fetch_data(wdir_path)
+    # Run tadarida
+    logger.info('Starting tadaridaD')
+    ret = subprocess.call([TADARIDA_D, '-t', TADARIDA_D_CONCURRENCY, '.'], cwd=wdir_path)
+    if ret:
+        logger.error('Error in running tadaridaD : returned {}'.format(ret))
+        return 1
+    # Now retreive the generated files
+    # Save the error.log in the logs
+    with open(wdir_path + '/log/error.log', 'r') as fd:
+        data = fd.read()
+        if data:
+            participation.add_log(' ---- TadaridaD error.log ----\n' + data)
+    for file_name in os.listdir(wdir_path + '/txt/'):
+        file_path = '%s/txt/%s' % (wdir_path, file_name)
+        participation.add_raw_file(file_path)
+
+
+def run_tadaridaC(wdir_path, participation):
+    logger.info('Working in %s' % wdir_path)
+    for fichier in  participation.get_tas():
+        fichier.fetch_data(wdir_path)
+    # Run tadarida
+    logger.info('Starting tadaridaC')
+    ret = subprocess.call([TADARIDA_C, '.'], cwd=wdir_path)
+    if ret:
+        logger.error('Error in running tadaridaC : returned {}'.format(ret))
+        return 1
+    # Now retreive the generated files
+    for file_name in os.listdir(wdir_path):
+        if file_name.rsplit('.', 1)[-1] == 'tc':
+            participation.add_raw_file('/'.join((wdir_path, file_name)))
+
+
+if __name__ == '__main__':
+    import sys
+    from bson import ObjectId
+    process_participation(
+        '55895cc21d41c84c4ddbbcc0',
+        [ObjectId('55895cb41d41c84c4ddbbcbd'),
+         ObjectId('55895cb41d41c84c4ddbbcbe'),
+         ObjectId('55895cb41d41c84c4ddbbcbf')],
+        True)
