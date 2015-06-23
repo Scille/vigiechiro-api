@@ -418,10 +418,10 @@ def run_tadaridaD(wdir_path, participation):
         return 1
     # Now retreive the generated files
     # Save the error.log in the logs
-    with open(wdir_path + '/log/error.log', 'r') as fd:
-        data = fd.read()
-        if data:
-            participation.add_log(' ---- TadaridaD error.log ----\n' + data)
+    error_log = wdir_path + '/log/error.log'
+    if os.path.isfile(error_log):
+        with open(error_log, 'r') as fd:
+            participation.add_log(' ---- TadaridaD error.log ----\n' + fd.read())
     for file_name in os.listdir(wdir_path + '/txt/'):
         file_path = '%s/txt/%s' % (wdir_path, file_name)
         participation.add_raw_file(file_path)
@@ -441,14 +441,3 @@ def run_tadaridaC(wdir_path, participation):
     for file_name in os.listdir(wdir_path):
         if file_name.rsplit('.', 1)[-1] == 'tc':
             participation.add_raw_file('/'.join((wdir_path, file_name)))
-
-
-if __name__ == '__main__':
-    import sys
-    from bson import ObjectId
-    process_participation(
-        '55895cc21d41c84c4ddbbcc0',
-        [ObjectId('55895cb41d41c84c4ddbbcbd'),
-         ObjectId('55895cb41d41c84c4ddbbcbe'),
-         ObjectId('55895cb41d41c84c4ddbbcbf')],
-        True)
