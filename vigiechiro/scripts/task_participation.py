@@ -367,7 +367,7 @@ class Participation:
         self.donnees = {}
         self.logs = []
         self._load_pjs(pjs_ids)
-        config = participation.get('configuration', {})
+        config = self.participation.get('configuration', {})
         # Values: GAUCHE, DROITE, ABSENT
         self.cir_expansion = config.get('canal_expansion_temps')
         self.cir_direct = config.get('canal_enregistrement_direct')
@@ -393,17 +393,17 @@ class Participation:
     def add_log(self, message, level='info'):
         self.logs.append({'level': level, 'message': message})
 
-    def get_tas(self, cir_canal):
+    def get_tas(self, cir_canal=None):
         for d in self.donnees.values():
             if d.ta and (not cir_canal or canal == d.ta.cir_canal):
                 yield d.ta
 
-    def get_tcs(self, cir_canal):
+    def get_tcs(self, cir_canal=None):
         for d in self.donnees.values():
             if d.tc and (not cir_canal or canal == d.tc.cir_canal):
                 yield d.tc
 
-    def get_waves(self, cir_canal):
+    def get_waves(self, cir_canal=None):
         for d in self.donnees.values():
             if d.wav and (not cir_canal or canal == d.wav.cir_canal):
                 yield d.wav
