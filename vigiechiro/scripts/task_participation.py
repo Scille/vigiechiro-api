@@ -203,6 +203,18 @@ class Fichier:
         self.doc = fichier
 
     @property
+    def cir_canal(self):
+        # Display canal only for protocoles "routier" and "pedestre"
+        if not self.titre.startswith("Cir"):
+            return None
+        try:
+            return 'DROITE' if re.search(r'^Cir.+-[0-9]{4}-Pass[0-9]{1,2}-Tron[0-9]{1,2}-Chiro_([01])_[0-9]+_000',
+                                         self.titre).group(1) == '1' else 'GAUCHE'
+        except AttributeError:
+            return None
+
+
+    @property
     def basename(self):
         if self.titre:
             return self.titre.rsplit('.', 1)[0]
@@ -355,6 +367,10 @@ class Participation:
         self.donnees = {}
         self.logs = []
         self._load_pjs(pjs_ids)
+        config = participation.get('configuration', {})
+        # Values: GAUCHE, DROITE, ABSENT
+        self.cir_expansion = config.get('canal_expansion_temps')
+        self.cir_direct = config.get('canal_enregistrement_direct')
 
     def _load_pjs(self, pjs_ids):
         # Register those data as part of the participation
@@ -377,19 +393,19 @@ class Participation:
     def add_log(self, message, level='info'):
         self.logs.append({'level': level, 'message': message})
 
-    def get_tas(self):
+    def get_tas(self, cir_canal):
         for d in self.donnees.values():
-            if d.ta:
+            if d.ta and (not cir_canal or canal == d.ta.cir_canal):
                 yield d.ta
 
-    def get_tcs(self):
+    def get_tcs(self, cir_canal):
         for d in self.donnees.values():
-            if d.tc:
+            if d.tc and (not cir_canal or canal == d.tc.cir_canal):
                 yield d.tc
 
-    def get_waves(self):
+    def get_waves(self, cir_canal):
         for d in self.donnees.values():
-            if d.wav:
+            if d.wav and (not cir_canal or canal == d.wav.cir_canal):
                 yield d.wav
 
     def save(self):
@@ -416,11 +432,56 @@ class Participation:
 
 
 def run_tadaridaD(wdir_path, participation):
+    # In case of cir participation, special work
+    if participation.cir_direct and participation.cir_expansion:
+        if participation.cir_expansion != 'ABSENT':
+            wdir_path_cir = wdir_path + '/cir_expansion'
+            os.mkdir(wdir_path_cir)
+            _run_tadaridaD(wdir_path_cir, participation,
+                           canal=participation.cir_expansion, expansion=10)
+        if participation.cir_direct != 'ABSENT':
+            wdir_path_cir = wdir_path + '/cir_direct'
+            os.mkdir(wdir_path_cir)
+            _run_tadaridaD(wdir_path_cir, participation,
+                           canal=participation.cir_direct, expansion=1)
+    else:
+        _run_tadaridaD(wdir_path, participation)
+
+
+def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
+    if expansion not in (10, 1):
+        raise ValueError()
+    logger.info('Working in %s' % wdir_path)
+    for fichier in  participation.get_waves(canal):
+        fichier.fetch_data(wdir_path)
+    # Run tadarida
+    logger.info('Starting tadaridaD with concurrency %s and expansion x%s' %
+                (TADARIDA_D_CONCURRENCY, expansion)
+    ret = subprocess.call((TADARIDA_D, '-t', TADARIDA_D_CONCURRENCY, '-x', str(expansion), '.'),
+                          cwd=wdir_path)
+    if ret:
+        logger.error('Error in running tadaridaD : returned {}'.format(ret))
+        return 1
+    # Now retreive the generated files
+    # Save the error.log in the logs
+    error_log = wdir_path + '/log/error.log'
+    if os.path.isfile(error_log):
+        with open(error_log, 'r') as fd:
+            participation.add_log(' ---- TadaridaD error.log ----\n' + fd.read())
+    for file_name in os.listdir(wdir_path + '/txt/'):
+        file_path = '%s/txt/%s' % (wdir_path, file_name)
+        participation.add_raw_file(file_path)
+
+
+def run_tadaridaD_cir(wdir_path, participation):
     logger.info('Working in %s' % wdir_path)
     for fichier in  participation.get_waves():
         fichier.fetch_data(wdir_path)
     # Run tadarida
     logger.info('Starting tadaridaD')
+    # In case of cir participation, special work
+    if participation.cir_direct:
+    if participation.cir_expansion:
     ret = subprocess.call([TADARIDA_D, '-t', TADARIDA_D_CONCURRENCY, '.'], cwd=wdir_path)
     if ret:
         logger.error('Error in running tadaridaD : returned {}'.format(ret))
