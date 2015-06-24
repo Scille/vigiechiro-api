@@ -473,30 +473,6 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
         participation.add_raw_file(file_path)
 
 
-def run_tadaridaD_cir(wdir_path, participation):
-    logger.info('Working in %s' % wdir_path)
-    for fichier in  participation.get_waves():
-        fichier.fetch_data(wdir_path)
-    # Run tadarida
-    logger.info('Starting tadaridaD')
-    # In case of cir participation, special work
-    if participation.cir_direct:
-    if participation.cir_expansion:
-    ret = subprocess.call([TADARIDA_D, '-t', TADARIDA_D_CONCURRENCY, '.'], cwd=wdir_path)
-    if ret:
-        logger.error('Error in running tadaridaD : returned {}'.format(ret))
-        return 1
-    # Now retreive the generated files
-    # Save the error.log in the logs
-    error_log = wdir_path + '/log/error.log'
-    if os.path.isfile(error_log):
-        with open(error_log, 'r') as fd:
-            participation.add_log(' ---- TadaridaD error.log ----\n' + fd.read())
-    for file_name in os.listdir(wdir_path + '/txt/'):
-        file_path = '%s/txt/%s' % (wdir_path, file_name)
-        participation.add_raw_file(file_path)
-
-
 def run_tadaridaC(wdir_path, participation):
     logger.info('Working in %s' % wdir_path)
     for fichier in  participation.get_tas():
