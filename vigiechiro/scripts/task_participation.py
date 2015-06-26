@@ -10,6 +10,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger('task')
 logger.setLevel(logging.INFO)
+from datetime import datetime
 from uuid import uuid4
 import csv
 import shutil
@@ -391,7 +392,7 @@ class Participation:
             self._insert_file_obj(obj)
 
     def add_log(self, message, level='info'):
-        self.logs.append({'level': level, 'message': message})
+        self.logs.append({'level': level, 'message': message, 'date': datetime.utcnow()})
 
     def get_tas(self, cir_canal=None):
         for d in self.donnees.values():
@@ -413,6 +414,10 @@ class Participation:
             d.save(self.participation['_id'],
                    self.participation['observateur'],
                    self.publique)
+        if self.logs:
+            from ..resources.participations import participations as p_resource
+            p_resource.update(participation_id, {'logs': self.logs})
+
 
     def _insert_file_obj(self, obj):
         if obj.basename not in self.donnees:
@@ -457,9 +462,13 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
     # Run tadarida
     logger.info('Starting tadaridaD with concurrency %s and expansion x%s' %
                 (TADARIDA_D_CONCURRENCY, expansion))
-    ret = subprocess.call((TADARIDA_D, '-t', TADARIDA_D_CONCURRENCY, '-x', str(expansion), '.'),
-                          cwd=wdir_path)
+    ret = subprocess.call(
+        (TADARIDA_D, '-t', TADARIDA_D_CONCURRENCY, '-x', str(expansion), '.', '|', 'tee', 'tadaridaD.log'),
+        cwd=wdir_path, shell=True)
     if ret:
+        with open(wdir_path + '/tadaridaD.log', 'r') as fd:
+            logs = fd.read()
+        participation.add_log(' ---- TadaridaD output ----\n' + logs, level='error')
         logger.error('Error in running tadaridaD : returned {}'.format(ret))
         return 1
     # Now retreive the generated files
@@ -479,8 +488,12 @@ def run_tadaridaC(wdir_path, participation):
         fichier.fetch_data(wdir_path)
     # Run tadarida
     logger.info('Starting tadaridaC')
-    ret = subprocess.call([TADARIDA_C, '.'], cwd=wdir_path)
+    ret = subprocess.call([TADARIDA_C, '.', '|', 'tee', 'tadaridaC.log'],
+                          cwd=wdir_path, shell=True)
     if ret:
+        with open(wdir_path + '/tadaridaC.log', 'r') as fd:
+            logs = fd.read()
+        participation.add_log(' ---- TadaridaC output ----\n' + logs, level='error')
         logger.error('Error in running tadaridaC : returned {}'.format(ret))
         return 1
     # Now retreive the generated files
