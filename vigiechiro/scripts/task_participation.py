@@ -433,6 +433,9 @@ class Participation:
             obj = FichierTC(titre=titre, path=path)
         elif ext == 'wav':
             obj = FichierWav(titre=titre, path=path)
+        else:
+            # Unknown file, just skip it
+            return
         self._insert_file_obj(obj)
 
 
@@ -477,9 +480,10 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
     if os.path.isfile(error_log):
         with open(error_log, 'r') as fd:
             participation.add_log(' ---- TadaridaD error.log ----\n' + fd.read())
-    for file_name in os.listdir(wdir_path + '/txt/'):
-        file_path = '%s/txt/%s' % (wdir_path, file_name)
-        participation.add_raw_file(file_path)
+    if os.path.isdir(wdir_path + '/txt'):
+        for file_name in os.listdir(wdir_path + '/txt/'):
+            file_path = '%s/txt/%s' % (wdir_path, file_name)
+            participation.add_raw_file(file_path)
 
 
 def run_tadaridaC(wdir_path, participation):
