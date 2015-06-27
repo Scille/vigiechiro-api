@@ -465,9 +465,9 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
     # Run tadarida
     logger.info('Starting tadaridaD with concurrency %s and expansion x%s' %
                 (TADARIDA_D_CONCURRENCY, expansion))
-    ret = subprocess.call(
-        (TADARIDA_D, '-t', TADARIDA_D_CONCURRENCY, '-x', str(expansion), '.', '|', 'tee', 'tadaridaD.log'),
-        cwd=wdir_path, shell=True)
+    ret = subprocess.call('%s -t %s -x %s . | tee tadaridaD.log' %
+                          (TADARIDA_D, TADARIDA_D_CONCURRENCY, str(expansion)),
+                          cwd=wdir_path, shell=True)
     if ret:
         with open(wdir_path + '/tadaridaD.log', 'r') as fd:
             logs = fd.read()
@@ -492,7 +492,7 @@ def run_tadaridaC(wdir_path, participation):
         fichier.fetch_data(wdir_path)
     # Run tadarida
     logger.info('Starting tadaridaC')
-    ret = subprocess.call([TADARIDA_C, '.', '|', 'tee', 'tadaridaC.log'],
+    ret = subprocess.call(['%s . | tee tadaridaC.log' % TADARIDA_C],
                           cwd=wdir_path, shell=True)
     if ret:
         with open(wdir_path + '/tadaridaC.log', 'r') as fd:
