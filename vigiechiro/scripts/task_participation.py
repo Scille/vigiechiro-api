@@ -465,7 +465,7 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
     # Run tadarida
     logger.info('Starting tadaridaD with concurrency %s and expansion x%s' %
                 (TADARIDA_D_CONCURRENCY, expansion))
-    ret = subprocess.call('%s -t %s -x %s . | tee tadaridaD.log' %
+    ret = subprocess.call('%s -p %s -x %s . | tee tadaridaD.log' %
                           (TADARIDA_D, TADARIDA_D_CONCURRENCY, str(expansion)),
                           cwd=wdir_path, shell=True)
     if ret:
