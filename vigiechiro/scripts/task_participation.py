@@ -363,6 +363,7 @@ class Participation:
 
     def __init__(self, participation_id, pjs_ids, publique):
         from ..resources.participations import participations as p_resource
+        self.participation_id = participation_id
         self.participation = p_resource.get_resource(participation_id)
         self.publique = publique
         self.donnees = {}
@@ -416,7 +417,7 @@ class Participation:
                    self.publique)
         if self.logs:
             from ..resources.participations import participations as p_resource
-            p_resource.update(participation_id, {'logs': self.logs})
+            p_resource.update(self.participation_id, {'logs': self.logs})
 
 
     def _insert_file_obj(self, obj):
