@@ -41,7 +41,8 @@ SCHEMA = {
         'type': 'dict',
         'schema': {
             'chemin': {'type': 'linestring'},
-            'origine': {'type': 'point'}
+            'origine': {'type': 'point'},
+            'arrivee': {'type': 'point'}
         }
     },
     'url_cartographie': {'type': 'url'},
@@ -235,7 +236,7 @@ def _check_edit_acess(site_resource):
 def edit_site(site_id):
     site_resource = sites.get_resource(site_id)
     _check_edit_acess(site_resource)
-    payload = get_payload({'commentaire', 'observateur', 'verrouille'})
+    payload = get_payload({'commentaire', 'observateur', 'verrouille', 'tracet'})
     if (('observateur' in payload or 'verrouille' in payload)
         and g.request_user['role'] != 'Administrateur'):
         abort(403)
