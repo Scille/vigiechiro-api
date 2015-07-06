@@ -415,9 +415,9 @@ class Participation:
             d.save(self.participation['_id'],
                    self.participation['observateur'],
                    self.publique)
-        if self.logs:
-            from ..resources.participations import participations as p_resource
-            p_resource.update(self.participation_id, {'logs': self.logs})
+        from ..resources.participations import participations as p_resource
+        logger.info('Saving %s logs items in participation' % len(self.logs))
+        p_resource.update(self.participation_id, {'logs': self.logs})
 
 
     def _insert_file_obj(self, obj):
@@ -469,18 +469,22 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
     ret = subprocess.call('%s -t %s -x %s . | tee tadaridaD.log' %
                           (TADARIDA_D, TADARIDA_D_CONCURRENCY, str(expansion)),
                           cwd=wdir_path, shell=True)
-    if ret:
-        with open(wdir_path + '/tadaridaD.log', 'r') as fd:
-            logs = fd.read()
-        participation.add_log(' ---- TadaridaD output ----\n' + logs, level='error')
-        logger.error('Error in running tadaridaD : returned {}'.format(ret))
-        return 1
+    with open(wdir_path + '/tadaridaD.log', 'r') as fd:
+        participation.add_log(' ---- TadaridaD output ----\n' + fd.read())
     # Now retreive the generated files
     # Save the error.log in the logs
-    error_log = wdir_path + '/log/error.log'
-    if os.path.isfile(error_log):
-        with open(error_log, 'r') as fd:
-            participation.add_log(' ---- TadaridaD error.log ----\n' + fd.read())
+    for root, _, files in os.walk('./log'):
+        for file_name in files:
+            file_path = '/'.join(root, file_name)
+            with open(file_path, 'r') as fd:
+                data = fd.read()
+            if data:
+                participation.add_log(' ---- TadaridaD %s ----\n%s' % (file_path, data))
+    if ret:
+        msg = 'Error in running tadaridaD : returned {}'.format(ret)
+        participation.add_log(msg, level='error')
+        logger.error(msg)
+        return 1
     if os.path.isdir(wdir_path + '/txt'):
         for file_name in os.listdir(wdir_path + '/txt/'):
             file_path = '%s/txt/%s' % (wdir_path, file_name)
@@ -495,11 +499,12 @@ def run_tadaridaC(wdir_path, participation):
     logger.info('Starting tadaridaC')
     ret = subprocess.call(['%s . | tee tadaridaC.log' % TADARIDA_C],
                           cwd=wdir_path, shell=True)
+    with open(wdir_path + '/tadaridaC.log', 'r') as fd:
+        participation.add_log(' ---- TadaridaC output ----\n' + fd.read())
     if ret:
-        with open(wdir_path + '/tadaridaC.log', 'r') as fd:
-            logs = fd.read()
-        participation.add_log(' ---- TadaridaC output ----\n' + logs, level='error')
-        logger.error('Error in running tadaridaC : returned {}'.format(ret))
+        msg = 'Error in running tadaridaC : returned {}'.format(ret)
+        participation.add_log(msg, level='error')
+        logger.error(msg)
         return 1
     # Now retreive the generated files
     for file_name in os.listdir(wdir_path):
