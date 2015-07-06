@@ -134,6 +134,7 @@ class Bilan:
     def add_contact_max(self, taxon, proba):
         order = self._define_taxon_order(taxon)
         order[taxon['_id']]['contact_max'] += 1
+        self.add_contact_min(taxon, proba)
 
     def generate_payload(self):
         payload = {'problemes': self.problemes}
