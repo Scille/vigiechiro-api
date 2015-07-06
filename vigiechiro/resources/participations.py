@@ -76,7 +76,7 @@ SCHEMA = {
             'type': 'dict',
             'schema': {
                 'date': {'type': 'datetime', 'required': True},
-                'status': {'type': 'string', 'required': True},
+                'level': {'type': 'string', 'required': True},
                 'message': {'type': 'string', 'required': True}
             }
         }
