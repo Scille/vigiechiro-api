@@ -22,8 +22,8 @@ from pymongo import MongoClient
 from flask import current_app, g
 
 from .celery import celery_app
-from .. import settings
-from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS, TADARIDA_C_OPTS
+from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
+                        TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE)
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
                                   delete_fichier_and_s3, get_file_from_s3)
@@ -535,9 +535,10 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
             participation.add_raw_file(file_path)
 
 
-def run_tadaridaC(wdir_path, participation):
-    logger.debug('Working in %s' % wdir_path)
-    for fichier in  participation.get_tas():
+def _run_tadaridaC(wdir_path, participation, fichiers_batch):
+    if not os.path.isdir(wdir_path):
+        os.mkdir(wdir_path)
+    for fichier in fichiers_batch:
         fichier.fetch_data(wdir_path)
     # Run tadarida
     logger.info('Starting tadaridaC with options `%s`' % TADARIDA_C_OPTS or '<no_options>')
@@ -555,7 +556,24 @@ def run_tadaridaC(wdir_path, participation):
             participation.add_raw_file('/'.join((wdir_path, file_name)))
 
 
+def run_tadaridaC(wdir_path, participation):
+    logger.debug('Working in %s' % wdir_path)
+    batch = []
+    batch_count = 1
+    for i, fichier in enumerate(participation.get_tas(), 1):
+        batch.append(fichier)
+        if not (i % TADARIDA_C_BATCH_SIZE):
+            _run_tadaridaC('%s/%s' % (wdir_path, batch_count), participation, batch)
+            batch = []
+            batch_count += 1
+    if batch:
+        _run_tadaridaC('%s/%s' % (wdir_path, batch_count), participation, batch)
+
+
 if __name__ == '__main__':
+    import sys
     from bson import ObjectId
-    # process_participation(ObjectId("558a6c4d1d41c831abf7bdcc"), [], True)
-    process_participation(ObjectId("559c05d31d41c86315674d78"), [], True)
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: %s <participtaion_id>" %
+                         os.path.basename(sys.argv[0]))
+    process_participation(ObjectId(sys.argv[1]), [], True)

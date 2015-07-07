@@ -29,6 +29,10 @@ ROLE_RULES = {
                        'Administrateur']}
 TADARIDA_D_OPTS = environ.get('TADARIDA_D_OPTS', "")
 TADARIDA_C_OPTS = environ.get('TADARIDA_C_OPTS', "")
+try:
+    TADARIDA_C_BATCH_SIZE = int(environ['TADARIDA_C_BATCH_SIZE'])
+except (ValueError, KeyError):
+    TADARIDA_C_BATCH_SIZE = 1000
 
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
