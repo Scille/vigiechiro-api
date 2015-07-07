@@ -8,8 +8,8 @@ Participation bilan task worker
 
 import logging
 logging.basicConfig()
-logger = logging.getLogger('task')
-logger.setLevel(logging.INFO)
+base_logger = logging.getLogger('task')
+base_logger.setLevel(logging.INFO)
 from datetime import datetime
 from uuid import uuid4
 import csv
@@ -25,7 +25,26 @@ from .celery import celery_app
 from .. import settings
 from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS, TADARIDA_C_OPTS
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
-                                  ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
+                                  ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
+                                  delete_fichier_and_s3, get_file_from_s3)
+
+
+class ProxyLogger:
+    LOGS = []
+    def log(self, level, msg, *args, store=True, **kwargs):
+        logger_level = getattr(logging, level.upper())
+        base_logger.log(logger_level, msg, *args, **kwargs)
+        if store:
+            self.LOGS.append({'level': level, 'message': msg, 'date': datetime.utcnow()})
+    def info(self, *args, **kwargs):
+        self.log('info', *args, **kwargs)
+    def warning(self, *args, **kwargs):
+        self.log('warning', *args, **kwargs)
+    def error(self, *args, **kwargs):
+        self.log('error', *args, **kwargs)
+    def debug(self, *args, **kwargs):
+        self.log('debug', *args, store=False, **kwargs)
+logger = ProxyLogger()
 
 
 MIN_PROBA_TAXON = 0.05
@@ -93,14 +112,14 @@ class Bilan:
         self.problemes = 0
 
     def _define_taxon_order(self, taxon):
-        logger.info("Lookuping for taxon order for {}".format(
+        logger.debug("Lookuping for taxon order for {}".format(
             taxon['_id'], taxon['libelle_court']))
         taxon_id = taxon['_id']
         if taxon_id in self.taxon_to_order_name:
             order_name = self.taxon_to_order_name[taxon_id]
         else:
             def recursive_order_find(taxon):
-                logger.info("Recursive lookup on taxon {} ({})".format(
+                logger.debug("Recursive lookup on taxon {} ({})".format(
                     taxon['_id'], taxon['libelle_court']))
                 for order_name_compare, order_name in ORDER_NAMES:
                     if (taxon['libelle_long'] == order_name_compare
@@ -182,8 +201,11 @@ def process_participation(participation_id, pjs_ids, publique):
     from ..app import app as flask_app
     wdir = _create_working_dir(('D', 'C'))
     with flask_app.app_context():
+        logger.info("Starting building particiation %s" % participation_id)
         g.request_user = {'role': 'Administrateur'}
         participation = Participation(participation_id, pjs_ids, publique)
+        participation.reset_pjs_state()
+        participation.load_pjs()
         run_tadaridaD(wdir + '/D', participation)
         run_tadaridaC(wdir + '/C', participation)
         participation.save()
@@ -225,18 +247,11 @@ class Fichier:
         if not self.doc and not self.data_path:
             raise ValueError('No data to fetch')
         if self.doc:
-            r = requests.get('{}/fichiers/{}/acces'.format(
-                BACKEND_DOMAIN, self.id), params={'redirection': True},
-                stream=True, auth=AUTH)
             data_path = '/'.join((path, self.doc['titre']))
-            with open(data_path, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=1024):
-                    if chunk: # filter out keep-alive new chunks
-                        f.write(chunk)
-                        f.flush()
+            r = get_file_from_s3(self.doc, data_path)
             if r.status_code != 200:
-               logger.error('Cannot get back file {} : error {}'.format(
-                    fichier['fichier_info'], r.status_code))
+               logger.error('Cannot get back file {} ({}) : error {}'.format(
+                    self.id, self.doc['titre'], r.status_code))
         elif self.data_path:
             data_path = '/'.join((path, self.titre))
             os.link(self.data_path, data_path)
@@ -267,7 +282,7 @@ class Fichier:
         # Then store it representation in database
         inserted = f_resource.insert(payload)
         self.id = inserted['_id']
-        logger.info('Fichier created: {} ({})'.format(self.id, self.titre))
+        logger.debug('Fichier created: {} ({})'.format(self.id, self.titre))
 
 
 class FichierWav(Fichier):
@@ -323,8 +338,12 @@ class Donnee:
                     elif head == 'TFin':
                         obs['temps_fin'] = float(cell)
                     elif float(cell) > MIN_PROBA_TAXON:
-                        # Intersting taxon
-                        taxon = {'taxon': _get_taxon(head)['_id'],
+                        # Intersting taxo
+                        taxon_data = _get_taxon(head)
+                        if not taxon_data:
+                            logger.warning("Taxon `%s` doesn't exists" % head)
+                            continue
+                        taxon = {'taxon': taxon_data['_id'],
                                  'probabilite': float(cell)}
                         if taxon:
                             taxons.append(taxon)
@@ -352,7 +371,7 @@ class Donnee:
         }
         inserted = d_resource.insert(payload)
         self.id = inserted['_id']
-        logger.info('Creating donnee {} ({})'.format(self.id, self.basename))
+        logger.debug('Creating donnee {} ({})'.format(self.id, self.basename))
         for fichier in (self.wav, self.tc, self.ta):
             if not fichier:
                 continue
@@ -368,22 +387,50 @@ class Participation:
         self.participation = p_resource.get_resource(participation_id)
         self.publique = publique
         self.donnees = {}
-        self.logs = []
-        self._load_pjs(pjs_ids)
         config = self.participation.get('configuration', {})
         # Values: GAUCHE, DROITE, ABSENT
         self.cir_expansion = config.get('canal_expansion_temps')
         self.cir_direct = config.get('canal_enregistrement_direct')
-
-    def _load_pjs(self, pjs_ids):
-        # Register those data as part of the participation
-        ret = current_app.data.db.fichiers.update({'_id': {'$in': pjs_ids}},
+        # Register additional pjs as part of the participation
+        current_app.data.db.fichiers.update({'_id': {'$in': pjs_ids}},
             {'$set': {'lien_participation': self.participation['_id']}}, multi=True)
-        pjs = [pj for pj in current_app.data.db.fichiers.find({'_id': {'$in': pjs_ids}})]
+
+    def reset_pjs_state(self):
+        # Donnees will be recreated, delete them all
+        ret = current_app.data.db.donnees.remove({
+            'participation': self.participation['_id']
+        })
+        logger.info('Remove %s old donnees' % ret.get('n'))
+        # Delete old .ta/.tc if needed to reset
+        wav_pjs = current_app.data.db.fichiers.find({
+            'lien_participation': self.participation['_id'],
+            'mime': {'$in': ALLOWED_MIMES_WAV}
+        })
+        if wav_pjs.count():
+            delete_pjs = current_app.data.db.fichiers.find({
+                'lien_participation': self.participation['_id'],
+                'mime': {'$in': ALLOWED_MIMES_TA + ALLOWED_MIMES_TC}
+            })
+            logger.info("Participation base files are .wav, delete %s obsolete"
+                        " .ta and .tc files" % delete_pjs.count())
+            for fichier in delete_pjs:
+                delete_fichier_and_s3(fichier)
+            return
+        if ta_pjs.count():
+            delete_pjs = current_app.data.db.fichiers.find({
+                'lien_participation': self.participation['_id'],
+                'mime': {'$in': ALLOWED_MIMES_TC}
+            })
+            logger.info("Participation base files are .ta, delete %s obsolete"
+                        " .tc files" % delete_pjs.count())
+            for fichier in delete_pjs:
+                delete_fichier_and_s3(fichier)
+            return
+
+    def load_pjs(self):
+        pjs = [pj for pj in current_app.data.db.fichiers.find(
+            {'lien_participation': self.participation['_id']})]
         pjs_ids_found = {pj['_id'] for pj in pjs}
-        for pj_id in pjs_ids:
-            if pj_id not in pjs_ids_found:
-                logger.warning("Fichier %s doesn't exist" % pj_id)
         for pj in pjs:
             if pj['mime'] in ALLOWED_MIMES_WAV:
                 obj = FichierWav(fichier=pj)
@@ -392,9 +439,6 @@ class Participation:
             elif pj['mime'] in ALLOWED_MIMES_TA:
                 obj = FichierTA(fichier=pj)
             self._insert_file_obj(obj)
-
-    def add_log(self, message, level='info'):
-        self.logs.append({'level': level, 'message': message, 'date': datetime.utcnow()})
 
     def get_tas(self, cir_canal=None):
         for d in self.donnees.values():
@@ -417,8 +461,8 @@ class Participation:
                    self.participation['observateur'],
                    self.publique)
         from ..resources.participations import participations as p_resource
-        logger.info('Saving %s logs items in participation' % len(self.logs))
-        p_resource.update(self.participation_id, {'logs': self.logs})
+        logger.debug('Saving %s logs items in participation' % len(logger.LOGS))
+        p_resource.update(self.participation_id, {'logs': logger.LOGS})
 
 
     def _insert_file_obj(self, obj):
@@ -461,7 +505,7 @@ def run_tadaridaD(wdir_path, participation):
 def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
     if expansion not in (10, 1):
         raise ValueError()
-    logger.info('Working in %s' % wdir_path)
+    logger.debug('Working in %s' % wdir_path)
     for fichier in  participation.get_waves(canal):
         fichier.fetch_data(wdir_path)
     # Run tadarida
@@ -471,7 +515,7 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
                           (TADARIDA_D, TADARIDA_D_OPTS, str(expansion)),
                           cwd=wdir_path, shell=True)
     with open(wdir_path + '/tadaridaD.log', 'r') as fd:
-        participation.add_log(' ---- TadaridaD output ----\n' + fd.read())
+        logger.info(' ---- TadaridaD output ----\n' + fd.read())
     # Now retreive the generated files
     # Save the error.log in the logs
     for root, _, files in os.walk('./log'):
@@ -480,10 +524,9 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
             with open(file_path, 'r') as fd:
                 data = fd.read()
             if data:
-                participation.add_log(' ---- TadaridaD %s ----\n%s' % (file_path, data))
+                logger.info(' ---- TadaridaD %s ----\n%s' % (file_path, data))
     if ret:
         msg = 'Error in running tadaridaD : returned {}'.format(ret)
-        participation.add_log(msg, level='error')
         logger.error(msg)
         return 1
     if os.path.isdir(wdir_path + '/txt'):
@@ -493,7 +536,7 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
 
 
 def run_tadaridaC(wdir_path, participation):
-    logger.info('Working in %s' % wdir_path)
+    logger.debug('Working in %s' % wdir_path)
     for fichier in  participation.get_tas():
         fichier.fetch_data(wdir_path)
     # Run tadarida
@@ -501,13 +544,18 @@ def run_tadaridaC(wdir_path, participation):
     ret = subprocess.call(['%s %s . | tee tadaridaC.log' % (TADARIDA_C, TADARIDA_C_OPTS)],
                           cwd=wdir_path, shell=True)
     with open(wdir_path + '/tadaridaC.log', 'r') as fd:
-        participation.add_log(' ---- TadaridaC output ----\n' + fd.read())
+        logger.info(' ---- TadaridaC output ----\n' + fd.read())
     if ret:
         msg = 'Error in running tadaridaC : returned {}'.format(ret)
-        participation.add_log(msg, level='error')
         logger.error(msg)
         return 1
     # Now retreive the generated files
     for file_name in os.listdir(wdir_path):
         if file_name.rsplit('.', 1)[-1] == 'tc':
             participation.add_raw_file('/'.join((wdir_path, file_name)))
+
+
+if __name__ == '__main__':
+    from bson import ObjectId
+    # process_participation(ObjectId("558a6c4d1d41c831abf7bdcc"), [], True)
+    process_participation(ObjectId("559c05d31d41c86315674d78"), [], True)

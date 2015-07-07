@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import os
+import sys
 import requests
 import logging
 
@@ -53,4 +54,7 @@ def get_participation_files(participation_id):
 
 
 if __name__ == '__main__':
-    get_participation_files("558bf217c1bff8000d0a1289")
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: %s <participtaion_id>" %
+                         os.path.basename(sys.argv[0]))
+    get_participation_files(sys.argv[1])

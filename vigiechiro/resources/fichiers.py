@@ -65,6 +65,38 @@ SCHEMA = {
 fichiers = Resource('fichiers', __name__, schema=SCHEMA)
 
 
+def delete_fichier_and_s3(fichier):
+    # Destroy the unfinished file on S3
+    if fichier.get('s3_upload_multipart_id', False):
+        sign = _sign_request(verb='DELETE', object_name=fichier['s3_id'],
+                             sign_head='uploadId=' + fichier['s3_upload_multipart_id'])
+    else:
+        sign = _sign_request(verb='DELETE', object_name=fichier['s3_id'])
+    r = requests.delete(sign['signed_url'])
+    if r.status_code != 204:
+        logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
+        return r
+    fichiers.remove({'_id': fichier['_id']})
+    return None
+
+
+def get_file_from_s3(fichier, data_path):
+    object_name = fichier.get('s3_id')
+    if not object_name:
+        return None
+    if not settings.DEV_FAKE_S3_URL:
+        signed_url = _sign_request(verb='GET', object_name=object_name)['signed_url']
+    else:
+        signed_url = settings.DEV_FAKE_S3_URL + '/' + object_name
+    r = requests.get(signed_url, stream=True)
+    with open(data_path, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
+                f.flush()
+    return r
+
+
 def _check_access_rights(file_resource):
     # Check access rights : admin, validateur and owner can read,
     # other can read only if the data is public
@@ -255,7 +287,6 @@ def fichier_multipart_continue(file_id):
     else:
         sign = {'signed_url': settings.DEV_FAKE_S3_URL}
     return {'s3_signed_url': sign['signed_url']}
-
 
 @fichiers.route('/fichiers/<objectid:file_id>', methods=['DELETE'])
 @requires_auth(roles='Observateur')
