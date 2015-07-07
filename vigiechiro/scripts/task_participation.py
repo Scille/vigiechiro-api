@@ -125,7 +125,11 @@ class Bilan:
                     if (taxon['libelle_long'] == order_name_compare
                         or taxon['libelle_court'] == order_name_compare):
                         return order_name
-                for parent_id in taxon.get('parents', []):
+                for parent_id_or_data in taxon.get('parents', []):
+                    if isinstance(parent_id_or_data, dict):
+                        parent_id = parent_id_or_data['_id']
+                    else:
+                        parent_id = parent_id_or_data
                     r = requests.get(BACKEND_DOMAIN + '/taxons/{}'.format(parent_id), auth=AUTH)
                     if r.status_code != 200:
                         logger.error('Retrieving taxon {} error {} : {}'.format(
