@@ -23,7 +23,7 @@ from flask import current_app, g
 
 from .celery import celery_app
 from .. import settings
-from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_CONCURRENCY
+from ..settings import BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS, TADARIDA_C_OPTS
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 
@@ -465,10 +465,10 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
     for fichier in  participation.get_waves(canal):
         fichier.fetch_data(wdir_path)
     # Run tadarida
-    logger.info('Starting tadaridaD with concurrency %s and expansion x%s' %
-                (TADARIDA_D_CONCURRENCY, expansion))
-    ret = subprocess.call('%s -t %s -x %s . | tee tadaridaD.log' %
-                          (TADARIDA_D, TADARIDA_D_CONCURRENCY, str(expansion)),
+    logger.info('Starting tadaridaD with options `%s` and expansion x%s' %
+                (TADARIDA_D_OPTS or '<no_options>', expansion))
+    ret = subprocess.call('%s %s -x %s . | tee tadaridaD.log' %
+                          (TADARIDA_D, TADARIDA_D_OPTS, str(expansion)),
                           cwd=wdir_path, shell=True)
     with open(wdir_path + '/tadaridaD.log', 'r') as fd:
         participation.add_log(' ---- TadaridaD output ----\n' + fd.read())
@@ -497,8 +497,8 @@ def run_tadaridaC(wdir_path, participation):
     for fichier in  participation.get_tas():
         fichier.fetch_data(wdir_path)
     # Run tadarida
-    logger.info('Starting tadaridaC')
-    ret = subprocess.call(['%s . | tee tadaridaC.log' % TADARIDA_C],
+    logger.info('Starting tadaridaC with options `%s`' % TADARIDA_C_OPTS or '<no_options>')
+    ret = subprocess.call(['%s %s . | tee tadaridaC.log' % (TADARIDA_C, TADARIDA_C_OPTS)],
                           cwd=wdir_path, shell=True)
     with open(wdir_path + '/tadaridaC.log', 'r') as fd:
         participation.add_log(' ---- TadaridaC output ----\n' + fd.read())

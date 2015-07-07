@@ -27,7 +27,8 @@ ROLE_RULES = {
     'Validateur': ['Lecteur', 'Observateur', 'Validateur'],
     'Administrateur': ['Lecteur', 'Observateur', 'Validateur',
                        'Administrateur']}
-TADARIDA_D_CONCURRENCY = environ.get('TADARIDA_D_CONCURRENCY', "1")
+TADARIDA_D_OPTS = environ.get('TADARIDA_D_OPTS', "")
+TADARIDA_C_OPTS = environ.get('TADARIDA_C_OPTS', "")
 
 ### App ###
 SECRET_KEY = environ.get('SECRET_KEY', 'secret_for_test_only')
