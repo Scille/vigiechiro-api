@@ -68,7 +68,7 @@ def tadaridaD(fichier_id):
         return 1
     logger.info('Got back file {}, running tadaridaD on it'.format(fichier_info))
     # Run tadarida
-    ret = subprocess.call([TADARIDA_D, TADARIDA_D_OPTS.split(), 'waves'], cwd=wdir_path)
+    ret = subprocess.call([TADARIDA_D] + TADARIDA_D_OPTS.split() + ['waves'], cwd=wdir_path)
     if ret:
         logger.error('Error in running tadaridaD : returns {}'.format(ret))
         return 1
