@@ -526,7 +526,7 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
     # Run tadarida
     logger.info('Starting tadaridaD with options `%s` and expansion x%s' %
                 (TADARIDA_D_OPTS or '<no_options>', expansion))
-    ret = subprocess.call('%s %s -x %s . | tee tadaridaD.log' %
+    ret = subprocess.call('2>&1 %s %s -x %s . | tee tadaridaD.log' %
                           (TADARIDA_D, TADARIDA_D_OPTS, str(expansion)),
                           cwd=wdir_path, shell=True)
     with open(wdir_path + '/tadaridaD.log', 'r') as fd:
@@ -557,7 +557,7 @@ def _run_tadaridaC(wdir_path, participation, fichiers_batch):
         fichier.fetch_data(wdir_path)
     # Run tadarida
     logger.info('Starting tadaridaC with options `%s`' % TADARIDA_C_OPTS or '<no_options>')
-    ret = subprocess.call(['%s %s . | tee tadaridaC.log' % (TADARIDA_C, TADARIDA_C_OPTS)],
+    ret = subprocess.call(['2>&1 %s %s . | tee tadaridaC.log' % (TADARIDA_C, TADARIDA_C_OPTS)],
                           cwd=wdir_path, shell=True)
     with open(wdir_path + '/tadaridaC.log', 'r') as fd:
         logger.info(' ---- TadaridaC output ----\n' + fd.read())
