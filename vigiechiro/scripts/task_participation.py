@@ -420,6 +420,10 @@ class Participation:
             for fichier in delete_pjs:
                 delete_fichier_and_s3(fichier)
             return
+        ta_pjs = current_app.data.db.fichiers.find({
+            'lien_participation': self.participation['_id'],
+            'mime': {'$in': ALLOWED_MIMES_TA}
+        })
         if ta_pjs.count():
             delete_pjs = current_app.data.db.fichiers.find({
                 'lien_participation': self.participation['_id'],
