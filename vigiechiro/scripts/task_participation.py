@@ -196,7 +196,7 @@ def dummy_keep_alive():
     pass
 
 @celery_app.task
-def process_participation(participation_id, pjs_ids, publique):
+def process_participation(participation_id, pjs_ids=[], publique=True):
     # TODO: find a cleaner fix...
     # Currently, hirefire doesn't take into account the currently processed
     # tasks. Hence it can kill a worker during the process of a job.
@@ -207,7 +207,11 @@ def process_participation(participation_id, pjs_ids, publique):
     with flask_app.app_context():
         logger.info("Starting building particiation %s" % participation_id)
         g.request_user = {'role': 'Administrateur'}
-        participation = Participation(participation_id, pjs_ids, publique)
+        try:
+            participation = Participation(participation_id, pjs_ids, publique)
+        except ParticipationError as e:
+            logger.error(e)
+            return
         participation.reset_pjs_state()
         participation.load_pjs()
         run_tadaridaD(wdir + '/D', participation)
@@ -382,13 +386,16 @@ class Donnee:
             fichier.save(donnee_id=self.id, participation_id=participation_id,
                          proprietaire_id=proprietaire_id)
 
-
+class ParticipationError(Exception): pass
 class Participation:
 
     def __init__(self, participation_id, pjs_ids, publique):
         from ..resources.participations import participations as p_resource
         self.participation_id = participation_id
-        self.participation = p_resource.get_resource(participation_id)
+        self.participation = p_resource.get_resource(participation_id, auto_abort=False)
+        if not self.participation:
+            msg = 'Cannot retrieve participation %s' % participation_id
+            raise ParticipationError(msg)
         self.publique = publique
         self.donnees = {}
         config = self.participation.get('configuration', {})
