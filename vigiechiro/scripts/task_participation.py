@@ -197,6 +197,8 @@ def dummy_keep_alive():
 
 @celery_app.task
 def process_participation(participation_id, pjs_ids=[], publique=True):
+    if not isinstance(participation_id, str):
+        participation_id = str(participation_id)
     # TODO: find a cleaner fix...
     # Currently, hirefire doesn't take into account the currently processed
     # tasks. Hence it can kill a worker during the process of a job.
@@ -477,7 +479,7 @@ class Participation:
                    self.publique)
         from ..resources.participations import participations as p_resource
         logger.debug('Saving %s logs items in participation' % len(logger.LOGS))
-        p_resource.update(self.participation_id, {'logs': logger.LOGS})
+        p_resource.update(self.participation['_id'], {'logs': logger.LOGS})
 
 
     def _insert_file_obj(self, obj):
