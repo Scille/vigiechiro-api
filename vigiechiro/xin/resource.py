@@ -121,8 +121,8 @@ class Resource(Blueprint):
             return (404, )
         old_etag = document.get('_etag', None)
         if not old_etag:
-            logging.error('Errors in document {} : missing field _etag'.format(
-                document['_id'], ))
+            logging.error('Errors in document {} {} : missing field _etag'.format(
+                self.name, document['_id']))
             abort(500)
         # Check for race condition
         if if_match and old_etag != if_match:
@@ -220,8 +220,8 @@ class Resource(Blueprint):
         result = self.unserializer.run(document,
                                        additional_context=additional_context)
         if result.errors:
-            logging.error('Errors in document {} : {}'.format(
-                result.document['_id'], result.errors))
+            logging.error('Errors in document {} {} : {}'.format(
+                self.name, result.document['_id'], result.errors))
         return result
 
     def get_resource(self, obj_id, auto_abort=True, projection=None):
