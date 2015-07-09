@@ -523,11 +523,13 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
     if expansion not in (10, 1):
         raise ValueError()
     logger.debug('Working in %s' % wdir_path)
-    for fichier in  participation.get_waves(canal):
+    fichiers_count = 0
+    for fichier in participation.get_waves(canal):
         fichier.fetch_data(wdir_path)
+        fichiers_count += 1
     # Run tadarida
-    logger.info('Starting tadaridaD with options `%s` and expansion x%s' %
-                (TADARIDA_D_OPTS or '<no_options>', expansion))
+    logger.info('Starting tadaridaD with options `%s` and expansion x%s on %s files' %
+                (TADARIDA_D_OPTS or '<no_options>', expansion, fichiers_count))
     ret = subprocess.call('2>&1 %s %s -x %s . | tee tadaridaD.log' %
                           (TADARIDA_D, TADARIDA_D_OPTS, str(expansion)),
                           cwd=wdir_path, shell=True)
@@ -553,12 +555,17 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
 
 
 def _run_tadaridaC(wdir_path, participation, fichiers_batch):
+    if not fichiers_batch:
+        return
     if not os.path.isdir(wdir_path):
         os.mkdir(wdir_path)
     for fichier in fichiers_batch:
         fichier.fetch_data(wdir_path)
     # Run tadarida
-    logger.info('Starting tadaridaC with options `%s`' % TADARIDA_C_OPTS or '<no_options>')
+    logger.info('Starting tadaridaC with options `%s` on %s files %s (%s) to %s (%s)' %
+                (TADARIDA_C_OPTS or '<no_options>', len(fichiers_batch),
+                 fichiers_batch[0].id, fichiers_batch[0].titre,
+                 fichiers_batch[-1].id, fichiers_batch[-1].titre))
     ret = subprocess.call(['2>&1 %s %s . | tee tadaridaC.log' % (TADARIDA_C, TADARIDA_C_OPTS)],
                           cwd=wdir_path, shell=True)
     with open(wdir_path + '/tadaridaC.log', 'r') as fd:
@@ -585,6 +592,8 @@ def run_tadaridaC(wdir_path, participation):
             batch_count += 1
     if batch:
         _run_tadaridaC('%s/%s' % (wdir_path, batch_count), participation, batch)
+    elif batch_count == 1:
+        logger.info("No .ta files, tadaridaC doesn't need to be run")
 
 
 if __name__ == '__main__':
