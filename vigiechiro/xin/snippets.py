@@ -1,5 +1,6 @@
 from flask import request, abort, current_app, g
 from pymongo.cursor import Cursor
+import json
 
 from .tools import jsonify, parse_id
 
@@ -44,7 +45,7 @@ def get_resource(resource, obj_id, field='_id', auto_abort=True, projection=None
     cache = getattr(g, '_cache_get_resource', None)
     if not cache:
         g._cache_get_resource = {}
-    key = (resource, obj_id, field)
+    key = (resource, obj_id, field, json.dumps(projection))
     obj = g._cache_get_resource.get(key)
     if not obj:
         obj = current_app.data.db[resource].find_one({field: obj_id}, projection)
