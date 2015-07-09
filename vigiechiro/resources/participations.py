@@ -167,7 +167,15 @@ def list_site_participations(site_id):
 @participations.route('/participations/<objectid:participation_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def display_participation(participation_id):
-    document = participations.find_one(participation_id)
+    # Given logs can be very big and mostly useless, default is to discard them
+    document = participations.find_one(participation_id, fields={'logs': False})
+    return document
+
+
+@participations.route('/participations/<objectid:participation_id>/logs', methods=['GET'])
+@requires_auth(roles='Observateur')
+def display_participation_logs(participation_id):
+    document = participations.find_one(participation_id, fields={'logs': True})
     return document
 
 
