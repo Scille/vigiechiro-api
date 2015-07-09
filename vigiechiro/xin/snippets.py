@@ -1,4 +1,4 @@
-from flask import request, abort, current_app
+from flask import request, abort, current_app, g
 from pymongo.cursor import Cursor
 
 from .tools import jsonify, parse_id
@@ -41,12 +41,19 @@ def get_resource(resource, obj_id, field='_id', auto_abort=True, projection=None
             abort(422, 'invalid ObjectId `{}`'.format(obj_id))
         else:
             return None
-    obj = current_app.data.db[resource].find_one({field: obj_id}, projection)
+    cache = getattr(g, '_cache_get_resource', None)
+    if not cache:
+        g._cache_get_resource = {}
+    key = (resource, obj_id, field)
+    obj = g._cache_get_resource.get(key)
     if not obj:
-        if auto_abort:
-            abort(404, '`{}` is not a valid {} resource'.format(obj_id, resource))
-        else:
-            return None
+        obj = current_app.data.db[resource].find_one({field: obj_id}, projection)
+        if not obj:
+            if auto_abort:
+                abort(404, '`{}` is not a valid {} resource'.format(obj_id, resource))
+            else:
+                return None
+        g._cache_get_resource[key] = obj
     return obj
 
 

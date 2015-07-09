@@ -171,7 +171,8 @@ def list_participation_donnees(participation_id):
     if g.request_user['role'] not in ['Administrateur', 'Validateur']:
         # Only show public and owned donnees
         lookup['$or'] = [{'publique': True}, {'proprietaire': g.request_user['_id']}]
-    found = donnees.find(lookup, skip=pagination.skip, limit=pagination.max_results)
+    found = donnees.find(lookup, skip=pagination.skip, limit=pagination.max_results,
+                         fields={'participation': False, 'proprietaire': False})
     return pagination.make_response(*found)
 
 

@@ -130,8 +130,11 @@ participations = Resource('participations', __name__, schema=SCHEMA)
 @requires_auth(roles='Observateur')
 def list_participations():
     pagination = Paginator()
+    # Filter the result fields for perf...
     found = participations.find(get_lookup_from_q(), skip=pagination.skip,
-                                limit=pagination.max_results)
+        limit=pagination.max_results,
+        fields={'protocole': False, 'messages': False,
+                'logs': False, 'bilan': False})
     return pagination.make_response(*found)
 
 
@@ -141,9 +144,10 @@ def list_user_participations():
     pagination = Paginator()
     lookup = {'observateur': g.request_user['_id']}
     lookup.update(get_lookup_from_q() or {})
-    found = participations.find(lookup,
-                                 skip=pagination.skip,
-                                 limit=pagination.max_results)
+    found = participations.find(lookup, skip=pagination.skip,
+        limit=pagination.max_results,
+        fields={'observateur': False, 'protocole': False, 'messages': False,
+                'logs': False, 'bilan': False})
     return pagination.make_response(*found)
 
 
@@ -153,7 +157,10 @@ def list_site_participations(site_id):
     pagination = Paginator()
     lookup = {'site': site_id}
     lookup.update(get_lookup_from_q() or {})
-    found = participations.find(lookup, skip=pagination.skip, limit=pagination.max_results)
+    found = participations.find(lookup, skip=pagination.skip,
+        limit=pagination.max_results,
+        fields={'protocole': False, 'site': False,
+                'messages': False, 'logs': False, 'bilan': False})
     return pagination.make_response(*found)
 
 
@@ -283,9 +290,10 @@ def get_pieces_jointes(participation_id):
             if '$in' not in lookup['mime']:
                 lookup['mime']['$nin'] = []
             lookup['mime']['$in'] += mimes
-    found = fichiers_resource.find(lookup,
-                                   skip=pagination.skip,
-                                   limit=pagination.max_results)
+    found = fichiers_resource.find(lookup, skip=pagination.skip,
+        limit=pagination.max_results,
+        fields={'proprietaire': False, 'lien_participation': False,
+                'lien_donnee': False, 'lien_protocole': False})
     return pagination.make_response(*found)
 
 
