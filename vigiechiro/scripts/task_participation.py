@@ -537,9 +537,9 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
         logger.info(' ---- TadaridaD output ----\n' + fd.read())
     # Now retreive the generated files
     # Save the error.log in the logs
-    for root, _, files in os.walk('./log'):
+    for root, _, files in os.walk(wdir_path + '/log'):
         for file_name in files:
-            file_path = '/'.join(root, file_name)
+            file_path = '/'.join((root, file_name))
             with open(file_path, 'r') as fd:
                 data = fd.read()
             if data:
