@@ -31,9 +31,10 @@ from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_P
 
 class ProxyLogger:
     LOGS = []
-    def log(self, level, msg, *args, store=True, **kwargs):
+    def log(self, level, msg, *args, skip_print=False, store=True, **kwargs):
         logger_level = getattr(logging, level.upper())
-        base_logger.log(logger_level, msg, *args, **kwargs)
+        if not skip_print:
+            base_logger.log(logger_level, msg, *args, **kwargs)
         if store:
             self.LOGS.append({'level': level, 'message': msg, 'date': datetime.utcnow()})
     def info(self, *args, **kwargs):
@@ -543,7 +544,8 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
             with open(file_path, 'r') as fd:
                 data = fd.read()
             if data:
-                logger.info(' ---- TadaridaD %s ----\n%s' % (file_path, data))
+                logger.info(' ---- TadaridaD %s ----\n%s' % (file_path, data),
+                            skip_print=True)
     if ret:
         msg = 'Error in running tadaridaD : returned {}'.format(ret)
         logger.error(msg)
