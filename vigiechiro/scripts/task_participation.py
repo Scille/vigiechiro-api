@@ -223,7 +223,7 @@ def process_participation(participation_id, pjs_ids=[], publique=True):
         run_tadaridaD(wdir + '/D', participation)
         run_tadaridaC(wdir + '/C', participation)
         participation.save()
-        shutil.rmtree(wdir)
+        # shutil.rmtree(wdir)
         participation_generate_bilan(participation_id)
 
 
@@ -264,7 +264,7 @@ class Fichier:
             data_path = '/'.join((path, self.doc['titre']))
             r = get_file_from_s3(self.doc, data_path)
             if r.status_code != 200:
-               logger.error('Cannot get back file {} ({}) : error {}'.format(
+                logger.error('Cannot get back file {} ({}) : error {}'.format(
                     self.id, self.doc['titre'], r.status_code))
         elif self.data_path:
             data_path = '/'.join((path, self.titre))
@@ -386,11 +386,16 @@ class Donnee:
         inserted = d_resource.insert(payload)
         self.id = inserted['_id']
         logger.debug('Creating donnee {} ({})'.format(self.id, self.basename))
+        from ..app import app as flask_app
+        def save_fichier(fichier, **kwargs):
+            with flask_app.app_context():
+                g.request_user = {'role': 'Administrateur'}
+                fichier.save(**kwargs)
         with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
             for fichier in (self.wav, self.tc, self.ta):
                 if not fichier:
                     continue
-                e.submit(fichier.save, donnee_id=self.id,
+                e.submit(save_fichier, fichier, donnee_id=self.id,
                          participation_id=participation_id,
                          proprietaire_id=proprietaire_id)
 
@@ -530,9 +535,14 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
         raise ValueError()
     logger.debug('Working in %s' % wdir_path)
     fichiers_count = 0
+    from ..app import app as flask_app
+    def fetch_data(fichier):
+        with flask_app.app_context():
+            fichier.fetch_data(wdir_path)
     with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
         for fichier in participation.get_waves(canal):
-            e.submit(fichier.fetch_data, wdir_path)
+            # e.submit(fichier.fetch_data, wdir_path)
+            e.submit(fetch_data, fichier)
             fichiers_count += 1
     # Run tadarida
     logger.info('Starting tadaridaD with options `%s` and expansion x%s on %s files' %
@@ -567,9 +577,13 @@ def _run_tadaridaC(wdir_path, participation, fichiers_batch):
         return
     if not os.path.isdir(wdir_path):
         os.mkdir(wdir_path)
+    from ..app import app as flask_app
+    def fetch_data(fichier):
+        with flask_app.app_context():
+            fichier.fetch_data(wdir_path)
     with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
         for fichier in fichiers_batch:
-            e.submit(fichier.fetch_data, wdir_path)
+            e.submit(fetch_data, fichier)
     # Run tadarida
     logger.info('Starting tadaridaC with options `%s` on %s files %s (%s) to %s (%s)' %
                 (TADARIDA_C_OPTS or '<no_options>', len(fichiers_batch),
