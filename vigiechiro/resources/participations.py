@@ -179,6 +179,17 @@ def display_participation_logs(participation_id):
     return document
 
 
+@participations.route('/participations/<objectid:participation_id>/compute', methods=['POST'])
+@requires_auth(roles='Administrateur')
+def participation_trigger_compute(participation_id):
+    participation_resource = participations.find_one(participation_id,
+        fields={'protocole': False, 'site': False,
+                'messages': False, 'logs': False, 'bilan': False})
+    process_participation.delay(participation_id,
+        publique=participation_resource['observateur'].get('donnees_publiques', False))
+    return {}, 200
+
+
 @participations.route('/sites/<objectid:site_id>/participations', methods=['POST'])
 @requires_auth(roles='Observateur')
 def create_participation(site_id):
