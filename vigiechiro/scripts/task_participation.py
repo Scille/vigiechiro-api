@@ -20,6 +20,7 @@ import requests
 import os
 from pymongo import MongoClient
 from flask import current_app, g
+from concurrent.futures import ThreadPoolExecutor
 
 from .celery import celery_app
 from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
@@ -27,6 +28,8 @@ from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
                                   delete_fichier_and_s3, get_file_from_s3)
+
+DOWNLOAD_POOL_SIZE = 10
 
 
 class ProxyLogger:
@@ -383,10 +386,12 @@ class Donnee:
         inserted = d_resource.insert(payload)
         self.id = inserted['_id']
         logger.debug('Creating donnee {} ({})'.format(self.id, self.basename))
-        for fichier in (self.wav, self.tc, self.ta):
-            if not fichier:
-                continue
-            fichier.save(donnee_id=self.id, participation_id=participation_id,
+        with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
+            for fichier in (self.wav, self.tc, self.ta):
+                if not fichier:
+                    continue
+                e.submit(fichier.save, donnee_id=self.id,
+                         participation_id=participation_id,
                          proprietaire_id=proprietaire_id)
 
 class ParticipationError(Exception): pass
@@ -525,9 +530,10 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
         raise ValueError()
     logger.debug('Working in %s' % wdir_path)
     fichiers_count = 0
-    for fichier in participation.get_waves(canal):
-        fichier.fetch_data(wdir_path)
-        fichiers_count += 1
+    with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
+        for fichier in participation.get_waves(canal):
+            e.submit(fichier.fetch_data, wdir_path)
+            fichiers_count += 1
     # Run tadarida
     logger.info('Starting tadaridaD with options `%s` and expansion x%s on %s files' %
                 (TADARIDA_D_OPTS or '<no_options>', expansion, fichiers_count))
@@ -561,8 +567,9 @@ def _run_tadaridaC(wdir_path, participation, fichiers_batch):
         return
     if not os.path.isdir(wdir_path):
         os.mkdir(wdir_path)
-    for fichier in fichiers_batch:
-        fichier.fetch_data(wdir_path)
+    with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
+        for fichier in fichiers_batch:
+            e.submit(fichier.fetch_data, wdir_path)
     # Run tadarida
     logger.info('Starting tadaridaC with options `%s` on %s files %s (%s) to %s (%s)' %
                 (TADARIDA_C_OPTS or '<no_options>', len(fichiers_batch),
