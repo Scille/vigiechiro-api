@@ -69,7 +69,7 @@ def get_mongo_uri():
 
 ### CORS ###
 X_DOMAINS = FRONTEND_DOMAIN
-X_HEADERS = ['Accept', 'Content-type', 'Authorization', 'If-Match', 'Cache-Control']
+X_HEADERS = ['Accept', 'Content-type', 'Authorization', 'If-Match', 'If-None-Match', 'Cache-Control']
 X_EXPOSE_HEADERS = X_HEADERS
 
 ### Authomatic ###
