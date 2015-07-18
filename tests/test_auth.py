@@ -84,7 +84,7 @@ def test_cors(observateur):
         })
         assert r.status_code == 200, r.text
         assert 'Access-Control-Allow-Headers' in r.headers
-        assert r.headers['Access-Control-Allow-Headers'] == 'ACCEPT, CONTENT-TYPE, AUTHORIZATION, IF-MATCH, CACHE-CONTROL'
+        assert r.headers['Access-Control-Allow-Headers'] == 'ACCEPT, CONTENT-TYPE, AUTHORIZATION, IF-MATCH, IF-NONE-MATCH, CACHE-CONTROL'
         assert 'Access-Control-Allow-Methods' in r.headers
         assert r.headers['Access-Control-Allow-Methods'] == 'GET, PATCH'
         assert 'Access-Control-Allow-Origin' in r.headers
