@@ -70,17 +70,7 @@ SCHEMA = {
         'type': 'dict',
         'keyschema': {'type': 'string'}
     },
-    'logs': {
-        'type': 'list',
-        'schema': {
-            'type': 'dict',
-            'schema': {
-                'date': {'type': 'datetime', 'required': True},
-                'level': {'type': 'string', 'required': True},
-                'message': {'type': 'string', 'required': True}
-            }
-        }
-    },
+    'logs': relation('fichiers'),
     'bilan': {
         'type': 'dict',
         'schema': {
@@ -168,7 +158,7 @@ def list_site_participations(site_id):
 @requires_auth(roles='Observateur')
 def display_participation(participation_id):
     # Given logs can be very big and mostly useless, default is to discard them
-    document = participations.find_one(participation_id, fields={'logs': False})
+    document = participations.find_one(participation_id)
     return document
 
 

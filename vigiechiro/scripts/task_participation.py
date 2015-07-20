@@ -65,6 +65,42 @@ def _create_working_dir(subdirs=()):
     return wdir
 
 
+def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, **kwargs):
+    if mime == 'audio/wav':
+        s3_dir = 'wav/'
+    elif mime == 'application/ta':
+        s3_dir = 'ta/'
+    elif mime == 'application/tc':
+        s3_dir = 'tc/'
+    else:
+        s3_dir = 'others/'
+    from ..resources.fichiers import fichiers as f_resource, _sign_request
+    payload = {'titre': titre,
+               'proprietaire': proprietaire,
+               'mime': mime,
+               's3_id': s3_dir + titre + '.' + uuid4().hex,
+               'disponible': True}
+    payload.update(kwargs)
+    # Upload the fichier to S3
+    sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
+                         content_type=payload['mime'])
+    if data_path:
+        with open(data_path, 'rb') as fd:
+            r = requests.put(sign['signed_url'],
+                             headers={'Content-Type': mime}, data=fd)
+    elif data_raw:
+        r = requests.put(sign['signed_url'],
+                         headers={'Content-Type': mime},
+                         data=data_raw)
+                         # files={'file': ('', data_raw)})
+    if r.status_code != 200:
+        logger.error('Uploading to S3 {} error {} : {}'.format(
+            payload, r.status_code, r.text))
+        return 1
+    # Then store it representation in database
+    return f_resource.insert(payload)
+
+
 NAME_TO_TAXON = {}
 def _get_taxon(taxon_name):
     taxon = NAME_TO_TAXON.get(taxon_name)
@@ -275,43 +311,24 @@ class Fichier:
         if self.id:
             # Fichier already in database, nothing to do...
             return
-        from ..resources.fichiers import fichiers as f_resource, _sign_request
-        payload = {'titre': self.titre,
-                   'mime': self.mime,
-                   'proprietaire': proprietaire_id,
-                   'lien_donnee': donnee_id,
-                   'lien_participation': participation_id,
-                   's3_id': self.S3_DIR + self.titre + '.' + uuid4().hex,
-                   'disponible': True}
-        # Upload the fichier to S3
-        sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
-                             content_type=payload['mime'])
-        with open(self.data_path, 'rb') as fd:
-            r = requests.put(sign['signed_url'],
-                             headers={'Content-Type': self.mime}, data=fd)
-        if r.status_code != 200:
-            logger.error('Uploading to S3 {} error {} : {}'.format(
-                payload, r.status_code, r.text))
-            return 1
-        # Then store it representation in database
-        inserted = f_resource.insert(payload)
+        inserted = _create_fichier(self.titre, self.mime, proprietaire_id,
+                                   data_path=self.data_path,
+                                   lien_donnee=donnee_id,
+                                   lien_participation=participation_id,)
         self.id = inserted['_id']
         logger.debug('Fichier created: {} ({})'.format(self.id, self.titre))
 
 
 class FichierWav(Fichier):
     DEFAULT_MIME = 'audio/wav'
-    S3_DIR = 'wav/'
 
 
 class FichierTA(Fichier):
     DEFAULT_MIME = 'application/ta'
-    S3_DIR = 'ta/'
 
 
 class FichierTC(Fichier):
     DEFAULT_MIME = 'application/tc'
-    S3_DIR = 'tc/'
 
 
 class Donnee:
@@ -466,6 +483,8 @@ class Participation:
                 obj = FichierTC(fichier=pj)
             elif pj['mime'] in ALLOWED_MIMES_TA:
                 obj = FichierTA(fichier=pj)
+            else:
+                continue # Other attachements are useless
             self._insert_file_obj(obj)
 
     def get_tas(self, cir_canal=None):
@@ -490,8 +509,15 @@ class Participation:
                    self.publique)
         from ..resources.participations import participations as p_resource
         logger.debug('Saving %s logs items in participation' % len(logger.LOGS))
-        p_resource.update(self.participation['_id'], {'logs': logger.LOGS})
-
+        titre = 'participation-%s-logs' % (self.participation['_id'])
+        new_logs = _create_fichier(titre, 'text/plain',
+                                   self.participation['observateur'],
+                                   data_raw=str(logger.LOGS),
+                                   lien_participation=self.participation['_id'])
+        old_logs = self.participation.get('logs')
+        if old_logs:
+            delete_fichier_and_s3(old_logs)
+        p_resource.update(self.participation['_id'], {'logs': new_logs})
 
     def _insert_file_obj(self, obj):
         if obj.basename not in self.donnees:

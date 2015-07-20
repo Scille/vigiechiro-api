@@ -66,6 +66,8 @@ fichiers = Resource('fichiers', __name__, schema=SCHEMA)
 
 
 def delete_fichier_and_s3(fichier):
+    if not isinstance(fichier, dict):
+        fichier = fichiers.get_resource(fichier)
     # Destroy the unfinished file on S3
     if fichier.get('s3_upload_multipart_id', False):
         sign = _sign_request(verb='DELETE', object_name=fichier['s3_id'],
