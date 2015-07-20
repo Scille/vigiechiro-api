@@ -295,6 +295,8 @@ class Unserializer(SchemaRunner):
                                   " '%s', field '%s'." %
                                   (context.value, resource_name, field))
             else:
+                from ..resources import strip_resource_fields
+                data_relation = strip_resource_fields(resource_name, data_relation)
                 schema, field, _ = context.pop()
                 context.value[field] = data_relation
                 context.push(schema, field, data_relation)

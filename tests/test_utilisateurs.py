@@ -124,6 +124,7 @@ def test_rigths_read(observateur, validateur):
     r = validateur.get(observateur.url)
     assert r.status_code == 200, r.text
     assert 'email' in r.json()
+    assert 'tokens' not in r.json()
     # Of course, observateur has full access of it own profile
     r = observateur.get('/moi')
     assert r.status_code == 200, r.text
