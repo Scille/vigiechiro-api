@@ -235,7 +235,23 @@ def dummy_keep_alive():
     pass
 
 @celery_app.task
-def process_participation(participation_id, pjs_ids=[], publique=True):
+def process_participation(participation_id, **kwargs):
+    from ..resources.participations import participations as p_resource
+    traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
+    p_resource.update(participation_id, {'traitement': traitement})
+    try:
+        _process_participation(participation_id, **kwargs)
+    except:
+        traitement['etat'] = 'ERREUR'
+        traitement['date_fin'] = datetime.utcnow()
+        p_resource.update(participation_id, {'traitement': traitement})
+    else:
+        traitement['etat'] = 'FINI'
+        traitement['date_fin'] = datetime.utcnow()
+        p_resource.update(participation_id, {'traitement': traitement})
+
+
+def _process_participation(participation_id, pjs_ids=[], publique=True):
     if not isinstance(participation_id, str):
         participation_id = str(participation_id)
     # TODO: find a cleaner fix...
@@ -258,7 +274,7 @@ def process_participation(participation_id, pjs_ids=[], publique=True):
         run_tadaridaD(wdir + '/D', participation)
         run_tadaridaC(wdir + '/C', participation)
         participation.save()
-        # shutil.rmtree(wdir)
+        shutil.rmtree(wdir)
         participation_generate_bilan(participation_id)
 
 

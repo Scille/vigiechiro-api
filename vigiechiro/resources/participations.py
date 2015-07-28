@@ -71,6 +71,14 @@ SCHEMA = {
         'keyschema': {'type': 'string'}
     },
     'logs': relation('fichiers'),
+    'traitement': {
+        'type': 'dict',
+        'schema': {
+            'etat': {'type': 'string', 'choices': ['PLANIFIE', 'EN_COURS', 'FINI', 'ERREUR']},
+            'debut_traitement': {'type': 'datetime'},
+            'fin_traitement': {'type': 'datetime'}
+        }
+    },
     'bilan': {
         'type': 'dict',
         'schema': {
@@ -167,8 +175,12 @@ def participation_trigger_compute(participation_id):
     participation_resource = participations.find_one(participation_id,
         fields={'protocole': False, 'site': False,
                 'messages': False, 'logs': False, 'bilan': False})
-    process_participation.delay(participation_id,
-        publique=participation_resource['observateur'].get('donnees_publiques', False))
+    if participation_resource.get('traitement', {}).get('etat') \
+            not in ['PLANIFIE', 'EN_COURS']:
+        participations.update(participation_id,
+            payload={'traitement': {'etat': 'PLANIFIE'}})
+        process_participation.delay(participation_id,
+            publique=participation_resource['observateur'].get('donnees_publiques', False))
     return {}, 200
 
 
