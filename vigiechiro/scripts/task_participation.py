@@ -218,8 +218,7 @@ def participation_generate_bilan(participation_id):
             bilan.problemes += 1
         for observation in donnee.get('observations', []):
             bilan.add_contact_max(observation['tadarida_taxon'], observation['tadarida_probabilite'])
-            for obs in observation.get('tadarida_taxon_autre', []):
-                bilan.add_contact_min(obs['taxon'], obs['probabilite'])
+            bilan.add_contact_min(observation['tadarida_taxon'], observation['tadarida_probabilite'])
     # Update the participation
     logger.info('participation {}, bilan : {}'.format(participation_id, bilan.generate_payload()))
     r = requests.patch(BACKEND_DOMAIN + '/participations/' + participation_id,
