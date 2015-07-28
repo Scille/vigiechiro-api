@@ -177,10 +177,10 @@ def participation_trigger_compute(participation_id):
                 'messages': False, 'logs': False, 'bilan': False})
     if participation_resource.get('traitement', {}).get('etat') \
             not in ['PLANIFIE', 'EN_COURS']:
-        participations.update(participation_id,
-            payload={'traitement': {'etat': 'PLANIFIE'}})
         process_participation.delay(participation_id,
             publique=participation_resource['observateur'].get('donnees_publiques', False))
+        participations.update(participation_id,
+            payload={'traitement': {'etat': 'PLANIFIE'}})
     return {}, 200
 
 
@@ -270,6 +270,8 @@ def add_pieces_jointes(participation_id):
         utilisateurs_resource.get_resource(
             participation_resource['observateur']).get(
                 'donnees_publiques', False))
+    participations.update(participation_id,
+        payload={'traitement': {'etat': 'PLANIFIE'}})
     return {}, 200
 
 

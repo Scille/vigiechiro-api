@@ -235,12 +235,12 @@ def dummy_keep_alive():
     pass
 
 @celery_app.task
-def process_participation(participation_id, **kwargs):
+def process_participation(participation_id, pjs_ids=[], publique=True):
     from ..resources.participations import participations as p_resource
     traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
     p_resource.update(participation_id, {'traitement': traitement})
     try:
-        _process_participation(participation_id, **kwargs)
+        _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
     except:
         traitement['etat'] = 'ERREUR'
         traitement['date_fin'] = datetime.utcnow()
