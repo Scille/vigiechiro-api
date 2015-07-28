@@ -236,19 +236,21 @@ def dummy_keep_alive():
 
 @celery_app.task
 def process_participation(participation_id, pjs_ids=[], publique=True):
+    from ..app import app as flask_app
     from ..resources.participations import participations as p_resource
-    traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
-    p_resource.update(participation_id, {'traitement': traitement})
-    try:
-        _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
-    except:
-        traitement['etat'] = 'ERREUR'
-        traitement['date_fin'] = datetime.utcnow()
+    with flask_app.app_context():
+        traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
         p_resource.update(participation_id, {'traitement': traitement})
-    else:
-        traitement['etat'] = 'FINI'
-        traitement['date_fin'] = datetime.utcnow()
-        p_resource.update(participation_id, {'traitement': traitement})
+        try:
+            _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
+        except:
+            traitement['etat'] = 'ERREUR'
+            traitement['date_fin'] = datetime.utcnow()
+            p_resource.update(participation_id, {'traitement': traitement})
+        else:
+            traitement['etat'] = 'FINI'
+            traitement['date_fin'] = datetime.utcnow()
+            p_resource.update(participation_id, {'traitement': traitement})
 
 
 def _process_participation(participation_id, pjs_ids=[], publique=True):
@@ -259,23 +261,21 @@ def _process_participation(participation_id, pjs_ids=[], publique=True):
     # tasks. Hence it can kill a worker during the process of a job.
     # To solve that, we spawn a dummy task and disable worker parallelism
     dummy_keep_alive.delay()
-    from ..app import app as flask_app
     wdir = _create_working_dir(('D', 'C'))
-    with flask_app.app_context():
-        logger.info("Starting building particiation %s" % participation_id)
-        g.request_user = {'role': 'Administrateur'}
-        try:
-            participation = Participation(participation_id, pjs_ids, publique)
-        except ParticipationError as e:
-            logger.error(e)
-            return
-        participation.reset_pjs_state()
-        participation.load_pjs()
-        run_tadaridaD(wdir + '/D', participation)
-        run_tadaridaC(wdir + '/C', participation)
-        participation.save()
-        shutil.rmtree(wdir)
-        participation_generate_bilan(participation_id)
+    logger.info("Starting building particiation %s" % participation_id)
+    g.request_user = {'role': 'Administrateur'}
+    try:
+        participation = Participation(participation_id, pjs_ids, publique)
+    except ParticipationError as e:
+        logger.error(e)
+        return
+    participation.reset_pjs_state()
+    participation.load_pjs()
+    run_tadaridaD(wdir + '/D', participation)
+    run_tadaridaC(wdir + '/C', participation)
+    participation.save()
+    shutil.rmtree(wdir)
+    participation_generate_bilan(participation_id)
 
 
 class Fichier:
