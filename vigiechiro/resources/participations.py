@@ -74,7 +74,7 @@ SCHEMA = {
     'traitement': {
         'type': 'dict',
         'schema': {
-            'etat': {'type': 'string', 'choices': ['PLANIFIE', 'EN_COURS', 'FINI', 'ERREUR']},
+            'etat': choices(['PLANIFIE', 'EN_COURS', 'FINI', 'ERREUR']),
             'debut_traitement': {'type': 'datetime'},
             'fin_traitement': {'type': 'datetime'}
         }
