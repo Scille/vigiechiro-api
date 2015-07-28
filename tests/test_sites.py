@@ -172,6 +172,25 @@ def test_create_site(administrateur, observateur, protocoles_base):
     assert r.json()['observateur']['_id'] == observateur.user_id
     assert r.json()['protocole']['_id'] == protocole_id
 
+def test_create_custom_name_site(administrateur, observateur, protocoles_base):
+    # Register the observateur to a protocole
+    protocole_id = str(protocoles_base[1]['_id'])
+    r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
+    assert r.status_code == 200, r.text
+    # Validate the user
+    r = administrateur.put('/protocoles/{}/observateurs/{}'.format(
+                           protocole_id, observateur.user_id))
+    assert r.status_code == 200, r.text
+    # Create site for the observateur
+    site_payload = {
+        'titre': 'custom-title',
+        'protocole': protocole_id,
+        'commentaire': 'My little site',
+        'justification_non_aleatoire': 'dunno'
+    }
+    r = observateur.post('/sites', json=site_payload)
+    assert r.status_code == 201, r.text
+    assert r.json()['titre'] == 'custom-title'
 
 def test_same_grille_stoc_site(administrateur, protocole_point_fixe):
     protocole, taxon = protocole_point_fixe

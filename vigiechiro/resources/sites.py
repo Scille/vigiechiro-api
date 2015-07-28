@@ -168,11 +168,13 @@ def list_protocole_sites_tracet(protocole_id):
 @sites.route('/sites', methods=['POST'])
 @requires_auth(roles='Observateur')
 def create_site():
-    payload = get_payload({'protocole',
-                           'commentaire',
-                           'grille_stoc',
-                           'tracet',
-                           'justification_non_aleatoire'})
+    payload = get_payload({
+        'titre',
+        'protocole',
+        'commentaire',
+        'grille_stoc',
+        'tracet',
+        'justification_non_aleatoire'})
     payload['observateur'] = g.request_user['_id']
     # Get protocole resource
     protocole_resource = get_resource('protocoles',
@@ -192,7 +194,9 @@ def create_site():
         payload.get('grille_stoc', None), auto_abort=False)
     # Create site title
     type_site = protocole_resource['type_site']
-    if type_site in ['CARRE', 'POINT_FIXE']:
+    if 'titre' in payload:
+        pass
+    elif type_site in ['CARRE', 'POINT_FIXE']:
         if not grille_stoc_resource:
             abort(422, 'site from protocole CARRE and POINT_FIXE '
                        'must provide a valid grille_stoc field')
