@@ -18,7 +18,7 @@ import tempfile
 import subprocess
 import requests
 import os
-from pymongo import MongoClient
+from bson import ObjectId
 from flask import current_app, g
 from concurrent.futures import ThreadPoolExecutor
 
@@ -236,26 +236,26 @@ def dummy_keep_alive():
 
 @celery_app.task
 def process_participation(participation_id, pjs_ids=[], publique=True):
+    participation_id = ObjectId(participation_id)
     from ..app import app as flask_app
     from ..resources.participations import participations as p_resource
     with flask_app.app_context():
         traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
-        p_resource.update(participation_id, {'traitement': traitement})
+        p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
         try:
             _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
         except:
             traitement['etat'] = 'ERREUR'
             traitement['date_fin'] = datetime.utcnow()
-            p_resource.update(participation_id, {'traitement': traitement})
+            p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
         else:
             traitement['etat'] = 'FINI'
             traitement['date_fin'] = datetime.utcnow()
-            p_resource.update(participation_id, {'traitement': traitement})
+            p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
 
 
 def _process_participation(participation_id, pjs_ids=[], publique=True):
-    if not isinstance(participation_id, str):
-        participation_id = str(participation_id)
+    participation_id = str(participation_id)
     # TODO: find a cleaner fix...
     # Currently, hirefire doesn't take into account the currently processed
     # tasks. Hence it can kill a worker during the process of a job.
@@ -532,7 +532,7 @@ class Participation:
         old_logs = self.participation.get('logs')
         if old_logs:
             delete_fichier_and_s3(old_logs)
-        p_resource.update(self.participation['_id'], {'logs': new_logs})
+        p_resource.update(self.participation['_id'], {'logs': new_logs}, auto_abort=False)
 
     def _insert_file_obj(self, obj):
         if obj.basename not in self.donnees:

@@ -75,8 +75,8 @@ SCHEMA = {
         'type': 'dict',
         'schema': {
             'etat': choice(['PLANIFIE', 'EN_COURS', 'FINI', 'ERREUR']),
-            'debut_traitement': {'type': 'datetime'},
-            'fin_traitement': {'type': 'datetime'}
+            'date_debut': {'type': 'datetime'},
+            'date_fin': {'type': 'datetime'}
         }
     },
     'bilan': {
