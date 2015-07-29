@@ -175,12 +175,13 @@ def participation_trigger_compute(participation_id):
     participation_resource = participations.find_one(participation_id,
         fields={'protocole': False, 'site': False,
                 'messages': False, 'logs': False, 'bilan': False})
-    if participation_resource.get('traitement', {}).get('etat') \
-            not in ['PLANIFIE', 'EN_COURS']:
-        process_participation.delay(participation_id,
-            publique=participation_resource['observateur'].get('donnees_publiques', False))
-        participations.update(participation_id,
-            payload={'traitement': {'etat': 'PLANIFIE'}})
+    status = participation_resource.get('traitement', {}).get('etat')
+    if status in ['PLANIFIE', 'EN_COURS']:
+        abort(400, {'etat': 'Already %s' % status})
+    process_participation.delay(participation_id,
+        publique=participation_resource['observateur'].get('donnees_publiques', False))
+    participations.update(participation_id,
+        payload={'traitement': {'etat': 'PLANIFIE'}})
     return {}, 200
 
 
