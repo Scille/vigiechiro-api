@@ -12,6 +12,7 @@ base_logger = logging.getLogger('task')
 base_logger.setLevel(logging.INFO)
 from datetime import datetime
 from uuid import uuid4
+from functools import wraps
 import csv
 import shutil
 import tempfile
@@ -207,6 +208,7 @@ class Bilan:
         return payload
 
 
+@keep_alive
 @celery_app.task
 def participation_generate_bilan(participation_id):
     if not isinstance(participation_id, str):
@@ -230,17 +232,28 @@ def participation_generate_bilan(participation_id):
     return 0
 
 
+# TODO: find a cleaner fix...
+# Currently, hirefire doesn't take into account the currently processed
+# tasks. Hence it can kill a worker during the process of a job.
+# To solve that, we spawn a dummy task and disable worker parallelism
 @celery_app.task
 def dummy_keep_alive():
-    pass
+    print('dummy_keep_alive')
 
+def keep_alive(cls):
+    delay = cls.delay
+    @wraps(cls.delay)
+    def delay_wrapper(*args, **kwargs):
+        ret = delay(*args, **kwargs)
+        dummy_keep_alive.delay()
+        return ret
+    cls.delay = delay_wrapper
+    return cls
+
+
+@keep_alive
 @celery_app.task
 def process_participation(participation_id, pjs_ids=[], publique=True):
-    # TODO: find a cleaner fix...
-    # Currently, hirefire doesn't take into account the currently processed
-    # tasks. Hence it can kill a worker during the process of a job.
-    # To solve that, we spawn a dummy task and disable worker parallelism
-    dummy_keep_alive.delay()
     participation_id = ObjectId(participation_id)
     from ..app import app as flask_app
     from ..resources.participations import participations as p_resource
@@ -262,7 +275,7 @@ def process_participation(participation_id, pjs_ids=[], publique=True):
 def _process_participation(participation_id, pjs_ids=[], publique=True):
     participation_id = str(participation_id)
     wdir = _create_working_dir(('D', 'C'))
-    logger.info("Starting building particiation %s" % participation_id)
+    logger.info("Starting building participation %s" % participation_id)
     g.request_user = {'role': 'Administrateur'}
     try:
         participation = Participation(participation_id, pjs_ids, publique)
