@@ -236,6 +236,11 @@ def dummy_keep_alive():
 
 @celery_app.task
 def process_participation(participation_id, pjs_ids=[], publique=True):
+    # TODO: find a cleaner fix...
+    # Currently, hirefire doesn't take into account the currently processed
+    # tasks. Hence it can kill a worker during the process of a job.
+    # To solve that, we spawn a dummy task and disable worker parallelism
+    dummy_keep_alive.delay()
     participation_id = ObjectId(participation_id)
     from ..app import app as flask_app
     from ..resources.participations import participations as p_resource
@@ -256,11 +261,6 @@ def process_participation(participation_id, pjs_ids=[], publique=True):
 
 def _process_participation(participation_id, pjs_ids=[], publique=True):
     participation_id = str(participation_id)
-    # TODO: find a cleaner fix...
-    # Currently, hirefire doesn't take into account the currently processed
-    # tasks. Hence it can kill a worker during the process of a job.
-    # To solve that, we spawn a dummy task and disable worker parallelism
-    dummy_keep_alive.delay()
     wdir = _create_working_dir(('D', 'C'))
     logger.info("Starting building particiation %s" % participation_id)
     g.request_user = {'role': 'Administrateur'}
