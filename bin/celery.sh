@@ -2,4 +2,4 @@
 
 DIR=`dirname $0`/..
 
-cd $DIR && celery -A vigiechiro.scripts.celery worker $@
+cd $DIR && celery -A vigiechiro.scripts.celery.celery_app worker $@
