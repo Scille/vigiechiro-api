@@ -208,6 +208,25 @@ class Bilan:
         return payload
 
 
+# TODO: find a cleaner fix...
+# Currently, hirefire doesn't take into account the currently processed
+# tasks. Hence it can kill a worker during the process of a job.
+# To solve that, we spawn a dummy task and disable worker parallelism
+@celery_app.task
+def dummy_keep_alive():
+    print('dummy_keep_alive')
+
+def keep_alive(cls):
+    delay = cls.delay
+    @wraps(cls.delay)
+    def delay_wrapper(*args, **kwargs):
+        ret = delay(*args, **kwargs)
+        dummy_keep_alive.delay()
+        return ret
+    cls.delay = delay_wrapper
+    return cls
+
+
 @keep_alive
 @celery_app.task
 def participation_generate_bilan(participation_id):
@@ -230,25 +249,6 @@ def participation_generate_bilan(participation_id):
             participation_id, r.status_code, r.text))
         return 1
     return 0
-
-
-# TODO: find a cleaner fix...
-# Currently, hirefire doesn't take into account the currently processed
-# tasks. Hence it can kill a worker during the process of a job.
-# To solve that, we spawn a dummy task and disable worker parallelism
-@celery_app.task
-def dummy_keep_alive():
-    print('dummy_keep_alive')
-
-def keep_alive(cls):
-    delay = cls.delay
-    @wraps(cls.delay)
-    def delay_wrapper(*args, **kwargs):
-        ret = delay(*args, **kwargs)
-        dummy_keep_alive.delay()
-        return ret
-    cls.delay = delay_wrapper
-    return cls
 
 
 @keep_alive
