@@ -22,6 +22,7 @@ import os
 from bson import ObjectId
 from flask import current_app, g
 from concurrent.futures import ThreadPoolExecutor
+from traceback import format_exc
 
 from .celery import celery_app
 from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
@@ -263,6 +264,7 @@ def process_participation(participation_id, pjs_ids=[], publique=True):
         try:
             _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
         except:
+            logger.error(format_exc())
             traitement['etat'] = 'ERREUR'
             traitement['date_fin'] = datetime.utcnow()
             p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
@@ -270,7 +272,6 @@ def process_participation(participation_id, pjs_ids=[], publique=True):
             traitement['etat'] = 'FINI'
             traitement['date_fin'] = datetime.utcnow()
             p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
-
 
 def _process_participation(participation_id, pjs_ids=[], publique=True):
     participation_id = str(participation_id)
