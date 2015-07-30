@@ -19,6 +19,7 @@ import tempfile
 import subprocess
 import requests
 import os
+import re
 from bson import ObjectId
 from flask import current_app, g
 from concurrent.futures import ThreadPoolExecutor
