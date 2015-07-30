@@ -4,4 +4,4 @@ web: ./bin/newrelic_bootstrap.sh gunicorn vigiechiro:app --log-file -
 # web: uwsgi --http-socket localhost:$PORT -w vigiechiro:app
 # web: waitress-serve --port $PORT vigiechiro:app
 
-worker: ./bin/celery.sh --concurrency=$CELERY_CONCURRENCY
+worker: ./bin/celery.sh
