@@ -518,17 +518,17 @@ class Participation:
 
     def get_tas(self, cir_canal=None):
         for d in self.donnees.values():
-            if d.ta and (not cir_canal or canal == d.ta.cir_canal):
+            if d.ta and (not cir_canal or cir_canal == d.ta.cir_canal):
                 yield d.ta
 
     def get_tcs(self, cir_canal=None):
         for d in self.donnees.values():
-            if d.tc and (not cir_canal or canal == d.tc.cir_canal):
+            if d.tc and (not cir_canal or cir_canal == d.tc.cir_canal):
                 yield d.tc
 
     def get_waves(self, cir_canal=None):
         for d in self.donnees.values():
-            if d.wav and (not cir_canal or canal == d.wav.cir_canal):
+            if d.wav and (not cir_canal or cir_canal == d.wav.cir_canal):
                 yield d.wav
 
     def save(self):
