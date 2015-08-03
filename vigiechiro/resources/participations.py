@@ -197,8 +197,6 @@ def create_participation(site_id):
     site_resource = get_resource('sites', site_id, auto_abort=False)
     if not site_resource:
         abort(422, {'site': 'no site with this id'})
-    if not site_resource.get('verrouille', False):
-        abort(422, {'site': "cannot create protocole on an unlocked site"})
     protocole_id = site_resource['protocole']
     payload['protocole'] = protocole_id
     # Make sure observateur has joined protocole and is validated
