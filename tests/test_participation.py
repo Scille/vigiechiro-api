@@ -170,6 +170,7 @@ def test_participation_bad_file(participation_ready, file_init):
         assert r.status_code == 422, r.text
 
 
+@pytest.mark.xfail(reason="Validation & verrouille participation has been disabled")
 def test_non_valide_observateur(clean_participations, obs_sites_base, administrateur):
     # Observateur subscribe to protocole and create a site but is not yet
     # validated

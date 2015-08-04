@@ -257,11 +257,12 @@ def test_create_site_explicit_obs(administrateur, observateur, protocoles_base):
     # Admin is the only allowed to do that
     r = administrateur.patch(site_url, json={'observateur': administrateur.user_id})
     assert r.status_code == 200, r.text
-    # Now observateur cannot use this site anymore
-    # TODO : test participation
-    r = observateur.post('{}/participations'.format(site_url),
-                         json={'date_debut': format_datetime(datetime.utcnow())})
-    assert r.status_code == 422, r.text
+    # Opportuniste participation are now allowed : anyone can create a participation in a site
+    # # Now observateur cannot use this site anymore
+    # # TODO : test participation
+    # r = observateur.post('{}/participations'.format(site_url),
+    #                      json={'date_debut': format_datetime(datetime.utcnow())})
+    # assert r.status_code == 422, r.text
 
 
 def test_lock_site(administrateur, obs_sites_base):
