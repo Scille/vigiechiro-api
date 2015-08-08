@@ -75,7 +75,7 @@ SCHEMA = {
                 },
                 'observateur_taxon': relation('taxons'),
                 'observateur_probabilite': choice(['SUR', 'PROBABLE', 'POSSIBLE']),
-                'validateur_taxon': relation('utilisateurs'),
+                'validateur_taxon': relation('taxons'),
                 'validateur_probabilite': choice(['SUR', 'PROBABLE', 'POSSIBLE']),
                 'messages': {
                     'type': 'list',
