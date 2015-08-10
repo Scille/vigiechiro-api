@@ -237,8 +237,10 @@ def edit_observation(donnee_id, observation_id):
         observation['observateur_probabilite'] = payload.pop('observateur_probabilite')
         observation['observateur_taxon'] = payload.pop('observateur_taxon')
         mongo_update_observation.update({
-            'observations.{}.observateur_probabilite': observation['observateur_probabilite'],
-            'observations.{}.observateur_taxon': observation['observateur_taxon']
+            'observations.%s.observateur_probabilite' % observation_id:
+                observation['observateur_probabilite'],
+            'observations.%s.observateur_taxon' % observation_id:
+                observation['observateur_taxon']
         })
     if 'validateur_taxon' in payload:
         if g.request_user['role'] not in ['Administrateur', 'Validateur']:
@@ -248,8 +250,10 @@ def edit_observation(donnee_id, observation_id):
         observation['validateur_probabilite'] = payload.pop('validateur_probabilite')
         observation['validateur_taxon'] = payload.pop('validateur_taxon')
         mongo_update_observation.update({
-            'observations.{}.validateur_probabilite': observation['validateur_probabilite'],
-            'observations.{}.validateur_taxon': observation['validateur_taxon']
+            'observations.%s.validateur_probabilite' % observation_id:
+                observation['validateur_probabilite'],
+            'observations.%s.validateur_taxon' % observation_id:
+                observation['validateur_taxon']
         })
     if payload:
         abort(422, {f: 'unknown field' for f in payload.keys()})

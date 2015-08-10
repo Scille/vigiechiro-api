@@ -253,3 +253,14 @@ def test_validation(donnee_env, taxons_base, observateur_other,
         'observateur_probabilite': 'SUR'
     })
     assert r.status_code == 403, r.text
+    # Do the actual validations
+    r = observateur.patch(donnee_observation_url, json={
+        'observateur_taxon': str(taxons_base[0]['_id']),
+        'observateur_probabilite': 'PROBABLE'
+    })
+    assert r.status_code == 200, r.text
+    r = validateur.patch(donnee_observation_url, json={
+        'validateur_taxon': str(taxons_base[1]['_id']),
+        'validateur_probabilite': 'SUR'
+    })
+    assert r.status_code == 200, r.text
