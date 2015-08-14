@@ -122,7 +122,7 @@ def _sites_generic_list(params):
         if field in params:
             lookup[field] = params[field]
     pagination = Paginator(args=params)
-    found = sites.find(lookup or None, skip=pagination.skip,
+    found = sites.find(lookup or None, sort=[('titre', 1)], skip=pagination.skip,
                        limit=pagination.max_results)
     return pagination.make_response(*found)
 
