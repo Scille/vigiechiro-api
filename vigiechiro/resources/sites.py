@@ -18,6 +18,7 @@ from ..xin.snippets import Paginator, get_payload, get_resource, get_url_params
 
 from .actualites import create_actuality_nouveau_site, create_actuality_verrouille_site
 from .protocoles import check_configuration_participation
+from ..scripts import clean_deleted_site
 
 
 STOC_SCHEMA = {
@@ -225,6 +226,17 @@ def create_site():
 @requires_auth(roles='Observateur')
 def display_site(site_id):
     return sites.find_one({'_id': site_id})
+
+
+@sites.route('/sites/<objectid:site_id>', methods=['DELETE'])
+@requires_auth(roles='Administrateur')
+def delete_site(site_id):
+    res = sites.remove({'_id': site_id})
+    if res['n']:
+        clean_deleted_site.delay(site_id)
+        return {}, 204
+    else:
+        abort(404)
 
 
 def _check_edit_acess(site_resource):

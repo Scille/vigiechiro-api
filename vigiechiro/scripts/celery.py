@@ -11,6 +11,24 @@ celery_app.conf.CELERYD_PREFETCH_MULTIPLIER = 1
 celery_app.conf.CELERYD_CONCURRENCY = 1
 celery_app.conf.CELERY_ACKS_LATE = True
 
+
+# TODO: find a cleaner fix...
+# Currently, hirefire doesn't take into account the currently processed
+# tasks. Hence it can kill a worker during the process of a job.
+# To solve that, we spawn a dummy task and disable worker parallelism
+@celery_app.task
+def dummy_keep_alive():
+    print('dummy_keep_alive')
+
+delay = celery_app.delay
+@wraps(celery_app.delay)
+def delay_wrapper(*args, **kwargs):
+    ret = delay(*args, **kwargs)
+    dummy_keep_alive.delay()
+    return ret
+celery_app.delay = delay_wrapper
+
+
 if __name__ == '__main__':
     import logging; logging.basicConfig(level=logging.INFO)
     celery_app.start()

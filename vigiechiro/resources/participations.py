@@ -20,7 +20,7 @@ from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
 from .donnees import donnees as donnees_resource
-from ..scripts import tadaridaD, tadaridaC, process_participation
+from ..scripts import process_participation, clean_deleted_participation
 
 
 def _validate_site(context, site):
@@ -167,6 +167,17 @@ def list_site_participations(site_id):
 def display_participation(participation_id):
     document = participations.find_one(participation_id)
     return document
+
+
+@participations.route('/participations/<objectid:participation_id>', methods=['DELETE'])
+@requires_auth(roles='Administrateur')
+def delete_participation(participation_id):
+    res = participations.remove({'_id': participation_id})
+    if res['n']:
+        clean_deleted_participation.delay(participation_id)
+        return {}, 204
+    else:
+        abort(404)
 
 
 @participations.route('/participations/<objectid:participation_id>/compute', methods=['POST'])
