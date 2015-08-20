@@ -6,7 +6,7 @@ from bson import ObjectId
 from uuid import uuid4
 
 from vigiechiro import settings
-from vigiechiro.scripts import tadaridaD
+from vigiechiro.scripts.task_tadarida_d import tadaridaD
 
 from .test_fake_s3 import fake_s3, S3_ADDRESS, WAVES_DEFAULT_DIR
 
@@ -52,7 +52,6 @@ def init_env(fake_s3, request):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail
 def test_tadaridaD(init_env):
     # Run tadaridaD on each fichier
     for fichier_id, donnee_id in init_env:
