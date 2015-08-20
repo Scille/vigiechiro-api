@@ -52,6 +52,7 @@ def init_env(fake_s3, request):
 
 
 @pytest.mark.slow
+@pytest.mark.xfail
 def test_tadaridaD(init_env):
     # Run tadaridaD on each fichier
     for fichier_id, donnee_id in init_env:
