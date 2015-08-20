@@ -1,4 +1,6 @@
 from celery import Celery
+from functools import wraps
+
 from .. import settings
 
 
