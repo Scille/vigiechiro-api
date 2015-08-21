@@ -94,7 +94,7 @@ class ProcessItem:
         self.DB.fichiers.update({'_id': self._input_doc['_id']}, {'$unset': {'require_process': ""}})
 
 
-@celery_app.task
+@celery_app.keep_alive_task
 def run_tadarida_d():
     db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
     ProcessItem.DB = db
@@ -126,7 +126,7 @@ def run_tadarida_d():
             break
 
 
-@celery_app.task
+@celery_app.keep_alive_task
 def run_tadarida_c():
     db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
     ProcessItem.DB = db

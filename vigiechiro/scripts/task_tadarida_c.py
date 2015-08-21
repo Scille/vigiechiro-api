@@ -47,7 +47,7 @@ def _make_taxon_observation(taxon_name, taxon_proba):
     return {'taxon': r.json()['_items'][0]['_id'], 'probabilite': taxon_proba}
 
 
-@celery_app.task
+@celery_app.keep_alive_task
 def tadaridaC(fichier_id):
     if not isinstance(fichier_id, str):
         fichier_id = str(fichier_id)
@@ -296,7 +296,7 @@ def _tadaridaC_process_batch(db, batch):
     return 0
 
  
-@celery_app.task
+@celery_app.keep_alive_task
 def tadaridaC_batch():
     db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
     batch_size = 500
@@ -307,7 +307,7 @@ def tadaridaC_batch():
         _tadaridaC_process_batch(db, batch)
 
 
-@celery_app.task
+@celery_app.keep_alive_task
 def tadaridaC_batch_watcher():
     db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
     batch = db.fichiers.find({'_async_process': 'tadaridaC'}, limit=1)

@@ -208,7 +208,7 @@ class Bilan:
         return payload
 
 
-@celery_app.task
+@celery_app.keep_alive_task
 def participation_generate_bilan(participation_id):
     if not isinstance(participation_id, str):
         participation_id = str(participation_id)
@@ -231,7 +231,7 @@ def participation_generate_bilan(participation_id):
     return 0
 
 
-@celery_app.task
+@celery_app.keep_alive_task
 def process_participation(participation_id, pjs_ids=[], publique=True):
     participation_id = ObjectId(participation_id)
     from ..app import app as flask_app

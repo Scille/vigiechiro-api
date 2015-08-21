@@ -31,7 +31,7 @@ def _create_working_dir(subdirs):
     return wdir
 
 
-@celery_app.task
+@celery_app.keep_alive_task
 def tadaridaD(fichier_id):
     if not isinstance(fichier_id, str):
         fichier_id = str(fichier_id)

@@ -22,18 +22,18 @@ celery_app.conf.CELERY_ACKS_LATE = True
 def dummy_keep_alive():
     print('dummy_keep_alive')
 
-_celery_app_task = celery_app.task
+
 def keep_alive_task(*args, **kwargs):
-    cls = _celery_app_task(*args, **kwargs)
+    cls = celery_app.task(*args, **kwargs)
     delay = cls.delay
-    @wraps(cls.delay)
+    @wraps(delay)
     def delay_wrapper(*args, **kwargs):
         ret = delay(*args, **kwargs)
         dummy_keep_alive.delay()
         return ret
     cls.delay = delay_wrapper
     return cls
-celery_app.task = keep_alive_task
+celery_app.keep_alive_task = keep_alive_task
 
 
 if __name__ == '__main__':
