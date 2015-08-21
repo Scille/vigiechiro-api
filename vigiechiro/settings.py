@@ -97,3 +97,14 @@ AWS_SECRET_ACCESS_KEY = environ.get('AWS_SECRET_ACCESS_KEY', '')
 ### Celery broker ###
 CELERY_BROKER_URL = environ.get('CELERY_BROKER_URL', get_mongo_uri())
 HIREFIRE_TOKEN = environ.get('HIREFIRE_TOKEN', 'development')
+
+
+### Flask Mail ###
+MAIL_SERVER = environ.get('MAIL_SERVER')
+MAIL_PORT = environ.get('MAIL_PORT')
+MAIL_USE_TLS = environ.get('MAIL_USE_TLS')
+MAIL_USE_SSL = environ.get('MAIL_USE_SSL')
+MAIL_DEBUG = environ.get('MAIL_DEBUG', False)
+MAIL_USERNAME = environ.get('MAIL_USERNAME')
+MAIL_PASSWORD = environ.get('MAIL_PASSWORD')
+DEFAULT_MAIL_SENDER = environ.get('DEFAULT_MAIL_SENDER')

@@ -20,7 +20,8 @@ from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
 from .utilisateurs import utilisateurs as utilisateurs_resource
 from .donnees import donnees as donnees_resource
-from ..scripts import process_participation, clean_deleted_participation
+from ..scripts import (process_participation, clean_deleted_participation,
+                       email_observations_csv)
 
 
 def _validate_site(context, site):
@@ -178,6 +179,25 @@ def delete_participation(participation_id):
         return {}, 204
     else:
         abort(404)
+
+
+@participations.route('/participations/<objectid:participation_id>/csv', methods=['POST'])
+@requires_auth(roles='Observateur')
+def participation_trigger_compute(participation_id):
+    p = participations.find_one(participation_id, fields={
+        'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
+    site_name = p['site']['titre']
+    _check_read_access(p)
+    msg = """Bonjour {name},
+
+Voici le csv des observations de la participation réalisée le {p_date} sur le site {p_site}.
+
+Cordialement,
+
+Vigiechiro
+""".format(name=request_user['pseudo'], p_site=site_name, p_date=p['date_debut'])
+    email_observations_csv.delay(participation_id, request_user['email'], msg=msg)
+    return {}, 200
 
 
 @participations.route('/participations/<objectid:participation_id>/compute', methods=['POST'])

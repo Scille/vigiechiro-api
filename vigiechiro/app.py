@@ -6,6 +6,7 @@ from os.path import abspath, dirname
 from flask import Flask, send_from_directory, make_response
 from flask.ext.pymongo import PyMongo
 from flask.ext.cache import Cache
+from flask.ext.mail import Mail
 from hirefire.procs.celery import CeleryProc
 from hirefire.contrib.flask.blueprint import build_hirefire_blueprint
 
@@ -18,7 +19,7 @@ from .scripts.celery import celery_app
 
 
 def make_json_app(app):
-    from flask import Flask, jsonify
+    from flask import jsonify
     from werkzeug.exceptions import default_exceptions
     from werkzeug.exceptions import HTTPException
     """
@@ -91,6 +92,8 @@ def init_app():
     worker_proc = CeleryProc(name='worker', queues=['celery'], app=celery_app)
     app.register_blueprint(build_hirefire_blueprint(settings.HIREFIRE_TOKEN,
                                                     [worker_proc]))
+    # Init Flask-Mail
+    app.mail = Mail(app)
     return app
 
 
