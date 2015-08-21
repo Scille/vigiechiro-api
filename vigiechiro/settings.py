@@ -20,7 +20,8 @@ SCRIPT_WORKER_TOKEN = environ.get('SCRIPT_WORKER_TOKEN', 'token_for_test_only')
 ## vigiechiro ##
 DEV_FAKE_AUTH = environ.get('DEV_FAKE_AUTH', 'False').lower() == 'true'
 DEV_FAKE_S3_URL = environ.get('DEV_FAKE_S3_URL', None)
-TOKEN_EXPIRE_TIME = 24 * 3600
+# into seconds
+TOKEN_EXPIRE_TIME = 14 * 24 * 3600
 ROLE_RULES = {
     'Lecteur': ['Lecteur'],
     'Observateur': ['Lecteur', 'Observateur'],
