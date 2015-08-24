@@ -102,9 +102,9 @@ HIREFIRE_TOKEN = environ.get('HIREFIRE_TOKEN', 'development')
 ### Flask Mail ###
 MAIL_SERVER = environ.get('MAIL_SERVER')
 MAIL_PORT = environ.get('MAIL_PORT')
-MAIL_USE_TLS = environ.get('MAIL_USE_TLS')
-MAIL_USE_SSL = environ.get('MAIL_USE_SSL')
-MAIL_DEBUG = environ.get('MAIL_DEBUG', False)
+MAIL_USE_TLS = environ.get('MAIL_USE_TLS', 'false').lower() == 'true'
+MAIL_USE_SSL = environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
+MAIL_DEBUG = environ.get('MAIL_DEBUG', 'false').lower() == 'true'
 MAIL_USERNAME = environ.get('MAIL_USERNAME')
 MAIL_PASSWORD = environ.get('MAIL_PASSWORD')
 DEFAULT_MAIL_SENDER = environ.get('DEFAULT_MAIL_SENDER')
