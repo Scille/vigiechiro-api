@@ -183,7 +183,7 @@ def delete_participation(participation_id):
 
 @participations.route('/participations/<objectid:participation_id>/csv', methods=['POST'])
 @requires_auth(roles='Observateur')
-def participation_trigger_compute(participation_id):
+def participation_generate_csv(participation_id):
     p = participations.find_one(participation_id, fields={
         'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     site_name = p['site']['titre']
