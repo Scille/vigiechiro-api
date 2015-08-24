@@ -107,4 +107,4 @@ MAIL_USE_SSL = environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
 MAIL_DEBUG = environ.get('MAIL_DEBUG', 'false').lower() == 'true'
 MAIL_USERNAME = environ.get('MAIL_USERNAME')
 MAIL_PASSWORD = environ.get('MAIL_PASSWORD')
-DEFAULT_MAIL_SENDER = environ.get('DEFAULT_MAIL_SENDER')
+MAIL_DEFAULT_SENDER = environ.get('MAIL_DEFAULT_SENDER')

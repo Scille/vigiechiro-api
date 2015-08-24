@@ -23,6 +23,7 @@ from bson import ObjectId
 from flask import current_app, g
 from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
+from flask.ext.mail import Message
 
 from .celery import celery_app
 from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
@@ -232,7 +233,8 @@ def participation_generate_bilan(participation_id):
 
 
 @celery_app.keep_alive_task
-def process_participation(participation_id, pjs_ids=[], publique=True):
+def process_participation(participation_id, pjs_ids=[], publique=True,
+                          notify_mail=None, notify_msg=None):
     participation_id = ObjectId(participation_id)
     from ..app import app as flask_app
     from ..resources.participations import participations as p_resource
@@ -250,6 +252,12 @@ def process_participation(participation_id, pjs_ids=[], publique=True):
             traitement['etat'] = 'FINI'
             traitement['date_fin'] = datetime.utcnow()
             p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
+        if not notify_mail:
+            return
+        msg = Message(subject="La particiation %s vient d'être traitée !" % participation_id,
+                      recipients=notify_mail, body=notify_msg)
+        flask_app.mail.send(msg)
+
 
 def _process_participation(participation_id, pjs_ids=[], publique=True):
     participation_id = str(participation_id)

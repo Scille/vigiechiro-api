@@ -195,9 +195,20 @@ Voici le csv des observations de la participation réalisée le {p_date} sur le 
 Cordialement,
 
 Vigiechiro
-""".format(name=request_user['pseudo'], p_site=site_name, p_date=p['date_debut'])
-    email_observations_csv.delay(participation_id, request_user['email'], msg=msg)
+""".format(name=g.request_user['pseudo'], p_site=site_name, p_date=p['date_debut'])
+    email_observations_csv.delay(participation_id, g.request_user['email'], msg=msg)
     return {}, 200
+
+
+def _build_participation_notify_msg(participation):
+    return """Bonjour {name},
+
+La participation vient d'être traitée.
+
+Cordialement,
+
+Vigiechiro
+""".format(name=g.request_user['pseudo'], p_site=participation)
 
 
 @participations.route('/participations/<objectid:participation_id>/compute', methods=['POST'])
@@ -210,7 +221,9 @@ def participation_trigger_compute(participation_id):
     if status in ['PLANIFIE', 'EN_COURS']:
         abort(400, {'etat': 'Already %s' % status})
     process_participation.delay(participation_id,
-        publique=participation_resource['observateur'].get('donnees_publiques', False))
+        publique=participation_resource['observateur'].get('donnees_publiques', False),
+        notify_mail=g.request_user['email'],
+        notify_msg=_build_participation_notify_msg(participation_resource))
     participations.update(participation_id,
         payload={'traitement': {'etat': 'PLANIFIE'}})
     return {}, 200
@@ -299,7 +312,9 @@ def add_pieces_jointes(participation_id):
     process_participation.delay(participation_id, pjs_ids,
         utilisateurs_resource.get_resource(
             participation_resource['observateur']).get(
-                'donnees_publiques', False))
+                'donnees_publiques', False),
+            notify_mail=g.request_user['email'],
+            notify_msg=_build_participation_notify_msg(participation_resource))
     participations.update(participation_id,
         payload={'traitement': {'etat': 'PLANIFIE'}})
     return {}, 200

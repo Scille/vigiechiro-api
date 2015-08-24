@@ -44,4 +44,4 @@ def email_observations_csv(participation_id, recipients, body=None):
     msg.attach("participation-%s-observations.csv" % participation_id,
                "text/csv", generate_observations_csv(participation_id))
     from ..app import app as flask_app
-    flask_app.mail(msg)
+    flask_app.mail.send(msg)
