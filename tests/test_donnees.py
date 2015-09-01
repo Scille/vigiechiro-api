@@ -264,3 +264,40 @@ def test_validation(donnee_env, taxons_base, observateur_other,
         'validateur_probabilite': 'SUR'
     })
     assert r.status_code == 200, r.text
+
+
+def test_delete_site(donnee_env, taxons_base, observateur_other,
+                     validateur, administrateur):
+    observateur, protocole, site, participation, donnee = donnee_env
+    r = administrateur.delete("/sites/%s" % site['_id'])
+    assert r.status_code == 204, r.text
+    r = administrateur.get("/sites/%s" % site['_id'])
+    assert r.status_code == 404, r.text
+    assert db.sites.find({'_id': site['_id']}).count() == 0
+    # Test the task finishing the cleanup
+    from vigiechiro.scripts.task_deleter import clean_deleted_site
+    clean_deleted_site(site['_id'])
+    assert db.participations.find({'site': site['_id']}).count() == 0
+    assert db.donnees.find({'participation': participation['_id']}).count() == 0
+    assert db.fichiers.find({'lien_participation': participation['_id']}).count() == 0
+    # Cannot delete two times
+    r = administrateur.delete("/sites/%s" % site['_id'])
+    assert r.status_code == 404, r.text
+
+
+def test_delete_participation(donnee_env, taxons_base, observateur_other,
+                              validateur, administrateur):
+    observateur, protocole, site, participation, donnee = donnee_env
+    r = administrateur.delete("/participations/%s" % participation['_id'])
+    assert r.status_code == 204, r.text
+    r = administrateur.get("/participations/%s" % participation['_id'])
+    assert r.status_code == 404, r.text
+    assert db.participations.find({'_id': participation['_id']}).count() == 0
+    # Test the task finishing the cleanup
+    from vigiechiro.scripts.task_deleter import clean_deleted_participation
+    clean_deleted_participation(participation['_id'])
+    assert db.donnees.find({'participation': participation['_id']}).count() == 0
+    assert db.fichiers.find({'lien_participation': participation['_id']}).count() == 0
+    # Cannot delete two times
+    r = administrateur.delete("/participations/%s" % participation['_id'])
+    assert r.status_code == 404, r.text

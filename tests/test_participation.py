@@ -46,7 +46,7 @@ def participation_ready(clean_participations, obs_sites_base, administrateur):
 
 
 def test_pieces_jointes_access(participation_ready, file_uploaded,
-                              observateur_other, administrateur, validateur):
+                               observateur_other, administrateur, validateur):
     observateur, protocole, site = participation_ready
     # Post participation
     r = observateur.post('/sites/{}/participations'.format(site['_id']),
