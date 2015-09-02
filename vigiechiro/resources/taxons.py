@@ -111,5 +111,5 @@ def edit_taxon(taxon_id):
 @requires_auth(roles='Observateur')
 def get_resume_list():
     """Return a brief list of per taxon id and libelle"""
-    items = taxons.find({}, {"libelle_long": 1})
+    items = taxons.find({}, {"libelle_long": 1, 'libelle_court': 1})
     return {'_items': [i for i in items[0]]}
