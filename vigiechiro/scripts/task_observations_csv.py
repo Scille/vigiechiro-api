@@ -37,11 +37,12 @@ def generate_observations_csv(participation_id):
 
 @celery_app.keep_alive_task
 def email_observations_csv(participation_id, recipients, body=None):
-    if not isinstance(recipients, (list, tuple)):
-        recipients = (recipients, )
-    msg = Message(subject="Observations de la participation %s" % participation_id,
-                  recipients=recipients, body=body)
-    msg.attach("participation-%s-observations.csv" % participation_id,
-               "text/csv", generate_observations_csv(participation_id))
     from ..app import app as flask_app
-    flask_app.mail.send(msg)
+    with flask_app.app_context():
+        if not isinstance(recipients, (list, tuple)):
+            recipients = (recipients, )
+        msg = Message(subject="Observations de la participation %s" % participation_id,
+                      recipients=recipients, body=body)
+        msg.attach("participation-%s-observations.csv" % participation_id,
+                   "text/csv", generate_observations_csv(participation_id))
+        flask_app.mail.send(msg)
