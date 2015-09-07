@@ -6,9 +6,9 @@ from flask.ext.mail import Message
 from .celery import celery_app
 
 
-HEADERS = ('temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
+HEADERS = ['temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
            'tadarida_probabilite', 'tadarida_taxon_autre', 'observateur_taxon',
-           'observateur_probabilite', 'validateur_taxon', 'validateur_probabilite')
+           'observateur_probabilite', 'validateur_taxon', 'validateur_probabilite']
 
 
 def generate_observations_csv(participation_id):
