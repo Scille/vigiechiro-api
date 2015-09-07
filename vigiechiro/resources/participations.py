@@ -188,7 +188,7 @@ def participation_generate_csv(participation_id):
         'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     site_name = p['site']['titre']
     _check_read_access(p)
-    msg = """Bonjour {name},
+    body = """Bonjour {name},
 
 Voici le csv des observations de la participation réalisée le {p_date} sur le site {p_site}.
 
@@ -196,7 +196,7 @@ Cordialement,
 
 Vigiechiro
 """.format(name=g.request_user['pseudo'], p_site=site_name, p_date=p['date_debut'])
-    email_observations_csv.delay(participation_id, g.request_user['email'], msg=msg)
+    email_observations_csv.delay(participation_id, g.request_user['email'], body=body)
     return {}, 200
 
 
