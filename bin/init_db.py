@@ -50,12 +50,13 @@ def create_indexes():
         ('tags', pymongo.TEXT)
     ], default_language='french', name='protocolesTextIndex')
     db.sites.ensure_index([
-        ('titre', pymongo.TEXT),
+        ('titre', pymongo.TEXT)
     ], default_language='french', name='sitesTextIndex')
     db.sites.ensure_index([('titre', 1)])
     db.actualites.ensure_index([('_updated', -1)])
     db.fichiers.ensure_index([('titre', 1), ('mime', 1)])
     db.donnees.ensure_index([('proprietaire', 1), ('publique', 1)])
+    db.donnees.ensure_index([('participation', 1), ('titre', 1)])
 
 
 def insert_default_documents():
