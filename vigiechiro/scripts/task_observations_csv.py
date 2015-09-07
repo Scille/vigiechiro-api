@@ -12,7 +12,7 @@ HEADERS = ('temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
 
 
 def generate_observations_csv(participation_id):
-    from ..resource.donnees import donnees
+    from ..resources.donnees import donnees
     participation_id = ObjectId(participation_id)
     buff = BytesIO()
     w = csv.writer(buff)
