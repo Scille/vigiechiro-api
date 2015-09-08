@@ -28,8 +28,9 @@ def generate_observations_csv(participation_id):
             else:
                 value = obs.get(h)
             row.append(value if value else '')
+        return row
 
-    for do in donnees.find({'participation': participation_id}):
+    for do in donnees.find({'participation': participation_id})[0]:
         for obs in do.get('observations', []):
             w.writerow(format_row(obs))
     return buff
