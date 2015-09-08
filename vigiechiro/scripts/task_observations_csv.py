@@ -30,7 +30,7 @@ def generate_observations_csv(participation_id):
             row.append(value if value else '')
 
     for do in donnees.find({'participation': participation_id}):
-        for obs in donnees.get('observations', []):
+        for obs in do.get('observations', []):
             w.writerow(format_row(obs))
     return buff
 
