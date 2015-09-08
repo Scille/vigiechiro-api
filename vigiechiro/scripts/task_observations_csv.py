@@ -1,5 +1,5 @@
 from bson import ObjectId
-from io import BytesIO
+from io import BytesIO, StringIO
 import csv
 from flask.ext.mail import Message
 
@@ -14,7 +14,7 @@ HEADERS = ['temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
 def generate_observations_csv(participation_id):
     from ..resources.donnees import donnees
     participation_id = ObjectId(participation_id)
-    buff = BytesIO()
+    buff = StringIO()
     w = csv.writer(buff)
     # Add headers
     w.writerow(HEADERS)
