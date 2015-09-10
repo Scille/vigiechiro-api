@@ -1,5 +1,5 @@
 from bson import ObjectId
-from io import BytesIO, StringIO
+from io import StringIO
 import csv
 from flask.ext.mail import Message
 
@@ -33,7 +33,7 @@ def generate_observations_csv(participation_id):
     for do in donnees.find({'participation': participation_id})[0]:
         for obs in do.get('observations', []):
             w.writerow(format_row(obs))
-    return buff
+    return bytearray(buff.getvalue().encode())
 
 
 @celery_app.keep_alive_task
@@ -41,7 +41,7 @@ def email_observations_csv(participation_id, recipients, body=None):
     from ..app import app as flask_app
     with flask_app.app_context():
         if not isinstance(recipients, (list, tuple)):
-            recipients = (recipients, )
+            recipients = [recipients, ]
         msg = Message(subject="Observations de la participation %s" % participation_id,
                       recipients=recipients, body=body)
         msg.attach("participation-%s-observations.csv" % participation_id,
