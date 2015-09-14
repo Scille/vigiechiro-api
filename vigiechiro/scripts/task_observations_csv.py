@@ -1,20 +1,20 @@
 from bson import ObjectId
-from io import BytesIO
+from io import StringIO
 import csv
 from flask.ext.mail import Message
 
 from .celery import celery_app
 
 
-HEADERS = ('temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
+HEADERS = ['temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
            'tadarida_probabilite', 'tadarida_taxon_autre', 'observateur_taxon',
-           'observateur_probabilite', 'validateur_taxon', 'validateur_probabilite')
+           'observateur_probabilite', 'validateur_taxon', 'validateur_probabilite']
 
 
 def generate_observations_csv(participation_id):
-    from ..resource.donnees import donnees
+    from ..resources.donnees import donnees
     participation_id = ObjectId(participation_id)
-    buff = BytesIO()
+    buff = StringIO()
     w = csv.writer(buff)
     # Add headers
     w.writerow(HEADERS)
@@ -28,11 +28,12 @@ def generate_observations_csv(participation_id):
             else:
                 value = obs.get(h)
             row.append(value if value else '')
+        return row
 
-    for do in donnees.find({'participation': participation_id}):
-        for obs in donnees.get('observations', []):
+    for do in donnees.find({'participation': participation_id})[0]:
+        for obs in do.get('observations', []):
             w.writerow(format_row(obs))
-    return buff
+    return bytearray(buff.getvalue().encode())
 
 
 @celery_app.keep_alive_task
@@ -40,7 +41,7 @@ def email_observations_csv(participation_id, recipients, body=None):
     from ..app import app as flask_app
     with flask_app.app_context():
         if not isinstance(recipients, (list, tuple)):
-            recipients = (recipients, )
+            recipients = [recipients, ]
         msg = Message(subject="Observations de la participation %s" % participation_id,
                       recipients=recipients, body=body)
         msg.attach("participation-%s-observations.csv" % participation_id,
