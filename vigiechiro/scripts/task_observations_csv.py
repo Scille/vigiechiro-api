@@ -6,7 +6,8 @@ from flask.ext.mail import Message
 from .celery import celery_app
 
 
-HEADERS = ['temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
+HEADERS = ['titre',
+           'temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
            'tadarida_probabilite', 'tadarida_taxon_autre', 'observateur_taxon',
            'observateur_probabilite', 'validateur_taxon', 'validateur_probabilite']
 
@@ -19,11 +20,15 @@ def generate_observations_csv(participation_id):
     # Add headers
     w.writerow(HEADERS)
 
-    def format_row(obs):
+    def format_row(obs, titre):
         row = []
         for h in HEADERS:
-            if h == 'tadarida_taxon_autre':
-                value = '\n'.join(['%s:%s' % (a['taxon'], a['probabilite'])
+            if h == 'titre':
+                value = titre
+            elif h == 'tadarida_taxon':
+                value = obs.get(h, {})['libelle_long']
+            elif h == 'tadarida_taxon_autre':
+                value = '\n'.join(['%s:%s' % (a['taxon']['libelle_long'], a['probabilite'])
                                    for a in obs.get(h, [])])
             else:
                 value = obs.get(h)
@@ -32,8 +37,8 @@ def generate_observations_csv(participation_id):
 
     for do in donnees.find({'participation': participation_id})[0]:
         for obs in do.get('observations', []):
-            w.writerow(format_row(obs))
-    return bytearray(buff.getvalue().encode())
+            w.writerow(format_row(obs, do.get('titre', '')))
+    return bytearray(buff.getvalue().encode('UTF-16LE'))
 
 
 @celery_app.keep_alive_task
