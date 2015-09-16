@@ -28,8 +28,16 @@ def generate_observations_csv(participation_id):
             elif h == 'tadarida_taxon':
                 value = obs.get(h, {})['libelle_court']
             elif h == 'tadarida_taxon_autre':
-                value = '\n'.join(['%s:%s' % (a['taxon']['libelle_court'], a['probabilite'])
-                                   for a in obs.get(h, [])])
+                value = ', '.join(['%s' % (a['taxon']['libelle_court'])
+                    for a in obs.get(h, []) if a['probabilite'] >= (obs.get('tadarida_probabilite', 0) / 2)])
+            elif h == 'observateur_taxon':
+                value = ''
+                if 'libelle_court' in obs.get(h, {}).keys():
+                    value = obs.get(h, {})['libelle_court']
+            elif h == 'validateur_taxon':
+                value = ''
+                if 'libelle_court' in obs.get(h, {}).keys():
+                    value = obs.get(h, {})['libelle_court']
             else:
                 value = obs.get(h)
             row.append(value if value else '')
