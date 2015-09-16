@@ -175,7 +175,8 @@ def create_site():
         'commentaire',
         'grille_stoc',
         'tracet',
-        'justification_non_aleatoire'})
+        'justification_non_aleatoire',
+        'generee_aleatoirement'})
     payload['observateur'] = g.request_user['_id']
     # Get protocole resource
     protocole_resource = get_resource('protocoles',
