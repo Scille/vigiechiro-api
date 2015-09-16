@@ -74,10 +74,12 @@ def create_actuality_verrouille_site(site_id, utilisateur_id):
 def create_actuality_nouvelle_participation(participation):
     participation_id = participation['_id']
     sujet_id = participation['observateur']
+    site_id = participation['site']
     document = {'action': 'NOUVELLE_PARTICIPATION',
                 'participation': participation_id,
                 'sujet': sujet_id,
-                'resources': [participation_id, sujet_id]}
+                'site': site_id,
+                'resources': [participation_id, sujet_id, site_id]}
     return _create_actuality(document)
 
 
@@ -131,10 +133,9 @@ def get_user_actualites():
     pagination = Paginator()
     following = g.request_user.get('actualites_suivies', [])
     following.append(g.request_user['_id'])
-    expend = ['sujet', 'site', 'protocole', 'participation']
     lookup = {'resources': {'$in': following}}
     found = actualites.find(lookup, sort=[('_updated', -1)],
-                            expend=expend, skip=pagination.skip,
+                            skip=pagination.skip,
                             limit=pagination.max_results)
     return pagination.make_response(*found)
 
