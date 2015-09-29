@@ -16,6 +16,7 @@ from ..xin.snippets import Paginator, get_payload, get_resource, get_url_params
 from ..xin.schema import relation, choice
 
 from .utilisateurs import utilisateurs as utilisateurs_resource
+from .taxons import taxons as taxons_resource
 from ..scripts import participation_generate_bilan
 
 def validate_donnee_name(name):
@@ -237,7 +238,8 @@ def edit_observation(donnee_id, observation_id):
         if 'observateur_probabilite' not in payload:
             abort(422, {'observateur_probabilite': 'missing field'})
         observation['observateur_probabilite'] = payload.pop('observateur_probabilite')
-        observation['observateur_taxon'] = payload.pop('observateur_taxon')
+        taxon_resource = taxons_resource.get_resource(payload.pop('observateur_taxon'))['_id']
+        observation['observateur_taxon'] = taxon_resource
         mongo_update_observation.update({
             'observations.%s.observateur_probabilite' % observation_id:
                 observation['observateur_probabilite'],
@@ -250,7 +252,8 @@ def edit_observation(donnee_id, observation_id):
         if 'validateur_probabilite' not in payload:
             abort(422, {'validateur_probabilite': 'missing field'})
         observation['validateur_probabilite'] = payload.pop('validateur_probabilite')
-        observation['validateur_taxon'] = payload.pop('validateur_taxon')
+        taxon_resource = taxons_resource.get_resource(payload.pop('validateur_taxon'))['_id']
+        observation['validateur_taxon'] = taxon_resource
         mongo_update_observation.update({
             'observations.%s.validateur_probabilite' % observation_id:
                 observation['validateur_probabilite'],

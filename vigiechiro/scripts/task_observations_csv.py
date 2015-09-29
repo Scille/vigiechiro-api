@@ -16,7 +16,7 @@ def generate_observations_csv(participation_id):
     from ..resources.donnees import donnees
     participation_id = ObjectId(participation_id)
     buff = StringIO()
-    w = csv.writer(buff)
+    w = csv.writer(buff, delimiter=';', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
     # Add headers
     w.writerow(HEADERS)
 
