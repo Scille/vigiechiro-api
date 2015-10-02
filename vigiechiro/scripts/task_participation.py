@@ -254,6 +254,8 @@ def process_participation(participation_id, pjs_ids=[], publique=True,
             p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
         if not notify_mail:
             return
+        if isinstance(notify_mail, str):
+            notify_mail = [notify_mail]
         msg = Message(subject="La particiation %s vient d'être traitée !" % participation_id,
                       recipients=notify_mail, body=notify_msg)
         flask_app.mail.send(msg)
