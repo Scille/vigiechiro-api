@@ -27,7 +27,7 @@ def donnee_env(request, participation_ready, taxons_base):
     created = format_datetime(datetime.utcnow())
     donnee_payload = {
         '_created': created,
-        '_udpated': created,
+        '_updated': created,
         '_etag': uuid4().hex,
         'proprietaire': observateur.user['_id'],
         'participation': ObjectId(participation['_id']),

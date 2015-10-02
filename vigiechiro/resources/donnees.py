@@ -8,6 +8,7 @@
 from flask import request, current_app, g
 from datetime import datetime
 import re
+from bson import ObjectId
 
 from ..xin import Resource
 from ..xin.tools import jsonify, abort
@@ -244,7 +245,7 @@ def edit_observation(donnee_id, observation_id):
             'observations.%s.observateur_probabilite' % observation_id:
                 observation['observateur_probabilite'],
             'observations.%s.observateur_taxon' % observation_id:
-                observation['observateur_taxon']
+                ObjectId(observation['observateur_taxon'])
         })
     if 'validateur_taxon' in payload:
         if g.request_user['role'] not in ['Administrateur', 'Validateur']:
@@ -258,7 +259,7 @@ def edit_observation(donnee_id, observation_id):
             'observations.%s.validateur_probabilite' % observation_id:
                 observation['validateur_probabilite'],
             'observations.%s.validateur_taxon' % observation_id:
-                observation['validateur_taxon']
+                ObjectId(observation['validateur_taxon'])
         })
     if payload:
         abort(422, {f: 'unknown field' for f in payload.keys()})
