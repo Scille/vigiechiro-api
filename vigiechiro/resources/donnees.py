@@ -17,7 +17,6 @@ from ..xin.snippets import Paginator, get_payload, get_resource, get_url_params
 from ..xin.schema import relation, choice
 
 from .utilisateurs import utilisateurs as utilisateurs_resource
-from .taxons import taxons as taxons_resource
 from ..scripts import participation_generate_bilan
 
 def validate_donnee_name(name):
@@ -177,8 +176,7 @@ def list_participation_donnees(participation_id):
         lookup.update({'titre': request.args['titre']})
     observations = {'observations' : {'$elemMatch': {}}}
     if 'tadarida_taxon' in request.args:
-        taxon_resource = taxons_resource.get_resource(request.args['tadarida_taxon'])['_id']
-        observations['observations']['$elemMatch'].update({'tadarida_taxon': taxon_resource})
+        observations['observations']['$elemMatch'].update({'tadarida_taxon': ObjectId(request.args['tadarida_taxon'])})
         lookup.update(observations)
     found = donnees.find(lookup, skip=pagination.skip, limit=pagination.max_results,
                          fields={'participation': False, 'proprietaire': False})
@@ -244,13 +242,11 @@ def edit_observation(donnee_id, observation_id):
         if 'observateur_probabilite' not in payload:
             abort(422, {'observateur_probabilite': 'missing field'})
         observation['observateur_probabilite'] = payload.pop('observateur_probabilite')
-        taxon_resource = taxons_resource.get_resource(payload.pop('observateur_taxon'))['_id']
-        observation['observateur_taxon'] = taxon_resource
         mongo_update_observation.update({
             'observations.%s.observateur_probabilite' % observation_id:
                 observation['observateur_probabilite'],
             'observations.%s.observateur_taxon' % observation_id:
-                ObjectId(observation['observateur_taxon'])
+                ObjectId(payload.pop('observateur_taxon'))
         })
     if 'validateur_taxon' in payload:
         if g.request_user['role'] not in ['Administrateur', 'Validateur']:
@@ -258,13 +254,11 @@ def edit_observation(donnee_id, observation_id):
         if 'validateur_probabilite' not in payload:
             abort(422, {'validateur_probabilite': 'missing field'})
         observation['validateur_probabilite'] = payload.pop('validateur_probabilite')
-        taxon_resource = taxons_resource.get_resource(payload.pop('validateur_taxon'))['_id']
-        observation['validateur_taxon'] = taxon_resource
         mongo_update_observation.update({
             'observations.%s.validateur_probabilite' % observation_id:
                 observation['validateur_probabilite'],
             'observations.%s.validateur_taxon' % observation_id:
-                ObjectId(observation['validateur_taxon'])
+                ObjectId(payload.pop('validateur_taxon'))
         })
     if payload:
         abort(422, {f: 'unknown field' for f in payload.keys()})
