@@ -198,7 +198,8 @@ Cordialement,
 
 Vigiechiro
 """.format(name=g.request_user['pseudo'], p_site=site_name, p_date=p['date_debut'], p_id=participation_id)
-    email_observations_csv.delay(participation_id, g.request_user['email'], body=body)
+    subject = """Observations de la participation du {p_date} sur le site {p_site}""".format(p_site=site_name, p_date=p['date_debut'])
+    email_observations_csv.delay(participation_id, g.request_user['email'], body=body, subject=subject)
     return {}, 200
 
 
