@@ -175,6 +175,11 @@ def list_participation_donnees(participation_id):
         lookup['$or'] = [{'publique': True}, {'proprietaire': g.request_user['_id']}]
     if 'titre' in request.args:
         lookup.update({'titre': request.args['titre']})
+    observations = {'observations' : {'$elemMatch': {}}}
+    if 'tadarida_taxon' in request.args:
+        taxon_resource = taxons_resource.get_resource(request.args['tadarida_taxon'])['_id']
+        observations['observations']['$elemMatch'].update({'tadarida_taxon': taxon_resource})
+        lookup.update(observations)
     found = donnees.find(lookup, skip=pagination.skip, limit=pagination.max_results,
                          fields={'participation': False, 'proprietaire': False})
     return pagination.make_response(*found)
