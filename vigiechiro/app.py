@@ -65,7 +65,7 @@ def init_app():
                 r = requests.get(target)
                 if r.status_code != 200:
                     app.logger.error('cannot fetch {}, error {} : {}'.format(
-                        target, r.status_code, r.data))
+                        target, r.status_code, r.content))
                 response = make_response(r.content, r.status_code)
                 for key, value in r.headers.items():
                     response.headers[key] = value
