@@ -3,7 +3,7 @@
 import requests
 import logging
 from os.path import abspath, dirname
-from flask import Flask, send_from_directory, make_response
+from flask import Flask, send_from_directory, make_response, request, redirect
 from flask.ext.pymongo import PyMongo
 from flask.ext.cache import Cache
 from flask.ext.mail import Mail
@@ -55,11 +55,14 @@ def init_app():
         cache = Cache(app, config={'CACHE_TYPE': 'simple'})
         app.root_path = abspath(dirname(__file__) + '/..')
         redirect_url = app.config['FRONTEND_HOSTED_REDIRECT_URL']
+        force_https = FRONTEND_DOMAIN.startswith('https://')
 
         @app.route('/')
         @app.route('/<path:path>')
         @cache.cached(timeout=600)
         def host_front(path='index.html'):
+            if force_https and request.headers.get('x-forwarded-proto') != 'https':
+                redirect('%s/%s' % (FRONTEND_DOMAIN, path))
             if redirect_url:
                 target = '{}/{}'.format(redirect_url, path)
                 r = requests.get(target)
