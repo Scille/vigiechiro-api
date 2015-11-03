@@ -204,6 +204,29 @@ def create_donnee(participation_id):
     return result, 201
 
 
+@donnees.route('/participations/<objectid:participation_id>/donnees/taxons/liste', methods=['GET'])
+@requires_auth(roles='Observateur')
+def get_resume_list_donnees_taxons(participation_id):
+    lookup = {'participation': participation_id}
+    observations = {'observations' : {'$elemMatch': {}}}
+    founds = donnees.find(lookup, fields={'participation': False, 'proprietaire': False, 'publique': False, 'titre': False})
+    items = []
+    for found in founds[0]:
+        if "observations" in found:
+            for observation in found["observations"]:
+                if "tadarida_taxon" in observation:
+                    tadarida_taxon_id = observation["tadarida_taxon"]["_id"]
+                    find = False
+                    for item in items:
+                        if tadarida_taxon_id == item["_id"]:
+                            find = True
+                            break
+                    if not find:
+                        taxon = {"_id": tadarida_taxon_id, "libelle_court": observation["tadarida_taxon"]["libelle_court"]}
+                        items.append(taxon)
+    return {'_items': items}
+
+
 @donnees.route('/donnees/<objectid:donnee_id>', methods=['PATCH'])
 @requires_auth(roles='Observateur')
 def update_donnee(donnee_id):
