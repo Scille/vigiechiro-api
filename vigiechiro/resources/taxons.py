@@ -83,7 +83,7 @@ def expend_parents_libelles(document):
 def list_taxons():
     pagination = Paginator()
     found = taxons.find(get_lookup_from_q(), skip=pagination.skip,
-                        limit=pagination.max_results)
+                        limit=pagination.max_results, sort=[('libelle_long', 1)])
     return pagination.make_response(*found)
 
 
