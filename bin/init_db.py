@@ -45,6 +45,7 @@ def create_indexes():
         ('libelle_court', pymongo.TEXT),
         ('tags', pymongo.TEXT)
     ], default_language='french', name='taxonsTextIndex')
+    db.taxons.ensure_index([('libelle_long', 1)])
     db.protocoles.ensure_index([
         ('titre', pymongo.TEXT),
         ('tags', pymongo.TEXT)

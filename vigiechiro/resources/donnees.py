@@ -36,7 +36,7 @@ def validate_donnee_name(name):
         tron = int(re.search(r'-Tron([0-9]{1,2})-', basename).group(1))
         if tron > 15 or tron == 0:
             return None
-    elif re.match(r'^Car.+-[0-9]{4}-Pass[0-9]{1,2}-(([A-H][12])|(Z[1-9]))-.*[01]_[0-9]{8}_[0-9]{6}_[0-9]{3}$', basename):
+    elif re.match(r'^Car.+-[0-9]{4}-Pass[0-9]{1,2}-(([A-H][12])|(Z[1-9][0-9]*))-.*[01]_[0-9]{8}_[0-9]{6}_[0-9]{3}$', basename):
         # Protocole "point fixe"
         pass_ = int(re.search(r'-Pass([0-9]{1,2})-', basename).group(1))
         if pass_ > 10 or pass_ == 0:
@@ -202,29 +202,6 @@ def create_donnee(participation_id):
     if 'observations' in payload and not request.args.get('no_bilan', False):
         participation_generate_bilan.delay(participation_id)
     return result, 201
-
-
-@donnees.route('/participations/<objectid:participation_id>/donnees/taxons/liste', methods=['GET'])
-@requires_auth(roles='Observateur')
-def get_resume_list_donnees_taxons(participation_id):
-    lookup = {'participation': participation_id}
-    observations = {'observations' : {'$elemMatch': {}}}
-    founds = donnees.find(lookup, fields={'participation': False, 'proprietaire': False, 'publique': False, 'titre': False})
-    items = []
-    for found in founds[0]:
-        if "observations" in found:
-            for observation in found["observations"]:
-                if "tadarida_taxon" in observation:
-                    tadarida_taxon_id = observation["tadarida_taxon"]["_id"]
-                    find = False
-                    for item in items:
-                        if tadarida_taxon_id == item["_id"]:
-                            find = True
-                            break
-                    if not find:
-                        taxon = {"_id": tadarida_taxon_id, "libelle_court": observation["tadarida_taxon"]["libelle_court"]}
-                        items.append(taxon)
-    return {'_items': items}
 
 
 @donnees.route('/donnees/<objectid:donnee_id>', methods=['PATCH'])
