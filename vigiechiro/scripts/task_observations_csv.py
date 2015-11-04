@@ -27,6 +27,8 @@ def generate_observations_csv(participation_id):
                 value = titre
             elif h == 'temps_debut':
                 value = (obs.get(h) if obs.get(h) else '0.0')
+            elif h == 'temps_fin':
+                value = (obs.get(h) if obs.get(h) else '0.0')
             elif h == 'tadarida_taxon':
                 value = obs.get(h, {})['libelle_court']
             elif h == 'tadarida_taxon_autre':
