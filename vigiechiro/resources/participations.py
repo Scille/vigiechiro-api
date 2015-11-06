@@ -231,7 +231,7 @@ def participation_trigger_compute(participation_id):
         notify_mail=g.request_user['email'],
         notify_msg=_build_participation_notify_msg(participation_resource))
     participations.update(participation_id,
-        payload={'traitement': {'etat': 'PLANIFIE', 'date_debut': None, 'date_fin': None}})
+        payload={'traitement': {'etat': 'PLANIFIE'}})
     return {}, 200
 
 
