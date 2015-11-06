@@ -220,15 +220,18 @@ def participation_trigger_compute(participation_id):
     participation_resource = participations.find_one(participation_id,
         fields={'protocole': False, 'site': False,
                 'messages': False, 'logs': False, 'bilan': False})
-    status = participation_resource.get('traitement', {}).get('etat')
-    if status in ['PLANIFIE', 'EN_COURS']:
+    traitement = participation_resource.get('traitement', {})
+    status = traitement.get('etat')
+    date_debut = participation_resource.get('date_debut')
+    # Skip if date_debut is older than one day
+    if status in ('PLANIFIE', 'EN_COURS') and (date_debut - datetime.utcnow()).days < 1:
         abort(400, {'etat': 'Already %s' % status})
     process_participation.delay(participation_id,
         publique=participation_resource['observateur'].get('donnees_publiques', False),
         notify_mail=g.request_user['email'],
         notify_msg=_build_participation_notify_msg(participation_resource))
     participations.update(participation_id,
-        payload={'traitement': {'etat': 'PLANIFIE'}})
+        payload={'traitement': {'etat': 'PLANIFIE', 'date_debut': None, 'date_fin': None}})
     return {}, 200
 
 
