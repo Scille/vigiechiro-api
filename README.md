@@ -66,7 +66,6 @@ Pour configurer l'authentification via Oauth, les variables d'environnement suiv
 Pour émuler l'authentification, `DEV_FAKE_AUTH` peut être mis à `true`
 
 
-
 ## Heroku
 
 Configurer heroku pour utiliser le multi buildpack (python/r)
