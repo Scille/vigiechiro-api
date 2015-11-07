@@ -225,7 +225,7 @@ def participation_trigger_compute(participation_id):
     date_debut = traitement.get('date_debut')
     # Skip if date_debut is older than one day
     if status == 'PLANIFIE' or (status == 'EN_COURS' and
-            (date_debut.replace(tzinfo=None) - datetime.utcnow()) < 1):
+            (date_debut.replace(tzinfo=None) - datetime.utcnow()).days < 1):
         abort(400, {'etat': 'Already %s' % status})
     process_participation.delay(participation_id,
         publique=participation_resource['observateur'].get('donnees_publiques', False),
