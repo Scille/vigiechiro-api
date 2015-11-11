@@ -206,12 +206,15 @@ Vigiechiro
 def _build_participation_notify_msg(participation):
     return """Bonjour {name},
 
-La participation vient d'être traitée.
+La participation réalisée le {p_date} sur le site {p_site} vient d'être traitée.
+
+https://vigiechiro.herokuapp.com/#/participations/{p_id}
 
 Cordialement,
 
 Vigiechiro
-""".format(name=g.request_user['pseudo'], p_site=participation)
+""".format(name=g.request_user['pseudo'], p_site=participation['site']['titre'],
+    p_date=particiation['date_debut'], p_id=particiation['_id'])
 
 
 @participations.route('/participations/<objectid:participation_id>/compute', methods=['POST'])

@@ -235,28 +235,30 @@ def participation_generate_bilan(participation_id):
 @celery_app.keep_alive_task
 def process_participation(participation_id, pjs_ids=[], publique=True,
                           notify_mail=None, notify_msg=None):
-    participation_id = ObjectId(participation_id)
     from ..app import app as flask_app
     from ..resources.participations import participations as p_resource
     with flask_app.app_context():
+        p = participations.find_one(participation_id, fields={
+            'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
+        site_name = p['site']['titre']
         traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
-        p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
+        p_resource.update(p._id, {'traitement': traitement}, auto_abort=False)
         try:
-            _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
+            _process_participation(p._id, pjs_ids=pjs_ids, publique=publique)
         except:
             logger.error(format_exc())
             traitement['etat'] = 'ERREUR'
             traitement['date_fin'] = datetime.utcnow()
-            p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
+            p_resource.update(p._id, {'traitement': traitement}, auto_abort=False)
         else:
             traitement['etat'] = 'FINI'
             traitement['date_fin'] = datetime.utcnow()
-            p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
+            p_resource.update(p._id, {'traitement': traitement}, auto_abort=False)
         if not notify_mail:
             return
         if isinstance(notify_mail, str):
             notify_mail = [notify_mail]
-        msg = Message(subject="La particiation %s vient d'être traitée !" % participation_id,
+        msg = Message(subject="La particiation réalisée le {p_date} sur le site {p_site} vient d'être traitée !".format(p_site=site_name, p_date=p['date_debut']),
                       recipients=notify_mail, body=notify_msg)
         flask_app.mail.send(msg)
 
