@@ -306,7 +306,8 @@ def edit_participation(participation_id):
 @participations.route('/participations/<objectid:participation_id>/pieces_jointes', methods=['PUT'])
 @requires_auth(roles='Observateur')
 def add_pieces_jointes(participation_id):
-    participation_resource = participations.get_resource(participation_id)
+    participation_resource = participations.find_one(participation_id,
+        fields={'protocole': False, 'messages': False, 'logs': False, 'bilan': False}))
     _check_edit_access(participation_resource)
     errors = {}
     pjs_ids_str =  get_payload({'pieces_jointes': True})['pieces_jointes']
