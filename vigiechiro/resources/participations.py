@@ -307,7 +307,7 @@ def edit_participation(participation_id):
 @requires_auth(roles='Observateur')
 def add_pieces_jointes(participation_id):
     participation_resource = participations.find_one(participation_id,
-        fields={'protocole': False, 'messages': False, 'logs': False, 'bilan': False}))
+        fields={'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     _check_edit_access(participation_resource)
     errors = {}
     pjs_ids_str =  get_payload({'pieces_jointes': True})['pieces_jointes']
