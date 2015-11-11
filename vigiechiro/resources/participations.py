@@ -204,6 +204,7 @@ Vigiechiro
 
 
 def _build_participation_notify_msg(participation):
+    print(participation['site'])
     return """Bonjour {name},
 
 La participation réalisée le {p_date} sur le site {p_site} vient d'être traitée.
@@ -214,7 +215,7 @@ Cordialement,
 
 Vigiechiro
 """.format(name=g.request_user['pseudo'], p_site=participation['site']['titre'],
-    p_date=particiation['date_debut'], p_id=particiation['_id'])
+    p_date=particiation['date_debut'], p_id=participation['_id'])
 
 
 @participations.route('/participations/<objectid:participation_id>/compute', methods=['POST'])
