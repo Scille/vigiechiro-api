@@ -267,8 +267,9 @@ def create_participation(site_id):
 
 def _check_edit_access(participation_resource):
     # Only owner and admin can edit
+    p_obs = participation_resource['observateur']['_id'] or participation_resource['observateur']
     if (g.request_user['role'] != 'Administrateur' and
-        g.request_user['_id'] != participation_resource['observateur']):
+        g.request_user['_id'] != p_obs):
         abort(403)
 
 
@@ -322,7 +323,7 @@ def add_pieces_jointes(participation_id):
         abort(422, {'pieces_jointes': errors})
     process_participation.delay(participation_id, pjs_ids,
         utilisateurs_resource.get_resource(
-            participation_resource['observateur']).get(
+            participation_resource['observateur']['_id']).get(
                 'donnees_publiques', False),
             notify_mail=g.request_user['email'],
             notify_msg=_build_participation_notify_msg(participation_resource))
