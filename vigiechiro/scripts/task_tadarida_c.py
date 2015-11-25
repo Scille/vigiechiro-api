@@ -295,10 +295,10 @@ def _tadaridaC_process_batch(db, batch):
         participation_generate_bilan.delay(participation_id)
     return 0
 
- 
+
 @celery_app.keep_alive_task
 def tadaridaC_batch():
-    db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+    db = MongoClient(host=settings.MONGO_HOST).get_default_database()
     batch_size = 500
     while True:
         batch = db.fichiers.find({'_async_process': 'tadaridaC'}, limit=batch_size)
@@ -309,7 +309,7 @@ def tadaridaC_batch():
 
 @celery_app.keep_alive_task
 def tadaridaC_batch_watcher():
-    db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+    db = MongoClient(host=settings.MONGO_HOST).get_default_database()
     batch = db.fichiers.find({'_async_process': 'tadaridaC'}, limit=1)
     count = batch.count()
     if count:

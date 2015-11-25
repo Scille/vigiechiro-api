@@ -53,20 +53,7 @@ REDIS_PORT = environ.get('REDIS_PORT', 6379)
 REDIS_HOST = environ.get('REDIS_HOST', 'localhost')
 
 ### MongoDB ###
-MONGO_HOST = environ.get('MONGO_HOST', 'localhost')
-MONGO_PORT = int(environ.get('MONGO_PORT', 27017))
-MONGO_USERNAME = environ.get('MONGO_USERNAME', '')
-MONGO_PASSWORD = environ.get('MONGO_PASSWORD', '')
-MONGO_DBNAME = environ.get('MONGO_DBNAME', 'vigiechiro')
-def get_mongo_uri():
-    basepart = "{host}:{port}/{database}".format(
-        host=MONGO_HOST, port=MONGO_PORT, database=MONGO_DBNAME)
-    if not MONGO_USERNAME:
-        return 'mongodb://' + basepart
-    else:
-        return "mongodb://{username}:{password}@{basepart}".format(
-            username=quote(MONGO_USERNAME), password=quote(MONGO_PASSWORD),
-            basepart=basepart)
+MONGO_HOST = MONGO_URI = environ.get('MONGO_HOST', 'mongodb://localhost:27017/vigiechiro')
 
 ### CORS ###
 X_DOMAINS = FRONTEND_DOMAIN
@@ -95,7 +82,7 @@ AWS_ACCESS_KEY_ID = environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = environ.get('AWS_SECRET_ACCESS_KEY', '')
 
 ### Celery broker ###
-CELERY_BROKER_URL = environ.get('CELERY_BROKER_URL', get_mongo_uri())
+CELERY_BROKER_URL = environ.get('CELERY_BROKER_URL', MONGO_HOST)
 HIREFIRE_TOKEN = environ.get('HIREFIRE_TOKEN', 'development')
 
 

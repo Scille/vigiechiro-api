@@ -1,5 +1,4 @@
 import requests
-import base64
 import random
 import string
 import pytest
@@ -15,8 +14,7 @@ from wsgiref.handlers import format_date_time
 from time import mktime
 
 
-db = MongoClient(settings.MONGO_HOST, settings.MONGO_PORT)[
-    settings.MONGO_DBNAME]
+db = MongoClient(host=settings.MONGO_HOST).get_default_database()
 
 
 def format_datetime(dt):

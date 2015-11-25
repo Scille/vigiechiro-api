@@ -14,7 +14,7 @@ AUTH = (settings.SCRIPT_WORKER_TOKEN, None)
 # To save complexity, just hack into the database the only needed
 # informations (i.e. the fichier and donnee) instead of creating an
 # observateur, join a protocole, then create a site, etc...
-db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+db = MongoClient(host=settings.MONGO_HOST).get_default_database()
 
 
 @pytest.fixture

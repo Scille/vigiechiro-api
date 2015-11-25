@@ -96,7 +96,7 @@ class ProcessItem:
 
 @celery_app.keep_alive_task
 def run_tadarida_d():
-    db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+    db = MongoClient(host=settings.MONGO_HOST).get_default_database()
     ProcessItem.DB = db
     while True: 
         wdir_path = _create_working_dir(['waves'])
@@ -128,7 +128,7 @@ def run_tadarida_d():
 
 @celery_app.keep_alive_task
 def run_tadarida_c():
-    db = MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+    db = MongoClient(host=settings.MONGO_HOST).get_default_database()
     ProcessItem.DB = db
     while True:
         wdir_path = _create_working_dir(['tas'])

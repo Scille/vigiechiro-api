@@ -23,11 +23,11 @@ COLLECTIONS = [
     'configuration'
 ]
 
-db = pymongo.MongoClient(host=settings.get_mongo_uri())[settings.MONGO_DBNAME]
+db = pymongo.MongoClient(host=settings.MONGO_HOST).get_default_database()
 
 
 def clean_db():
-    db.connection.drop_database(settings.MONGO_DBNAME)
+    db.connection.drop_database(db.name)
 
 
 def create_indexes():
@@ -76,9 +76,8 @@ def insert_default_documents():
         })
 
 def main():
-    db_name = '{}:{}/{}'.format(settings.MONGO_HOST, settings.MONGO_PORT, settings.MONGO_DBNAME)
     print('You are about to fully ERASE the database {green}{name}{endc}'.format(
-        green='\033[92m', name=db_name, endc='\033[0m'))
+        green='\033[92m', name=settings.MONGO_HOST, endc='\033[0m'))
     print('To continue, type YES')
     if input() != 'YES':
         raise SystemExit('You changed your mind, exiting...')
