@@ -73,5 +73,3 @@ Configurer heroku pour utiliser le multi buildpack (python/r)
 ```
 heroku buildpacks:set https://github.com/ddollar/heroku-buildpack-multi.git\#331b02 -a vigiechiro
 ```
-
-
