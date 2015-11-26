@@ -268,9 +268,10 @@ def create_participation(site_id):
 
 def _check_edit_access(participation_resource):
     # Only owner and admin can edit
-    p_obs = participation_resource['observateur']['_id'] or participation_resource['observateur']
-    if (g.request_user['role'] != 'Administrateur' and
-        g.request_user['_id'] != p_obs):
+    p_obs = participation_resource['observateur']
+    if isinstance(p_obs, dict):
+        p_obs = p_obs['_id']
+    if g.request_user['role'] != 'Administrateur' and g.request_user['_id'] != p_obs:
         abort(403)
 
 
@@ -312,7 +313,7 @@ def add_pieces_jointes(participation_id):
         fields={'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     _check_edit_access(participation_resource)
     errors = {}
-    pjs_ids_str =  get_payload({'pieces_jointes': True})['pieces_jointes']
+    pjs_ids_str = get_payload({'pieces_jointes': True})['pieces_jointes']
     pjs_ids = []
     for pj_id_str in pjs_ids_str:
         pj_id = parse_id(pj_id_str)
