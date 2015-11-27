@@ -28,7 +28,7 @@ def validate_donnee_name(name):
     if ext not in allow_extensions:
         return None
     # See rules: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893805
-    if re.match(r'^Cir.+-[0-9]{4}-Pass[0-9]{1,2}-Tron[0-9]{1,2}-Chiro_[01]_[0-9]+_000$', basename):
+    if re.match(r'^Cir.+-[0-9]{4}-Pass[0-9]{1,2}-Tron[0-9]{1,2}-Chiro_[01]_[0-9]+_[0-9]{3}$', basename):
         # Protocole "routier" or "pedestre"
         pass_ = int(re.search(r'-Pass([0-9]{1,2})-', basename).group(1))
         if pass_ > 10 or pass_ == 0:
