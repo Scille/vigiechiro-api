@@ -334,7 +334,7 @@ def add_pieces_jointes(participation_id):
             notify_mail=g.request_user['email'],
             notify_msg=_build_participation_notify_msg(participation_resource))
     participations.update(participation_id,
-        payload={'traitement': {'etat': 'PLANIFIE'}})
+        payload={'traitement': {'etat': 'PLANIFIE', 'date_planification': datetime.utcnow()}})
     return {}, 200
 
 
