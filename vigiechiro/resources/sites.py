@@ -253,8 +253,8 @@ def _check_edit_acess(site_resource):
 def edit_site(site_id):
     site_resource = sites.get_resource(site_id)
     _check_edit_acess(site_resource)
-    payload = get_payload({'commentaire', 'observateur', 'verrouille', 'tracet'})
-    if (('observateur' in payload or 'verrouille' in payload)
+    payload = get_payload({'commentaire', 'observateur', 'verrouille', 'tracet', 'titre'})
+    if (('observateur' in payload or 'verrouille' in payload or 'titre' in payload)
         and g.request_user['role'] != 'Administrateur'):
         abort(403)
     check_configuration_participation(payload)
@@ -277,7 +277,19 @@ def get_resume_list():
 def add_localite(site_id):
     payload = get_payload({'localites': True})
     site_resource = sites.get_resource(site_id)
-    _check_edit_acess(site_resource)
+    is_owner = site_resource['observateur'] == g.request_user['_id']
+    if g.request_user['role'] != 'Administrateur':
+        if is_owner and site_resource.get('verrouille', False):
+            abort(403)
+        elif not is_owner:
+            valid = False
+            for protocole in g.request_user['protocoles'] or []:
+                if protocole['protocole'] == site_resource['protocole']:
+                    if protocole['valide']:
+                        valid = True
+                    break
+            if not valid:
+                abort(403)
     # payload = {'localites': [get_payload({'nom': True, 'coordonnee': False,
     #     'geometries': False, 'representatif': False})]}
     mongo_update = {'$push': {'localites': {'$each': payload['localites']}}}
