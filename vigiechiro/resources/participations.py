@@ -77,6 +77,7 @@ SCHEMA = {
         'type': 'dict',
         'schema': {
             'etat': choice(['PLANIFIE', 'EN_COURS', 'FINI', 'ERREUR']),
+            'date_planification': {'type': 'datetime'},
             'date_debut': {'type': 'datetime'},
             'date_fin': {'type': 'datetime'}
         }
@@ -226,17 +227,20 @@ def participation_trigger_compute(participation_id):
                 'messages': False, 'logs': False, 'bilan': False})
     traitement = participation_resource.get('traitement', {})
     status = traitement.get('etat')
-    date_debut = traitement.get('date_debut')
     # Skip if date_debut is older than one day
-    if status == 'PLANIFIE' or (status == 'EN_COURS' and
-            (datetime.utcnow() - date_debut.replace(tzinfo=None)).days < 1):
-        abort(400, {'etat': 'Already %s' % status})
+    if status in ('EN_COURS', 'PLANIFIE'):
+        date_debut = traitement.get('date_debut')
+        date_planif = traitement.get('date_planification')
+        now = datetime.utcnow()
+        if ((date_debut and now - date_debut.replace(tzinfo=None)).days < 1) or
+            (date_planif and now - date_planif.replace(tzinfo=None)).days < 1):
+            abort(400, {'etat': 'Already %s' % status})
     process_participation.delay(participation_id,
         publique=participation_resource['observateur'].get('donnees_publiques', False),
         notify_mail=g.request_user['email'],
         notify_msg=_build_participation_notify_msg(participation_resource))
     participations.update(participation_id,
-        payload={'traitement': {'etat': 'PLANIFIE'}})
+        payload={'traitement': {'etat': 'PLANIFIE', 'date_planification': datetime.utcnow()}})
     return {}, 200
 
 
