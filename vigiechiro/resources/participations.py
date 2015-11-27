@@ -232,8 +232,8 @@ def participation_trigger_compute(participation_id):
         date_debut = traitement.get('date_debut')
         date_planif = traitement.get('date_planification')
         now = datetime.utcnow()
-        if ((date_debut and now - date_debut.replace(tzinfo=None)).days < 1) or
-            (date_planif and now - date_planif.replace(tzinfo=None)).days < 1):
+        if (((date_debut and now - date_debut.replace(tzinfo=None)).days < 1) or
+                ((date_planif and now - date_planif.replace(tzinfo=None)).days < 1)):
             abort(400, {'etat': 'Already %s' % status})
     process_participation.delay(participation_id,
         publique=participation_resource['observateur'].get('donnees_publiques', False),
