@@ -32,6 +32,7 @@ from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_P
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
                                   delete_fichier_and_s3, get_file_from_s3)
 
+
 DOWNLOAD_POOL_SIZE = 10
 
 
@@ -54,7 +55,7 @@ class ProxyLogger:
 logger = ProxyLogger()
 
 
-MIN_PROBA_TAXON = 0.05
+MIN_PROBA_TAXON = 0.20
 TADARIDA_C = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaC'
 TADARIDA_D = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD'
 ORDER_NAMES = [('Chiroptera', 'chiropteres'), ('Orthoptera', 'orthopteres')]
@@ -389,8 +390,8 @@ class Donnee:
                         obs['temps_debut'] = float(cell)
                     elif head == 'TFin':
                         obs['temps_fin'] = float(cell)
-                    elif float(cell) > MIN_PROBA_TAXON:
-                        # Intersting taxo
+                    elif float(cell) >= MIN_PROBA_TAXON:
+                        # Interesting taxon
                         taxon_data = _get_taxon(head)
                         if not taxon_data:
                             logger.warning("Taxon `%s` doesn't exists" % head)
@@ -437,7 +438,10 @@ class Donnee:
                          participation_id=participation_id,
                          proprietaire_id=proprietaire_id)
 
+
 class ParticipationError(Exception): pass
+
+
 class Participation:
 
     def __init__(self, participation_id, pjs_ids, publique):

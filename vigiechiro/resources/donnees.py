@@ -174,7 +174,7 @@ def list_participation_donnees(participation_id):
         lookup['$or'] = [{'publique': True}, {'proprietaire': g.request_user['_id']}]
     if 'titre' in request.args:
         lookup.update({'titre': request.args['titre']})
-    observations = {'observations' : {'$elemMatch': {}}}
+    observations = {'observations': {'$elemMatch': {}}}
     if 'tadarida_taxon' in request.args:
         observations['observations']['$elemMatch'].update({'tadarida_taxon': ObjectId(request.args['tadarida_taxon'])})
         lookup.update(observations)
