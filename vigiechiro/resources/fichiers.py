@@ -53,7 +53,7 @@ SCHEMA = {
     'mime': {'type': 'string', 'postonly': True, 'required': True},
     'proprietaire': relation('utilisateurs', postonly=True, required=True),
     'disponible': {'type': 'boolean'},
-    's3_id': {'type': 'string', 'postonly': True},
+    's3_id': {'type': 'string', 'postonly': True, 'unique': True},
     's3_upload_multipart_id': {'type': 'string', 'postonly': True},
     'lien_protocole': relation('protocoles'),
     'lien_donnee': relation('donnees', validator=_validate_donnee),
@@ -214,8 +214,6 @@ def fichier_create():
         'mime': mime,
         'proprietaire': proprietaire,
         'disponible': False,
-        # Add uuid to make sure the file name is unique
-        's3_id': path + titre + '.' + uuid.uuid4().hex,
     }
     if async_process:
         payload['_async_process'] = async_process
@@ -223,6 +221,9 @@ def fichier_create():
         payload['lien_donnee'] = lien_donnee
     if lien_participation:
         payload['lien_participation'] = lien_participation
+        payload['s3_id'] = "%s/pa%s/%s" % (path, lien_participation, titre)
+    else:
+        payload['s3_id'] = "%s/%s" % (path, titre)
     if lien_protocole:
         payload['lien_protocole'] = lien_protocole
     if multipart:
