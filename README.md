@@ -45,6 +45,7 @@ pip install -r dev-requirements.txt
 ## Tests
 
 ```
+DEV_FAKE_S3_URL=http://localhost:8000 DEV_FAKE_AUTH=true ./runserver.py&
 py.test tests
 ```
 
