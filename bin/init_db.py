@@ -24,6 +24,7 @@ COLLECTIONS = [
     'configuration'
 ]
 
+
 db = pymongo.MongoClient(host=settings.MONGO_HOST).get_default_database()
 
 
@@ -58,8 +59,12 @@ def ensure_indexes():
     db.sites.ensure_index([('protocole', 1)])
     db.actualites.ensure_index([('_updated', -1)])
     db.fichiers.ensure_index([('titre', 1), ('mime', 1)])
+    db.fichiers.ensure_index([('s3_id', 1)])
+    db.fichiers.ensure_index([("lien_participation", 1) , ("mime", 1)])
     db.donnees.ensure_index([('proprietaire', 1), ('publique', 1)])
     db.donnees.ensure_index([('participation', 1), ('titre', 1)])
+    db.donnees.ensure_index([("observations.tadarida_taxon", 1) , ("observations.tadarida_probabilite", 1), ("_created", 1)])
+    db.donnees.ensure_index([("observations.tadarida_taxon", 1) , ("participation" , 1)])
     db.queuer.ensure_index([('status', 1)])
     db.queuer.ensure_index([('submitted', 1)])
 
