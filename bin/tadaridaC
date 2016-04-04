@@ -1,5 +1,10 @@
 #! /bin/sh
 
+if [ -z "$RSCRIPT" ]
+then
+    RSCRIPT=Rscript
+fi
+
 if [ -z "$TADARIDAC_DIR" ]
 then
     TADARIDAC_DIR=`dirname $0`/tadaridaC_src
@@ -36,4 +41,4 @@ then
 fi
 
 # Finally start tadaridaC R script
-cd $TADARIDAC_DIR && Rscript ./TadaridaC.r $INPUT_FILE
+cd $TADARIDAC_DIR && $RSCRIPT ./TadaridaC.r $INPUT_FILE
