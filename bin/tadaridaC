@@ -1,7 +1,14 @@
 #! /bin/sh
 
-TADARIDAC_DIR=`dirname $0`/tadaridaC_src
-TADARIDAC_LEARNER_NAME=$TADARIDAC_DIR/ClassifEspHF3.learner
+if [ -z "$TADARIDAC_DIR" ]
+then
+    TADARIDAC_DIR=`dirname $0`/tadaridaC_src
+fi
+if [ -z "$TADARIDAC_LEARNER_NAME" ]
+then
+    TADARIDAC_LEARNER_NAME=ClassifEspHF3.learner
+fi
+TADARIDAC_LEARNER_PATH=$TADARIDAC_DIR/$TADARIDAC_LEARNER_NAME
 
 if ( [ "$TADARIDAC_LEARNER_URL" = "" ] )
 then
@@ -22,10 +29,10 @@ else
 fi
 
 
-if ( ! [ -f $TADARIDAC_LEARNER_NAME ] )
+if ( ! [ -f $TADARIDAC_LEARNER_PATH ] )
 then
     echo 'Retrieving tadaridaC learner'
-    wget $TADARIDAC_LEARNER_URL -O $TADARIDAC_LEARNER_NAME -nv
+    wget $TADARIDAC_LEARNER_URL -O $TADARIDAC_LEARNER_PATH -nv
 fi
 
 # Finally start tadaridaC R script
