@@ -243,9 +243,9 @@ def fichier_create():
         payload['lien_donnee'] = lien_donnee
     if lien_participation:
         payload['lien_participation'] = lien_participation
-        payload['s3_id'] = "%s/pa%s/%s" % (path, lien_participation, titre)
+        payload['s3_id'] = "%spa%s/%s" % (path, lien_participation, titre)
     else:
-        payload['s3_id'] = "%s/%s" % (path, titre)
+        payload['s3_id'] = "%s%s" % (path, titre)
     if lien_protocole:
         payload['lien_protocole'] = lien_protocole
     if multipart:
