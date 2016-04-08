@@ -15,6 +15,7 @@ from . import resources
 
 from .xin.auth import auth_factory
 from .xin.tools import ObjectIdConverter
+from .xin.cors import add_cors_headers_factory
 from .scripts.celery import celery_app
 
 
@@ -31,6 +32,8 @@ def make_json_app(app):
 
     { "message": "405: Method Not Allowed" }
     """
+    add_cors_headers = add_cors_headers_factory()
+
     def make_json_error(ex):
         # TODO : make this cleaner
         payload = {'_status': str(ex)}
@@ -38,7 +41,9 @@ def make_json_app(app):
             payload['_errors'] = ex.description
         response = jsonify(**payload)
         response.status_code = (ex.code if isinstance(ex, HTTPException) else 500)
-        return response
+        # Don't forget to add CORS headers !
+        return add_cors_headers(response)
+
     for code in default_exceptions.keys():
         app.error_handler_spec[None][code] = make_json_error
 
