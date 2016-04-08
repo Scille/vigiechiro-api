@@ -28,13 +28,13 @@ def add_cors_headers_factory(origin=None, methods=None, headers=None, max_age=21
             if methods != None:
                 return methods
             options_resp = current_app.make_default_options_response()
-            return options_resp.headers['allow']
+            return options_resp.headers.get('allow')
 
     def add_cors_headers(resp):
         h = resp.headers
         h['Access-Control-Allow-Credentials'] = 'true'
         h['Access-Control-Allow-Origin'] = origin
-        h['Access-Control-Allow-Methods'] = get_methods()
+        h['Access-Control-Allow-Methods'] = get_methods() or request.method
         h['Access-Control-Max-Age'] = str(max_age)
         if headers is not None:
             h['Access-Control-Allow-Headers'] = headers
