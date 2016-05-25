@@ -13,6 +13,8 @@
 """
 
 import base64
+import json
+import datetime
 import urllib
 import time
 import logging
@@ -154,9 +156,23 @@ def _sign_request(**kwargs):
         'params': params,
         'signed_url': (s3_url + cooked_sign_head + flat_params +
             'AWSAccessKeyId={}&Expires={}&Signature={}'.format(
-                current_app.config['AWS_ACCESS_KEY_ID'], expires, signature))
+                current_app.config['AWS_ACCESS_KEY_ID'], expires, signature)),
+        'aws_access_key_id': current_app.config['AWS_ACCESS_KEY_ID'],
+        'expires': expires,
+        'signature': signature
     }
     return sign
+
+
+def _aws_sign(to_sign):
+    if not isinstance(to_sign, bytes):
+        to_sign = to_sign.encode('utf8')
+    signature = base64.b64encode(hmac.new(
+            current_app.config['AWS_SECRET_ACCESS_KEY'].encode(),
+            base64.b64encode(to_sign),
+            sha1).digest())
+    return signature.strip().decode()
+    # return urllib.parse.quote_plus(signature.strip())
 
 
 @fichiers.route('/fichiers/<objectid:fichier_id>', methods=['GET'])
@@ -236,15 +252,30 @@ def fichier_create():
 
 
 def _s3_create_singlepart(payload):
-    sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
-                         content_type=payload['mime'])
+    expiration = datetime.datetime.utcnow() + datetime.timedelta(seconds=3600)
+    policy = json.dumps({
+        "expiration": expiration.isoformat() + 'Z',
+        "conditions": [
+            {"acl": "private"},
+            {"key": payload['s3_id']},
+            {"bucket": current_app.config['AWS_S3_BUCKET']}
+        ]
+    })
+    signature = _aws_sign(policy)
+    # sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
+    #                      content_type=payload['mime'])
+
     # Insert the file representation in the files resource
     inserted = fichiers.insert(payload)
-    # signed_request is not stored in the database but transfered once
-    if not settings.DEV_FAKE_S3_URL:
-        inserted['s3_signed_url'] = sign['signed_url']
-    else:
-        inserted['s3_signed_url'] = settings.DEV_FAKE_S3_URL + '/' + payload['s3_id']
+    inserted['s3_policy'] = base64.b64encode(policy.encode('utf8')).decode()
+    inserted['s3_signature'] = signature
+    inserted['s3_aws_access_key_id'] = current_app.config['AWS_ACCESS_KEY_ID']
+
+    # # signed_request is not stored in the database but transfered once
+    # if not settings.DEV_FAKE_S3_URL:
+    #     inserted['s3_signed_url'] = sign['signed_url']
+    # else:
+    #     inserted['s3_signed_url'] = settings.DEV_FAKE_S3_URL + '/' + payload['s3_id']
     return inserted, 201
 
 
@@ -253,6 +284,10 @@ def _s3_create_multipart(payload):
     amz_headers['Content-Type'] = payload['mime']
     sign = _sign_request(verb='POST', object_name=payload['s3_id'],
                          content_type=payload['mime'], sign_head='uploads')
+    # TODO
+    # inserted['s3_aws_access_key_id'] = sign['aws_access_key_id']
+    # inserted['s3_expires'] = sign['expires']
+    # inserted['s3_signature'] = sign['signature']
     # Create the multipart object on s3 using the signed request
     if not settings.DEV_FAKE_S3_URL:
         r = requests.post(sign['signed_url'], headers={'Content-Type': payload.get('mime', '')})
