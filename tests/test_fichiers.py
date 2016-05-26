@@ -66,6 +66,22 @@ def test_singlepart_upload(clean_fichiers, observateur):
     assert r.json()['disponible']
 
 
+def test_multi_register(clean_fichiers, observateur):
+    # First declare the file to get a signed request url
+    for _ in range(3):
+        r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
+        assert r.status_code == 201, r.text
+    response = r.json()
+    assert db.fichiers.find().count() == 1
+    # We should be uploading to S3 here...
+    # Once the upload is done, we have to signify it to the server
+    r = observateur.post('/fichiers/' + response['_id'],
+                         json={'parts': [{'part_number': 1, 'etag': uuid4().hex}]})
+    assert r.status_code == 200, r.text
+    r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
+    assert r.status_code == 422, r.text
+
+
 @pytest.mark.xfail(reason='multipart is no longer supported')
 def test_multipart_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url

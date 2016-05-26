@@ -254,6 +254,8 @@ def fichier_create():
 
 
 def _s3_create_singlepart(payload):
+    # Make sure no older&incomplete file is present
+    fichiers.remove({'s3_id': payload['s3_id'], 'disponible': False})
     # Insert the file representation in the files resource
     inserted = fichiers.insert(payload)
     expiration = datetime.datetime.utcnow() + datetime.timedelta(seconds=3600)
@@ -262,7 +264,8 @@ def _s3_create_singlepart(payload):
         "conditions": [
             {"acl": "private"},
             {"key": payload['s3_id']},
-            {"bucket": current_app.config['AWS_S3_BUCKET']}
+            {"bucket": current_app.config['AWS_S3_BUCKET']},
+            {"Content-Encoding": "gzip"}
         ]
     })
     inserted['s3_policy'] = base64.b64encode(policy.encode('utf8')).decode()
