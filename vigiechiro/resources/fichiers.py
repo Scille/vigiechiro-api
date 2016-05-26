@@ -251,18 +251,26 @@ def fichier_create():
 
 
 def _s3_create_singlepart(payload):
-    expiration = datetime.datetime.utcnow() + datetime.timedelta(seconds=3600)
-    policy = json.dumps({
-        "expiration": expiration.isoformat() + 'Z',
-        "conditions": [
-            {"acl": "private"},
-            {"key": payload['s3_id']},
-            {"bucket": current_app.config['AWS_S3_BUCKET']}
-        ]
-    })
-    signature = _aws_sign(policy)
     # Insert the file representation in the files resource
     inserted = fichiers.insert(payload)
+    if settings.DEV_FAKE_S3_URL:
+        signed_url = settings.DEV_FAKE_S3_URL + '/' + payload['s3_id']
+        policy = 'dummy'
+        signature = 'dummy'
+    else:
+        signed_url = _sign_request(verb='PUT', object_name=payload['s3_id'],
+                                   content_type=payload['mime'])['signed_url']
+        expiration = datetime.datetime.utcnow() + datetime.timedelta(seconds=3600)
+        policy = json.dumps({
+            "expiration": expiration.isoformat() + 'Z',
+            "conditions": [
+                {"acl": "private"},
+                {"key": payload['s3_id']},
+                {"bucket": current_app.config['AWS_S3_BUCKET']}
+            ]
+        })
+        signature = _aws_sign(policy)
+        s3_signed_url = _sign_request
     inserted['s3_policy'] = base64.b64encode(policy.encode('utf8')).decode()
     inserted['s3_signature'] = signature
     inserted['s3_aws_access_key_id'] = current_app.config['AWS_ACCESS_KEY_ID']
