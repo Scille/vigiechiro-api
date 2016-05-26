@@ -66,6 +66,7 @@ def test_singlepart_upload(clean_fichiers, observateur):
     assert r.json()['disponible']
 
 
+@pytest.mark.xfail(reason='multipart is no longer supported')
 def test_multipart_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url
     r = observateur.post('/fichiers',
