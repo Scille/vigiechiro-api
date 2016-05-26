@@ -156,10 +156,7 @@ def _sign_request(**kwargs):
         'params': params,
         'signed_url': (s3_url + cooked_sign_head + flat_params +
             'AWSAccessKeyId={}&Expires={}&Signature={}'.format(
-                current_app.config['AWS_ACCESS_KEY_ID'], expires, signature)),
-        'aws_access_key_id': current_app.config['AWS_ACCESS_KEY_ID'],
-        'expires': expires,
-        'signature': signature
+                current_app.config['AWS_ACCESS_KEY_ID'], expires, signature))
     }
     return sign
 
@@ -172,7 +169,6 @@ def _aws_sign(to_sign):
             base64.b64encode(to_sign),
             sha1).digest())
     return signature.strip().decode()
-    # return urllib.parse.quote_plus(signature.strip())
 
 
 @fichiers.route('/fichiers/<objectid:fichier_id>', methods=['GET'])
@@ -243,9 +239,12 @@ def fichier_create():
     if lien_protocole:
         payload['lien_protocole'] = lien_protocole
     if multipart:
-        result = _s3_create_multipart(payload)
+        abort(422, {'errors': {'multipart': 'Multipart upload not supported'}})
     else:
         result = _s3_create_singlepart(payload)
+        sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
+                             content_type=payload['mime'])
+        result[0]['s3_signed_url'] = sign['signed_url']
     if delay_work:
         delay_work(result[0]['_id'])
     return result
@@ -262,43 +261,11 @@ def _s3_create_singlepart(payload):
         ]
     })
     signature = _aws_sign(policy)
-    # sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
-    #                      content_type=payload['mime'])
-
     # Insert the file representation in the files resource
     inserted = fichiers.insert(payload)
     inserted['s3_policy'] = base64.b64encode(policy.encode('utf8')).decode()
     inserted['s3_signature'] = signature
     inserted['s3_aws_access_key_id'] = current_app.config['AWS_ACCESS_KEY_ID']
-
-    # # signed_request is not stored in the database but transfered once
-    # if not settings.DEV_FAKE_S3_URL:
-    #     inserted['s3_signed_url'] = sign['signed_url']
-    # else:
-    #     inserted['s3_signed_url'] = settings.DEV_FAKE_S3_URL + '/' + payload['s3_id']
-    return inserted, 201
-
-
-def _s3_create_multipart(payload):
-    amz_headers = {'x-amz-meta-title': payload['titre']}
-    amz_headers['Content-Type'] = payload['mime']
-    sign = _sign_request(verb='POST', object_name=payload['s3_id'],
-                         content_type=payload['mime'], sign_head='uploads')
-    # TODO
-    # inserted['s3_aws_access_key_id'] = sign['aws_access_key_id']
-    # inserted['s3_expires'] = sign['expires']
-    # inserted['s3_signature'] = sign['signature']
-    # Create the multipart object on s3 using the signed request
-    if not settings.DEV_FAKE_S3_URL:
-        r = requests.post(sign['signed_url'], headers={'Content-Type': payload.get('mime', '')})
-        if r.status_code != 200:
-            logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
-            abort(500, 'S3 has rejected file creation request')
-        # Why AWS doesn't provide a JSON api ???
-        payload['s3_upload_multipart_id'] = re.search('<UploadId>(.+)</UploadId>', r.text).group(1)
-    else:
-        payload['s3_upload_multipart_id'] = uuid.uuid4().hex
-    inserted = fichiers.insert(payload)
     return inserted, 201
 
 
