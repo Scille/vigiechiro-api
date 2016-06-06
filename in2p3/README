@@ -1,0 +1,16 @@
+Intégration avec le cloud in2p3
+===============================
+
+
+0 - Copier le répertoire sur le cloud in2p3
+1 - Configurer le fichier `init.env`
+2 - Cloner le projet vigiechiro-api dans le répertoire `vigiechiro-api`
+3 - lancer la tâche daemon:
+```
+$ . ./init.env
+$ qsub qsub_check_queue.sh
+```
+
+
+note: Les fichiers `qsub_check_queue.sh` et `qsub_worker.sh` sont généré à partir
+du répertoire `qsub_templates` à chaque fois que `init.env` est sourcé.

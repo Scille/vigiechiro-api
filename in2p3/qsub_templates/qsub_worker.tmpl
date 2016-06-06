@@ -1,0 +1,16 @@
+#!/bin/bash
+
+. {vigiechiro_dir}/init.env
+
+### Name with env
+#$ -N qsub_worker-{env_name}
+
+### Merge stdout et stderr in a single file
+#$ -j y
+
+## vmem is per core
+#$ -l vmem=2G
+#$ -l fsize=20G
+#$ -pe multicores 8 -q mc_long
+
+{vigiechiro_dir}/vigiechiro-api/bin/celery.sh

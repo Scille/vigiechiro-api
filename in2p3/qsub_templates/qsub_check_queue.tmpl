@@ -1,0 +1,26 @@
+#!/bin/bash
+
+. {vigiechiro_dir}/init.env
+
+### Name with env
+#$ -N qsub_check_queue-{env_name}
+
+### Merge stdout et stderr in a single file
+#$ -j y
+
+### Start as daemon
+#$ -q demon -l demon=1
+
+# Run the script for 60 * 600 == 10 hours
+for i in `seq 600`
+do
+    printf "[$(date)] "
+    python {vigiechiro_dir}/check_queue.py -t
+    sleep 60
+done
+
+# Then reload itself to prevent beeing killed by quotas
+# note: Couldn't use $(readlink -f $0) given qsub copy the
+# script in a temp folder before running it
+echo "[$(date)] restarting daemon"
+qsub {vigiechiro_dir}/qsub_check_queue.sh
