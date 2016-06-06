@@ -93,8 +93,8 @@ def init_app():
     make_json_app(app)
     # Init hirefire
     worker_proc = CeleryProc(name='worker', queues=['celery'], app=celery_app)
-    app.register_blueprint(build_hirefire_blueprint(settings.HIREFIRE_TOKEN,
-                                                    [worker_proc]))
+    app.register_blueprint(build_hirefire_blueprint(settings.HIREFIRE_TOKEN, [worker_proc]),
+                           url_prefix=url_prefix)
     # Init Flask-Mail
     app.mail = Mail(app)
     return app
