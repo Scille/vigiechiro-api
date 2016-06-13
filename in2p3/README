@@ -14,5 +14,5 @@ $ qsub qsub_check_queue.sh
 ```
 
 
-note: Les fichiers `qsub_check_queue.sh` et `qsub_worker.sh` sont généré à partir
-du répertoire `qsub_templates` à chaque fois que `init.env` est sourcé.
+note: Les fichiers `qsub_check_queue.sh` et `qsub_worker.sh` sont générés à
+partir du répertoire `qsub_templates` à chaque fois que `init.env` est sourcé.

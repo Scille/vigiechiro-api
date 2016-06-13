@@ -7,7 +7,7 @@ from subprocess import call
 import requests
 
 
-QSUB_JOB_NAME = 'qsub_worker-%s' % environ['VIGIECHIRO_ENV_NAME']
+QSUB_JOB_NAME = 'w-%s' % environ['VIGIECHIRO_ENV_NAME']
 QSUB_WORKER_SCRIPT = environ['VIGIECHIRO_DIR'] + '/qsub_worker.sh'
 
 
