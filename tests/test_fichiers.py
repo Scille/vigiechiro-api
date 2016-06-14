@@ -2,8 +2,12 @@ import requests
 from pymongo import MongoClient
 import pytest
 from uuid import uuid4
+from datetime import datetime
 
-from .common import db, administrateur, validateur, observateur, observateur_other
+from .common import db, administrateur, validateur, observateur, observateur_other, format_datetime
+from .test_sites import obs_sites_base
+from .test_protocoles import protocoles_base
+from .test_taxons import taxons_base
 from vigiechiro import settings
 from vigiechiro.resources import fichiers as fichiers_resource
 
@@ -62,6 +66,23 @@ def test_singlepart_upload(clean_fichiers, observateur):
     assert r.json()['disponible']
 
 
+def test_multi_register(clean_fichiers, observateur):
+    # First declare the file to get a signed request url
+    for _ in range(3):
+        r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
+        assert r.status_code == 201, r.text
+    response = r.json()
+    assert db.fichiers.find().count() == 1
+    # We should be uploading to S3 here...
+    # Once the upload is done, we have to signify it to the server
+    r = observateur.post('/fichiers/' + response['_id'],
+                         json={'parts': [{'part_number': 1, 'etag': uuid4().hex}]})
+    assert r.status_code == 200, r.text
+    r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
+    assert r.status_code == 422, r.text
+
+
+@pytest.mark.xfail(reason='multipart is no longer supported')
 def test_multipart_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url
     r = observateur.post('/fichiers',
@@ -144,3 +165,44 @@ def test_not_loggedin(file_uploaded):
         settings.BACKEND_DOMAIN, file_uploaded['_id'])
     r = requests.get(url_s3_access)
     assert r.status_code == 401, r.text
+
+
+def test_same_file_name(clean_fichiers, obs_sites_base):
+    observateur, sites = obs_sites_base
+    json_payload = {'titre': 'test', 'mime': 'image/png'}
+    # First declare the file to get a signed request url
+    r = observateur.post('/fichiers', json=json_payload)
+    assert r.status_code == 201, r.text
+    response = r.json()
+    # Try to upload with the same (titre, mime) is not allowed
+    r = observateur.post('/fichiers', json=json_payload)
+    assert r.status_code == 422, r.text
+    # We should be uploading to S3 here...
+    # Once the upload is done, we have to signify it to the server
+    r = observateur.post('/fichiers/' + response['_id'])
+    assert r.status_code == 200, r.text
+    # Still not allowed to upload with the same (titre, mime)
+    r = observateur.post('/fichiers', json=json_payload)
+    assert r.status_code == 422, r.text
+
+    participations_url = '/sites/{}/participations'.format(sites[0]['_id'])
+    r = observateur.post(participations_url,
+                         json={'date_debut': format_datetime(datetime.utcnow())})
+    assert r.status_code == 201, r.text
+    participation1 = r.json()
+    r = observateur.post(participations_url,
+                         json={'date_debut': format_datetime(datetime.utcnow())})
+    assert r.status_code == 201, r.text
+    participation2 = r.json()
+
+    # Same thing within the same participation
+    json_payload = {'titre': 'test2', 'lien_participation': participation1['_id'], 'mime': 'image/png'}
+    r = observateur.post('/fichiers', json=json_payload)
+    assert r.status_code == 201, r.text
+    r = observateur.post('/fichiers', json=json_payload)
+    assert r.status_code == 422, r.text
+
+    # Same name in different participation is allowed
+    json_payload["lien_participation"] = participation2['_id']
+    r = observateur.post('/fichiers', json=json_payload)
+    assert r.status_code == 201, r.text

@@ -220,11 +220,12 @@ Vigiechiro
 
 
 @participations.route('/participations/<objectid:participation_id>/compute', methods=['POST'])
-@requires_auth(roles='Administrateur')
+@requires_auth(roles='Observateur')
 def participation_trigger_compute(participation_id):
     participation_resource = participations.find_one(participation_id,
         fields={'protocole': False,
                 'messages': False, 'logs': False, 'bilan': False})
+    _check_edit_access(participation_resource)
     traitement = participation_resource.get('traitement', {})
     status = traitement.get('etat')
     # Skip if date_debut is older than one day
