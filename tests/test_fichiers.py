@@ -66,22 +66,6 @@ def test_singlepart_upload(clean_fichiers, observateur):
     assert r.json()['disponible']
 
 
-def test_multi_register(clean_fichiers, observateur):
-    # First declare the file to get a signed request url
-    for _ in range(3):
-        r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
-        assert r.status_code == 201, r.text
-    response = r.json()
-    assert db.fichiers.find().count() == 1
-    # We should be uploading to S3 here...
-    # Once the upload is done, we have to signify it to the server
-    r = observateur.post('/fichiers/' + response['_id'],
-                         json={'parts': [{'part_number': 1, 'etag': uuid4().hex}]})
-    assert r.status_code == 200, r.text
-    r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
-    assert r.status_code == 422, r.text
-
-
 @pytest.mark.xfail(reason='multipart is no longer supported')
 def test_multipart_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url
@@ -167,24 +151,26 @@ def test_not_loggedin(file_uploaded):
     assert r.status_code == 401, r.text
 
 
-def test_same_file_name(clean_fichiers, obs_sites_base):
-    observateur, sites = obs_sites_base
+def test_same_file_name(clean_fichiers, observateur):
     json_payload = {'titre': 'test', 'mime': 'image/png'}
     # First declare the file to get a signed request url
     r = observateur.post('/fichiers', json=json_payload)
     assert r.status_code == 201, r.text
-    response = r.json()
-    # Try to upload with the same (titre, mime) is not allowed
+    # As long as the file is not on S3, we can re-declare it
     r = observateur.post('/fichiers', json=json_payload)
-    assert r.status_code == 422, r.text
+    assert r.status_code == 201, r.text
+    assert db.fichiers.find().count() == 1
+    response = r.json()
     # We should be uploading to S3 here...
     # Once the upload is done, we have to signify it to the server
     r = observateur.post('/fichiers/' + response['_id'])
     assert r.status_code == 200, r.text
-    # Still not allowed to upload with the same (titre, mime)
+    # Now we're no more allowed to upload with the same (titre, mime)
     r = observateur.post('/fichiers', json=json_payload)
     assert r.status_code == 422, r.text
 
+def test_same_file_name_in_participations(clean_fichiers, obs_sites_base):
+    observateur, sites = obs_sites_base
     participations_url = '/sites/{}/participations'.format(sites[0]['_id'])
     r = observateur.post(participations_url,
                          json={'date_debut': format_datetime(datetime.utcnow())})
@@ -199,10 +185,17 @@ def test_same_file_name(clean_fichiers, obs_sites_base):
     json_payload = {'titre': 'test2', 'lien_participation': participation1['_id'], 'mime': 'image/png'}
     r = observateur.post('/fichiers', json=json_payload)
     assert r.status_code == 201, r.text
+    r_id = r.json()['_id']
+    # We should be uploading to S3 here...
+    # Once the upload is done, we have to signify it to the server
+    r = observateur.post('/fichiers/' + r_id)
+    assert r.status_code == 200, r.text
+    # Cannot register the same name in the same participation
     r = observateur.post('/fichiers', json=json_payload)
     assert r.status_code == 422, r.text
 
-    # Same name in different participation is allowed
+    # However, same name in different participation is allowed
     json_payload["lien_participation"] = participation2['_id']
     r = observateur.post('/fichiers', json=json_payload)
     assert r.status_code == 201, r.text
+    assert db.fichiers.find().count() == 2
