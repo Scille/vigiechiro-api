@@ -14,5 +14,10 @@ $ qsub qsub_check_queue.sh
 ```
 
 
+La tâche `qsub_check_queue` va interroger la queue de messages dans la base de
+données toutes les minutes.
+Si la queue de message contient des messages, une tâche `qsub_worker` est lancée.
+Cette dernière extrait un seul message, l'exécute, puis se ferme.
+
 note: Les fichiers `qsub_check_queue.sh` et `qsub_worker.sh` sont générés à
 partir du répertoire `qsub_templates` à chaque fois que `init.env` est sourcé.

@@ -14,8 +14,14 @@
 # Run the script for 60 * 600 == 10 hours
 for i in `seq 600`
 do
-    printf "[$(date)] "
-    python {vigiechiro_dir}/check_queue.py -t -c $QSUB_WORKER_CONCURRENCY
+    PENDINGS=`python {vigiechiro_dir}/vigiechiro-api/bin/queuer.py pendings`
+    if ( [ "$PENDINGS" -ne 0 ] )
+    then
+    	printf "[$(date)] $PENDINGS pending jobs, starting worker"
+    	qsub {vigiechiro_dir}/qsub_worker.sh
+    else
+    	printf "[$(date)] no pending jobs"
+    fi
     sleep 60
 done
 
