@@ -39,18 +39,16 @@ class Queuer:
         return self.collection.find({'status': 'READY'}).sort([('submitted', ASCENDING)])
 
     def execute_next_job(self):
-        task_result = None
-        while not task_result:
+        while True:
             cursor = self.get_pending_jobs()
             if cursor.count() == 0:
                 raise QueuerError('No task to execute')
             else:
                 try:
-                    task_result = self.execute_job(cursor[0]['_id'])
+                    return self.execute_job(cursor[0]['_id'])
                 except QueuerBadTaskError:
                     # Task has been taken by somebody else
                     continue
-        return task_result
 
     def execute_job(self, job_id):
         # First try to reserve the task
