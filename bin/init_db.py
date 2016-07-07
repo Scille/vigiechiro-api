@@ -6,6 +6,7 @@ Reset&configure the bdd for vigiechiro
 
 import pymongo
 from datetime import datetime, timedelta
+from sys import argv
 
 from vigiechiro import settings
 
@@ -31,7 +32,7 @@ def clean_db():
     db.connection.drop_database(db.name)
 
 
-def create_indexes():
+def ensure_indexes():
     db.grille_stoc.ensure_index([('centre', pymongo.GEOSPHERE)])
     db.utilisateurs.ensure_index([
         ('email', pymongo.TEXT),
@@ -62,6 +63,8 @@ def create_indexes():
     db.donnees.ensure_index([("observations.tadarida_taxon", 1) , ("observations.tadarida_probabilite", 1), ("_created", 1)])
     db.donnees.ensure_index([("observations.tadarida_taxon", 1) , ("participation" , 1)])
     db.donnees.ensure_index([("participation", 1)])
+    db.queuer.ensure_index([('status', 1)])
+    db.queuer.ensure_index([('submitted', 1)])
 
 
 def insert_default_documents():
@@ -80,7 +83,7 @@ def insert_default_documents():
         })
 
 
-def main():
+def reset_db():
     print('You are about to fully ERASE the database {green}{name}{endc}'.format(
         green='\033[92m', name=settings.MONGO_HOST, endc='\033[0m'))
     print('To continue, type YES')
@@ -90,10 +93,18 @@ def main():
     clean_db()
     print(' Done !')
     print('Creating indexes...', flush=True, end='')
-    create_indexes()
+    ensure_indexes()
     print(' Done !')
     insert_default_documents()
 
 
 if __name__ == '__main__':
-    main()
+    if len(argv) == 2:
+        if argv[1] == 'reset':
+            reset_db()
+        elif argv[1] == 'ensure_indexes':
+            ensure_indexes()
+        else:
+            print('%s [reset|ensure_indexes]' % argv[0])
+    else:
+        print('%s [reset|ensure_indexes]' % argv[0])

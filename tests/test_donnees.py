@@ -13,6 +13,7 @@ from .test_taxons import taxons_base
 from .test_sites import obs_sites_base
 
 from vigiechiro import settings
+from vigiechiro.app import app as flask_app
 
 
 @pytest.fixture
@@ -276,7 +277,8 @@ def test_delete_site(donnee_env, taxons_base, observateur_other,
     assert db.sites.find({'_id': site['_id']}).count() == 0
     # Test the task finishing the cleanup
     from vigiechiro.scripts.task_deleter import clean_deleted_site
-    clean_deleted_site(site['_id'])
+    with flask_app.app_context():
+        clean_deleted_site(site['_id'])
     assert db.participations.find({'site': site['_id']}).count() == 0
     assert db.donnees.find({'participation': participation['_id']}).count() == 0
     assert db.fichiers.find({'lien_participation': participation['_id']}).count() == 0
@@ -295,7 +297,8 @@ def test_delete_participation(donnee_env, taxons_base, observateur_other,
     assert db.participations.find({'_id': participation['_id']}).count() == 0
     # Test the task finishing the cleanup
     from vigiechiro.scripts.task_deleter import clean_deleted_participation
-    clean_deleted_participation(participation['_id'])
+    with flask_app.app_context():
+        clean_deleted_participation(participation['_id'])
     assert db.donnees.find({'participation': participation['_id']}).count() == 0
     assert db.fichiers.find({'lien_participation': participation['_id']}).count() == 0
     # Cannot delete two times

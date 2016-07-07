@@ -29,7 +29,7 @@ def is_qsub_started():
     return call('qstat -j %s 1>/dev/null' % QSUB_JOB_NAME, shell=True) == 0
 
 
-def f_trigger_qsub(f):
+def f_trigger_qsub(f, concurrency):
 
     def wrapper(*args, **kwargs):
         j = f(*args, **kwargs)
@@ -37,8 +37,9 @@ def f_trigger_qsub(f):
             if is_qsub_started():
                 print('Worker already in place (%s messages in queue)' % j)
             else:
-                print('Trigger qsub (%s jobs in queue)' % j)
-                submit_qsub()
+                print('Submiting %s qsub worker(s) (%s jobs in queue)' % (concurrency, j))
+                for _ in range(concurrency):
+                    submit_qsub()
         elif is_qsub_started():
             print('No more messages in queue, delete qsub job')
             delete_qsub()
@@ -78,12 +79,14 @@ def main():
                         help='Interval in second to do the polling (default: no polling)')
     parser.add_argument('--trigger', '-t', action='store_true',
                         help='Submit/delete the qsub job according to pending messages state (default: false)')
+    parser.add_argument('--concurrency', '-c', type=int, default=1,
+                        help='Number of qsub job to submit to handle the pending messages (default: 1)')
     args = parser.parse_args()
 
     function = get_queue_status
 
     if args.trigger:
-        function = f_trigger_qsub(function)
+        function = f_trigger_qsub(function, args.concurrency)
     else:
         function = f_display(function)
 

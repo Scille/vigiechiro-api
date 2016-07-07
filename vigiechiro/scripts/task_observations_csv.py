@@ -3,7 +3,7 @@ from io import StringIO
 import csv
 from flask.ext.mail import Message
 
-from .celery import celery_app
+from .queuer import task
 
 
 HEADERS = ['nom du fichier',
@@ -53,14 +53,12 @@ def generate_observations_csv(participation_id):
     return bytearray(buff.getvalue().encode('UTF-16LE'))
 
 
-@celery_app.keep_alive_task
+@task
 def email_observations_csv(participation_id, recipients, body=None, subject=None):
-    from ..app import app as flask_app
-    with flask_app.app_context():
-        if not isinstance(recipients, (list, tuple)):
-            recipients = [recipients, ]
-        msg = Message(subject=subject,
-                      recipients=recipients, body=body)
-        msg.attach("participation-%s-observations.csv" % participation_id,
-                   "text/csv", generate_observations_csv(participation_id))
-        flask_app.mail.send(msg)
+    if not isinstance(recipients, (list, tuple)):
+        recipients = [recipients, ]
+    msg = Message(subject=subject,
+                  recipients=recipients, body=body)
+    msg.attach("participation-%s-observations.csv" % participation_id,
+               "text/csv", generate_observations_csv(participation_id))
+    flask_app.mail.send(msg)

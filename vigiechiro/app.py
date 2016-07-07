@@ -16,7 +16,6 @@ from . import resources
 from .xin.auth import auth_factory
 from .xin.tools import ObjectIdConverter
 from .xin.cors import add_cors_headers_factory
-from .scripts.celery import celery_app
 
 
 def make_json_app(app):
@@ -96,10 +95,6 @@ def init_app():
     app.register_blueprint(resources.participations, url_prefix=url_prefix)
     app.register_blueprint(resources.donnees, url_prefix=url_prefix)
     make_json_app(app)
-    # Init hirefire
-    worker_proc = CeleryProc(name='worker', queues=['celery'], app=celery_app)
-    app.register_blueprint(build_hirefire_blueprint(settings.HIREFIRE_TOKEN, [worker_proc]),
-                           url_prefix=url_prefix)
     # Init Flask-Mail
     app.mail = Mail(app)
     return app

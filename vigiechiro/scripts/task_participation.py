@@ -25,12 +25,12 @@ from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
 from flask.ext.mail import Message
 
-from .celery import celery_app
 from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE)
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
                                   delete_fichier_and_s3, get_file_from_s3)
+from .queuer import task
 
 
 DOWNLOAD_POOL_SIZE = 10
@@ -210,7 +210,7 @@ class Bilan:
         return payload
 
 
-@celery_app.keep_alive_task
+@task
 def participation_generate_bilan(participation_id):
     participation_id = str(participation_id)
     bilan = Bilan()
@@ -232,38 +232,38 @@ def participation_generate_bilan(participation_id):
     return 0
 
 
-@celery_app.keep_alive_task
+@task
 def process_participation(participation_id, pjs_ids=[], publique=True,
                           notify_mail=None, notify_msg=None):
     participation_id = ObjectId(participation_id)
+    pjs_ids = [ObjectId(x) for x in pjs_ids]
     from ..app import app as flask_app
     from ..resources.participations import participations as p_resource
-    with flask_app.app_context():
-        p = p_resource.find_one(participation_id, fields={
-            'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
-        traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
+    p = p_resource.find_one(participation_id, fields={
+        'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
+    traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
+    p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
+    try:
+        _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
+    except:
+        logger.error(format_exc())
+        traitement['etat'] = 'ERREUR'
+        traitement['date_fin'] = datetime.utcnow()
         p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
-        try:
-            _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
-        except:
-            logger.error(format_exc())
-            traitement['etat'] = 'ERREUR'
-            traitement['date_fin'] = datetime.utcnow()
-            p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
-        else:
-            traitement['etat'] = 'FINI'
-            traitement['date_fin'] = datetime.utcnow()
-            p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
-        if not notify_mail:
-            return
-        if isinstance(notify_mail, str):
-            notify_mail = [notify_mail]
-        site_name = p['site']['titre']
-        msg = Message(
-            subject="La particiation réalisée le %s sur le site %s"
-                    " vient d'être traitée !" % (p['date_debut'], site_name),
-            recipients=notify_mail, body=notify_msg)
-        flask_app.mail.send(msg)
+    else:
+        traitement['etat'] = 'FINI'
+        traitement['date_fin'] = datetime.utcnow()
+        p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
+    if not notify_mail:
+        return
+    if isinstance(notify_mail, str):
+        notify_mail = [notify_mail]
+    site_name = p['site']['titre']
+    msg = Message(
+        subject="La particiation réalisée le %s sur le site %s"
+                " vient d'être traitée !" % (p['date_debut'], site_name),
+        recipients=notify_mail, body=notify_msg)
+    current_app.mail.send(msg)
 
 
 def _process_participation(participation_id, pjs_ids=[], publique=True):
