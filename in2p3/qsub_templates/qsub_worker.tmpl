@@ -8,9 +8,13 @@
 ### Merge stdout et stderr in a single file
 #$ -j y
 
+### Log into sps drive
+#$ -l sps=1
+#$ -o /sps/inter/mnhn/eleblond/vigiechiro-logs
+
 ## vmem is per core
 #$ -l vmem=2G
 #$ -l fsize=20G
 #$ -pe multicores 8 -q mc_long
 
-{vigiechiro_dir}/vigiechiro-api/bin/queuer.py consume next_job
+python {vigiechiro_dir}/vigiechiro-api/bin/queuer.py consume next_job
