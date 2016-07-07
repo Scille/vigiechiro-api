@@ -1,6 +1,6 @@
 # Simple&custom message queue to play nice with in2p3 infrastructure
 
-from flask import current_app, Blueprint
+from flask import current_app
 from pymongo import ASCENDING
 from datetime import datetime
 from traceback import format_exc
@@ -14,9 +14,8 @@ class QueuerBadTaskError(QueuerError):
     pass
 
 
-class Queuer(Blueprint):
-    def __init__(self, collection_name, *args):
-        super().__init__(self, collection_name, *args)
+class Queuer:
+    def __init__(self, collection_name):
         self._collection_name = collection_name
         self._collection = None
         self.registered_tasks = {}
@@ -80,7 +79,7 @@ class Queuer(Blueprint):
         return ret
 
 
-queuer = Queuer('queuer_jobs', __name__)
+queuer = Queuer('queuer_jobs')
 
 
 class Task:

@@ -8,6 +8,10 @@
 ### Merge stdout et stderr in a single file
 #$ -j y
 
+### Log into sps drive
+#$ -l sps=1
+#$ -o /sps/inter/mnhn/eleblond/vigiechiro-logs
+
 ### Start as daemon
 #$ -q demon -l demon=1
 
