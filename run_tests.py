@@ -1,7 +1,7 @@
 #! /bin/sh
 
 . ./venv/bin/activate
-./bin/init_db.py
+./bin/init_db.py reset
 PARAMS="$@"
 if [ "$PARAMS" = "" ]
 then

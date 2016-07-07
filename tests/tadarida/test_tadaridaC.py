@@ -6,7 +6,6 @@ from bson import ObjectId
 from uuid import uuid4
 
 from vigiechiro import settings
-from vigiechiro.scripts.task_tadarida_c import tadaridaC
 
 from .test_fake_s3 import fake_s3, TAS_DEFAULT_DIR
 
@@ -80,6 +79,7 @@ def init_env(taxons, fake_s3, request):
     return list(zip(fichiers_ids, donnees_ids))
 
 
+@pytest.mark.xfail
 @pytest.mark.slow
 @pytest.mark.rtest
 def test_tadaridaC(init_env):

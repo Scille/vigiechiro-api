@@ -15,7 +15,7 @@
 for i in `seq 600`
 do
     printf "[$(date)] "
-    python {vigiechiro_dir}/check_queue.py -t
+    python {vigiechiro_dir}/check_queue.py -t -c $QSUB_WORKER_CONCURRENCY
     sleep 60
 done
 
