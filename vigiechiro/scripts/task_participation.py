@@ -260,8 +260,7 @@ def process_participation(participation_id, pjs_ids=[], publique=True,
         notify_mail = [notify_mail]
     site_name = p['site']['titre']
     msg = Message(
-        subject="La particiation réalisée le %s sur le site %s"
-                " vient d'être traitée !" % (p['date_debut'], site_name),
+        subject="Votre participation vient d'être traitée !",
         recipients=notify_mail, body=notify_msg)
     current_app.mail.send(msg)
 
