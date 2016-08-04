@@ -26,7 +26,7 @@ from traceback import format_exc
 from flask.ext.mail import Message
 
 from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
-                        TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE)
+                        TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE, TASK_PARTICIPATION_BATCH_SIZE)
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
                                   delete_fichier_and_s3, get_file_from_s3)
@@ -476,6 +476,7 @@ class Participation:
                 'lien_participation': self.participation['_id'],
                 'mime': {'$in': ALLOWED_MIMES_TA + ALLOWED_MIMES_TC}
             })
+            delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .wav, delete %s obsolete"
                         " .ta and .tc files" % delete_pjs.count())
             for fichier in delete_pjs:
@@ -490,6 +491,7 @@ class Participation:
                 'lien_participation': self.participation['_id'],
                 'mime': {'$in': ALLOWED_MIMES_TC}
             })
+            delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .ta, delete %s obsolete"
                         " .tc files" % delete_pjs.count())
             for fichier in delete_pjs:
