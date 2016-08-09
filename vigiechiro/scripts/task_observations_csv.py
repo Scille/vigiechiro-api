@@ -1,6 +1,7 @@
 from bson import ObjectId
 from io import StringIO
 import csv
+from flask import current_app
 from flask.ext.mail import Message
 
 from .queuer import task
@@ -61,4 +62,4 @@ def email_observations_csv(participation_id, recipients, body=None, subject=None
                   recipients=recipients, body=body)
     msg.attach("participation-%s-observations.csv" % participation_id,
                "text/csv", generate_observations_csv(participation_id))
-    flask_app.mail.send(msg)
+    current_app.mail.send(msg)

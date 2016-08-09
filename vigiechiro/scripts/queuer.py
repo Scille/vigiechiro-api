@@ -1,5 +1,7 @@
 # Simple&custom message queue to play nice with in2p3 infrastructure
 
+from logging
+logger = logging.getLogger(__name__)
 from flask import current_app
 from pymongo import ASCENDING
 from datetime import datetime
@@ -61,6 +63,7 @@ class Queuer:
         job = self.collection.find_one({'_id': job_id})
         assert job['name'] in self.registered_tasks
         task = self.registered_tasks[job['name']]
+        logger.info('Executing job %s' % job)
         try:
             ret = task(*job['args'], **job['kwargs'])
         except:
