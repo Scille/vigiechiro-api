@@ -194,12 +194,14 @@ def participation_generate_csv(participation_id):
 
 Voici le csv des observations de la participation réalisée le {p_date} sur le site {p_site}.
 
-https://vigiechiro.herokuapp.com/#/participations/{p_id}
+{domain}/#/participations/{p_id}
 
 Cordialement,
 
 Vigiechiro
-""".format(name=g.request_user['pseudo'], p_site=site_name, p_date=p['date_debut'], p_id=participation_id)
+""".format(name=g.request_user['pseudo'], p_site=site_name,
+           p_date=p['date_debut'], p_id=participation_id,
+           domain=current_app.config['FRONTEND_DOMAIN'])
     subject = """Observations de la participation du {p_date} sur le site {p_site}""".format(p_site=site_name, p_date=p['date_debut'])
     email_observations_csv.delay(participation_id, g.request_user['email'], body=body, subject=subject)
     return {}, 200
@@ -210,13 +212,14 @@ def _build_participation_notify_msg(participation):
 
 La participation réalisée le {p_date} sur le site {p_site} vient d'être traitée.
 
-https://vigiechiro.herokuapp.com/#/participations/{p_id}
+{domain}/#/participations/{p_id}
 
 Cordialement,
 
 Vigiechiro
 """.format(name=g.request_user['pseudo'], p_site=participation['site']['titre'],
-    p_date=participation['date_debut'], p_id=participation['_id'])
+    p_date=participation['date_debut'], p_id=participation['_id'],
+    domain=current_app.config['FRONTEND_DOMAIN'])
 
 
 @participations.route('/participations/<objectid:participation_id>/compute', methods=['POST'])
