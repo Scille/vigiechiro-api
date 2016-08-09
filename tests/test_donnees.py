@@ -14,6 +14,7 @@ from .test_sites import obs_sites_base
 
 from vigiechiro import settings
 from vigiechiro.app import app as flask_app
+from vigiechiro.scripts import queuer
 
 
 @pytest.fixture
@@ -304,3 +305,59 @@ def test_delete_participation(donnee_env, taxons_base, observateur_other,
     # Cannot delete two times
     r = administrateur.delete("/participations/%s" % participation['_id'])
     assert r.status_code == 404, r.text
+
+
+def test_multi_bilan_triggered(clean_donnees, administrateur, participation_ready, taxons_base):
+    with flask_app.app_context():
+        observateur, protocole, site = participation_ready
+        # Post participation
+        participations_url = '/sites/{}/participations'.format(site['_id'])
+        r = observateur.post(participations_url,
+                             json={'date_debut': format_datetime(datetime.utcnow())})
+        assert r.status_code == 201, r.text
+        participation_id = r.json()['_id']
+
+        queuer.collection.remove()
+
+        # Create a donnees entry
+        donnee_payload = {
+            'observations': [
+                {
+                    'temps_debut': 102,
+                    'temps_fin': 1300,
+                    'frequence_mediane': 10000000,
+                    'tadarida_taxon': str(taxons_base[1]['_id']),
+                    'tadarida_probabilite': 70,
+                    'tadarida_taxon_autre': [
+                        {
+                            'taxon': str(taxons_base[2]['_id']),
+                            'probabilite': 30
+                        },
+                    ]
+                }
+            ]
+        }
+        r = observateur.post('/participations/{}/donnees'.format(participation_id),
+                                json=donnee_payload)
+        assert r.status_code == 201, r.text
+        donnee_id = r.json()['_id']
+
+        # Bilan task should have been triggered
+        assert queuer.get_pending_jobs().count() == 1
+        queuer.collection.remove()
+        assert queuer.get_pending_jobs().count() == 0
+
+        # Modify donnees, bilan task is retriggered
+        update_payload = {'observateur_taxon': str(taxons_base[1]['_id']),
+                          'observateur_probabilite': 'SUR'}
+        r = observateur.patch('donnees/{}/observations/0'.format(donnee_id),
+                               json=update_payload)
+        assert r.status_code == 200, r.text
+        assert queuer.get_pending_jobs().count() == 1
+
+        # Now re-modify donnees, given bilan task is already set, no should
+        # task should be created
+        r = observateur.patch('donnees/{}/observations/0'.format(donnee_id),
+                               json=update_payload)
+        assert r.status_code == 200, r.text
+        assert queuer.get_pending_jobs().count() == 1
