@@ -98,7 +98,7 @@ class Task:
         has is not already is database.
         """
         if not queuer.collection.find_one(
-                {'name': task, 'args': args, 'kwargs': kwargs, 'status': 'READY'},
+                {'name': self.name, 'args': args, 'kwargs': kwargs, 'status': 'READY'},
                 fields={}):
             return queuer.submit_job(self.name, *args, **kwargs)
 
