@@ -1,6 +1,6 @@
 # Simple&custom message queue to play nice with in2p3 infrastructure
 
-from logging
+import logging
 logger = logging.getLogger(__name__)
 from flask import current_app
 from pymongo import ASCENDING
