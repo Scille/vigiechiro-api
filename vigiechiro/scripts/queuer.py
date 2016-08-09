@@ -93,6 +93,15 @@ class Task:
         """
         return queuer.submit_job(self.name, *args, **kwargs)
 
+    def delay_singleton(self, *args, **kwargs):
+        """Register as a job if the function with thoses arguments
+        has is not already is database.
+        """
+        if not queuer.collection.find_one(
+                {'name': task, 'args': args, 'kwargs': kwargs, 'status': 'READY'},
+                fields={}):
+            return queuer.submit_job(self.name, *args, **kwargs)
+
     def __call__(self, *args, **kwargs):
         """Call the function synchronously
         """
