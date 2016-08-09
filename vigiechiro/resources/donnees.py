@@ -200,7 +200,7 @@ def create_donnee(participation_id):
         payload['publique'] = g.request_user.get('donnees_publiques', False)
     result = donnees.insert(payload)
     if 'observations' in payload and not request.args.get('no_bilan', False):
-        participation_generate_bilan.delay(participation_id)
+        participation_generate_bilan.delay_singleton(participation_id)
     return result, 201
 
 
@@ -218,7 +218,7 @@ def update_donnee(donnee_id):
         abort(403)
     result =  donnees.update(donnee_id, payload)
     if 'observations' in payload and not request.args.get('no_bilan', False):
-        participation_generate_bilan.delay(donnee_resource['participation'])
+        participation_generate_bilan.delay_singleton(donnee_resource['participation'])
     return result, 200
 
 
@@ -265,7 +265,7 @@ def edit_observation(donnee_id, observation_id):
     result = donnees.update(donnee_id, payload={'observations': [observation]},
                             mongo_update={'$set': mongo_update_observation})
     if not request.args.get('no_bilan', False):
-        participation_generate_bilan.delay(donnee_resource['participation'])
+        participation_generate_bilan.delay_singleton(donnee_resource['participation'])
     return result
 
 
