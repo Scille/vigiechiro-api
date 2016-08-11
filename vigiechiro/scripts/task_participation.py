@@ -303,8 +303,9 @@ class Fichier:
         if not self.titre.startswith("Cir"):
             return None
         try:
-            return 'DROITE' if re.search(r'^Cir.+-[0-9]{4}-Pass[0-9]{1,2}-Tron[0-9]{1,2}-Chiro_([01])_[0-9]+_000',
-                                         self.titre).group(1) == '1' else 'GAUCHE'
+            return 'DROITE' if re.search(
+                r'^Cir.+-[0-9]{4}-Pass[0-9]{1,2}-Tron[0-9]{1,2}-Chiro_([01])_[0-9]+_[0-9]{3}',
+                self.titre).group(1) == '1' else 'GAUCHE'
         except AttributeError:
             return None
 
