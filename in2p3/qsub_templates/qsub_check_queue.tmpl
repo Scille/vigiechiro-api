@@ -19,14 +19,14 @@
 for i in `seq 600`
 do
     PENDINGS=`python {vigiechiro_dir}/vigiechiro-api/bin/queuer.py pendings`
-    SCHEDULED_WORKERS=`qstat -j w-$VIGIECHIRO_ENV_NAME | grep job_state | grep -v r | grep -v d | wc -l`
+    SCHEDULED_WORKERS=`qstat -j w-$VIGIECHIRO_ENV_NAME 2>/dev/null | grep job_state | grep -v r | grep -v d | wc -l`
     NEEDED_TO_START=$(($PENDINGS - $SCHEDULED_WORKERS))
-    if ( ["$NEEDED_TO_START" -ne 0 ] )
+    if ( [ "$NEEDED_TO_START" -ne 0 ] )
     then
-    	printf "[$(date)] $PENDINGS pending jobs, starting worker"
-    	qsub {vigiechiro_dir}/qsub_worker.sh
+        printf "[$(date)] $PENDINGS pending jobs, starting worker\n"
+        qsub {vigiechiro_dir}/qsub_worker.sh
     else
-    	printf "[$(date)] no pending jobs"
+        printf "[$(date)] no pending jobs\n"
     fi
     sleep 60
 done
