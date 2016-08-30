@@ -307,8 +307,9 @@ def test_create_site_bad_payload(administrateur, observateur, protocoles_base):
             [48.87239311228893,2.353649139404297],
             [48.87736082887189,2.344379425048828]]
         }]:
-        r = observateur.put(localite_url, json={'nom': 'bad_localite',
-                                                'geometries': bad_geometrie})
+        r = observateur.put(localite_url, json={
+            'localites': [{'nom': 'bad_localite', 'geometries': bad_geometrie}]
+        })
         assert r.status_code == 422, r.text
 
 
@@ -377,10 +378,14 @@ def test_localite_name_unicity(observateur, administrateur, protocoles_base):
     r = observateur.put(localite_url,
         json={'localites': [{'nom': 'localite1', 'geometries': geometries}]})
     assert r.status_code == 200, r.text
-    # Cannot add localite with the same name at a different time
+    # Put replace data, so we can replace the same localite name
     r = observateur.put(localite_url,
         json={'localites': [{'nom': 'localite1', 'geometries': geometries}]})
-    assert r.status_code == 422, r.text
+    assert r.status_code == 200, r.text
+    # Make sure only one localite is present
+    r = observateur.get(site_url)
+    assert r.status_code == 200, r.text
+    assert r.json()['localites'] == [{'nom': 'localite1', 'geometries': geometries}]
 
 
 def test_create_site_with_localite(administrateur, observateur, protocoles_base):
@@ -418,8 +423,8 @@ def test_add_and_remove_localites(administrateur, observateur, protocoles_base):
     site_url = '/sites/{}'.format(site['_id'])
     check_localite_count(1)
     # Delete the localite
-    r = observateur.delete(site_url + '/localites')
-    assert r.status_code == 204, r.text
+    r = observateur.put(site_url + '/localites', json={'localites': []})
+    assert r.status_code == 200, r.text
     # No more localites in the site
     check_localite_count(0)
     # Add back a localite and lock the site
@@ -428,6 +433,6 @@ def test_add_and_remove_localites(administrateur, observateur, protocoles_base):
     r = administrateur.patch(site_url, json={'verrouille': True})
     assert r.status_code == 200, r.text
     # Now owner cannot remove localites
-    r = observateur.delete(site_url + '/localites')
+    r = observateur.put(site_url + '/localites', json={'localites': []})
     assert r.status_code == 403, r.text
     check_localite_count(1)
