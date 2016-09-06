@@ -246,9 +246,11 @@ def process_participation(participation_id, pjs_ids=[], publique=True,
     try:
         _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
     except:
-        logger.error(format_exc())
+        msg = format_exc()
+        logger.error(msg)
         traitement['etat'] = 'ERREUR'
         traitement['date_fin'] = datetime.utcnow()
+        traitement['message'] = msg
         p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
     else:
         traitement['etat'] = 'FINI'
