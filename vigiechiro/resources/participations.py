@@ -79,7 +79,8 @@ SCHEMA = {
             'etat': choice(['PLANIFIE', 'EN_COURS', 'FINI', 'ERREUR']),
             'date_planification': {'type': 'datetime'},
             'date_debut': {'type': 'datetime'},
-            'date_fin': {'type': 'datetime'}
+            'date_fin': {'type': 'datetime'},
+            'message': {'type': 'string'}
         }
     },
     'bilan': {
