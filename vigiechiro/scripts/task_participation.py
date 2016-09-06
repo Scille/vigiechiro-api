@@ -515,17 +515,17 @@ class Participation:
             self._insert_file_obj(obj)
 
     def get_tas(self, cir_canal=None):
-        for d in self.donnees.values():
+        for d in list(self.donnees.values()):
             if d.ta and (not cir_canal or cir_canal == d.ta.cir_canal):
                 yield d.ta
 
     def get_tcs(self, cir_canal=None):
-        for d in self.donnees.values():
+        for d in list(self.donnees.values()):
             if d.tc and (not cir_canal or cir_canal == d.tc.cir_canal):
                 yield d.tc
 
     def get_waves(self, cir_canal=None):
-        for d in self.donnees.values():
+        for d in list(self.donnees.values()):
             if d.wav and (not cir_canal or cir_canal == d.wav.cir_canal):
                 yield d.wav
 
