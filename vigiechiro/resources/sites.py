@@ -90,17 +90,18 @@ sites = Resource('sites', __name__, schema=SCHEMA)
 @sites.validator.attribute
 def unique_field(context):
     path = context.get_current_path()
-    node = context.additional_context.get('old_document', {})
-    for field in path.split('.'):
-        if field in node:
-            node = node[field]
-        else:
-            node = None
-            break
-    old_field_value = node or []
+    # node = context.additional_context.get('old_document', {})
+    # for field in path.split('.'):
+    #     if field in node:
+    #         node = node[field]
+    #     else:
+    #         node = None
+    #         break
+    # old_field_value = node or []
     field = context.schema['unique_field']
     field_values = []
-    for elem in context.value + old_field_value:
+    # for elem in context.value + old_field_value:
+    for elem in context.value:
         if field in elem:
             field_values.append(elem[field])
     if len(field_values) != len(set(field_values)):
@@ -274,7 +275,7 @@ def get_resume_list():
 
 @sites.route('/sites/<objectid:site_id>/localites', methods=['PUT'])
 @requires_auth(roles='Observateur')
-def add_localite(site_id):
+def set_localite(site_id):
     payload = get_payload({'localites': True})
     site_resource = sites.get_resource(site_id)
     is_owner = site_resource['observateur'] == g.request_user['_id']
@@ -290,21 +291,9 @@ def add_localite(site_id):
                     break
             if not valid:
                 abort(403)
-    # payload = {'localites': [get_payload({'nom': True, 'coordonnee': False,
-    #     'geometries': False, 'representatif': False})]}
-    mongo_update = {'$push': {'localites': {'$each': payload['localites']}}}
+    mongo_update = {'$set': {'localites': payload['localites']}}
     result = sites.update(site_id, payload=payload, mongo_update=mongo_update)
     return result
-
-
-@sites.route('/sites/<objectid:site_id>/localites', methods=['DELETE'])
-@requires_auth(roles='Observateur')
-def remove_localites(site_id):
-    site_resource = sites.get_resource(site_id)
-    _check_edit_acess(site_resource)
-    mongo_update = {'$unset': {'localites': True}}
-    result = sites.update(site_id, payload={}, mongo_update=mongo_update)
-    return (result, 204)
 
 
 @sites.route('/sites/<objectid:site_id>/localites/<localite_nom>/habitat', methods=['PUT'])
