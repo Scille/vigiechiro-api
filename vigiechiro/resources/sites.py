@@ -155,8 +155,10 @@ def list_protocole_sites(protocole_id):
 @requires_auth(roles='Observateur')
 def list_protocole_sites_grille_stoc(protocole_id):
     """Return a list of sites with grille_stoc for a protocol"""
-    items = sites.find({"protocole": protocole_id}, {"grille_stoc": 1})
-    return {'_items': [i for i in items[0]]}
+    pagination = Paginator()
+    found = sites.find({'protocole': protocole_id}, {'grille_stoc': 1},
+                       skip=pagination.skip, limit=pagination.max_results)
+    return pagination.make_response(*found)
 
 
 @sites.route('/protocoles/<objectid:protocole_id>/sites/tracet', methods=['GET'])
