@@ -60,6 +60,7 @@ TADARIDA_C = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaC'
 TADARIDA_D = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD'
 ORDER_NAMES = [('Chiroptera', 'chiropteres'), ('Orthoptera', 'orthopteres')]
 AUTH = (SCRIPT_WORKER_TOKEN, None)
+REQUESTS_TIMEOUT = 90
 
 
 def _create_working_dir(subdirs=()):
@@ -91,11 +92,13 @@ def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, **
     if data_path:
         with open(data_path, 'rb') as fd:
             r = requests.put(sign['signed_url'],
-                             headers={'Content-Type': mime}, data=fd)
+                             headers={'Content-Type': mime}, data=fd,
+                             timeout=REQUESTS_TIMEOUT)
     elif data_raw:
         r = requests.put(sign['signed_url'],
                          headers={'Content-Type': mime},
-                         data=data_raw)
+                         data=data_raw,
+                         timeout=REQUESTS_TIMEOUT)
                          # files={'file': ('', data_raw)})
     if r.status_code != 200:
         logger.error('Uploading to S3 {} error {} : {}'.format(
@@ -110,7 +113,8 @@ def _get_taxon(taxon_name):
     taxon = NAME_TO_TAXON.get(taxon_name)
     if not taxon:
         r = requests.get('{}/taxons'.format(BACKEND_DOMAIN),
-            params={'q': taxon_name}, auth=AUTH)
+            params={'q': taxon_name}, auth=AUTH,
+            timeout=REQUESTS_TIMEOUT)
         if r.status_code != 200:
             logger.warning('retreiving taxon {} in backend, error {}: {}'.format(
                 taxon_name, r.status_code, r.text))
@@ -130,7 +134,8 @@ def _list_donnees(participation_id):
     max_results = 100
     while True:
         r = requests.get(BACKEND_DOMAIN + '/participations/{}/donnees'.format(participation_id),
-            auth=AUTH, params={'page': page, 'max_results': max_results})
+            auth=AUTH, params={'page': page, 'max_results': max_results},
+            timeout=REQUESTS_TIMEOUT)
         if r.status_code != 200:
             logger.warning("retreiving participation {}'s donnees, error {}: {}".format(
                 participation_id, r.status_code, r.text))
@@ -174,7 +179,9 @@ class Bilan:
                         parent_id = parent_id_or_data['_id']
                     else:
                         parent_id = parent_id_or_data
-                    r = requests.get(BACKEND_DOMAIN + '/taxons/{}'.format(parent_id), auth=AUTH)
+                    r = requests.get(
+                        BACKEND_DOMAIN + '/taxons/{}'.format(parent_id),
+                        auth=AUTH, timeout=REQUESTS_TIMEOUT)
                     if r.status_code != 200:
                         logger.error('Retrieving taxon {} error {} : {}'.format(
                             parent_id, r.status_code, r.text))
@@ -224,7 +231,8 @@ def participation_generate_bilan(participation_id):
     # Update the participation
     logger.info('participation {}, bilan : {}'.format(participation_id, bilan.generate_payload()))
     r = requests.patch(BACKEND_DOMAIN + '/participations/' + participation_id,
-                       json={'bilan': bilan.generate_payload()}, auth=AUTH)
+                       json={'bilan': bilan.generate_payload()}, auth=AUTH,
+                       timeout=REQUESTS_TIMEOUT)
     if r.status_code != 200:
         logger.error('Cannot update bilan for participation {}, error {} : {}'.format(
             participation_id, r.status_code, r.text))
