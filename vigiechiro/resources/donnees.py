@@ -28,7 +28,7 @@ def validate_donnee_name(name):
     if ext not in allow_extensions:
         return None
     # See rules: https://scille.atlassian.net/wiki/pages/viewpage.action?pageId=13893805
-    if re.match(r'^Cir.+-[0-9]{4}-Pass[0-9]{1,2}-Tron[0-9]{1,2}-Chiro_[01]_[0-9]+_[0-9]{3}$', basename):
+    if re.match(r'^Cir.+-[0-9]{4}-Pass[0-9]{1,2}-Tron[0-9]{1,2}-Chiro_([01]_)?[0-9]+_[0-9]{3}$', basename):
         # Protocole "routier" or "pedestre"
         pass_ = int(re.search(r'-Pass([0-9]{1,2})-', basename).group(1))
         if pass_ > 10 or pass_ == 0:
@@ -36,7 +36,7 @@ def validate_donnee_name(name):
         tron = int(re.search(r'-Tron([0-9]{1,2})-', basename).group(1))
         if tron > 15 or tron == 0:
             return None
-    elif re.match(r'^Car.+-[0-9]{4}-Pass[0-9]{1,2}-(([A-H][12])|(Z[1-9][0-9]*))-.*[01]_[0-9]{8}_[0-9]{6}_[0-9]{3}$', basename):
+    elif re.match(r'^Car.+-[0-9]{4}-Pass[0-9]{1,2}-(([A-H][12])|(Z[1-9][0-9]*))-.*_[0-9]{8}_[0-9]{6}_[0-9]{3}$', basename):
         # Protocole "point fixe"
         pass_ = int(re.search(r'-Pass([0-9]{1,2})-', basename).group(1))
         if pass_ > 10 or pass_ == 0:
