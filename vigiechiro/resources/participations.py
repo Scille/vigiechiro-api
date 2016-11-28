@@ -56,6 +56,7 @@ SCHEMA = {
             'couverture': choice(['0-25', '25-50', '50-75', '75-100']),
         }
     },
+    'point': {'type': 'string'},
     'commentaire': {'type': 'string'},
     'messages': {
         'type': 'list',
@@ -253,7 +254,7 @@ def participation_trigger_compute(participation_id):
 def create_participation(site_id):
     payload = get_payload({'date_debut': False, 'date_fin': False,
                            'commentaire': False, 'meteo': False,
-                           'configuration': False})
+                           'configuration': False, 'point': ''})
     payload['observateur'] = g.request_user['_id']
     payload['site'] = site_id
     # Other inputs sanity check
@@ -309,7 +310,8 @@ def edit_participation(participation_id):
     _check_edit_access(participation_resource)
     payload = get_payload({'date_debut': False, 'date_fin': False,
                            'commentaire': False, 'meteo': False,
-                           'configuration': False, 'bilan': False})
+                           'configuration': False, 'bilan': False,
+                           'point': ''})
     document = participations.update(participation_id, payload)
     return document
 
