@@ -296,11 +296,13 @@ def _process_participation(participation_id, pjs_ids=[], publique=True):
 
 
 class Fichier:
-    def __init__(self, fichier=None, **kwargs):
+    def __init__(self, participation, fichier=None, **kwargs):
+        self.participation = participation
         if fichier:
             self.id = fichier['_id']
             self.titre = fichier['titre']
             self.mime = fichier['mime']
+            self.data_path = None
         else:
             self.id = kwargs.get('id')
             self.titre = kwargs.get('titre')
@@ -326,28 +328,31 @@ class Fichier:
         if self.titre:
             return self.titre.rsplit('.', 1)[0]
 
+    @property
+    def datastore_path(self):
+        assert TASK_PARTICIPATION_DATASTORE_CACHE
+        return '%s/%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, self.participation.participation_id, self.titre)
+
     def _get_from_datastore(self, target_path):
         assert TASK_PARTICIPATION_DATASTORE_CACHE
-        datastore_target = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, self.titre)
-        if not os.path.exists(TASK_PARTICIPATION_DATASTORE_CACHE):
+        if not os.path.exists(self.datastore_path):
             return False
         else:
-            os.symlink(datastore_target, target_path)
+            os.symlink(self.datastore_path, target_path)
             return True
 
     def _populate_datastore_from_s3(self):
         assert TASK_PARTICIPATION_DATASTORE_CACHE
         if self.doc:
-            self._get_from_s3(TASK_PARTICIPATION_DATASTORE_CACHE)
+            self._get_from_s3(self.datastore_path)
             return True
         else:
             return False
 
     def _populate_datastore_from_disk(self):
         assert TASK_PARTICIPATION_DATASTORE_CACHE
-        datastore_target = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, self.titre)
         if self.data_path:
-            shutil.copy(self.data_path, datastore_target)
+            shutil.copy(self.data_path, self.datastore_path)
             return True
         else:
             return False
@@ -387,9 +392,9 @@ class Fichier:
             raise ValueError('No data to fetch')
         target_path = '/'.join((path, self.titre))
         if TASK_PARTICIPATION_DATASTORE_CACHE:
-            self._fetch_data_with_datastore(path)
+            self._fetch_data_with_datastore(target_path)
         else:
-            self._fetch_data(path)
+            self._fetch_data(target_path)
         return target_path
 
     def save(self, donnee_id, participation_id, proprietaire_id):
@@ -576,11 +581,11 @@ class Participation:
         pjs_ids_found = {pj['_id'] for pj in pjs}
         for pj in pjs:
             if pj['mime'] in ALLOWED_MIMES_WAV:
-                obj = FichierWav(fichier=pj)
+                obj = FichierWav(self, fichier=pj)
             elif pj['mime'] in ALLOWED_MIMES_TC:
-                obj = FichierTC(fichier=pj)
+                obj = FichierTC(self, fichier=pj)
             elif pj['mime'] in ALLOWED_MIMES_TA:
-                obj = FichierTA(fichier=pj)
+                obj = FichierTA(self, fichier=pj)
             else:
                 continue # Other attachements are useless
             self._insert_file_obj(obj)
@@ -626,11 +631,11 @@ class Participation:
         titre = path.rsplit('/', 1)[-1]
         ext = titre.rsplit('.', 1)[-1]
         if ext == 'ta':
-            obj = FichierTA(titre=titre, path=path)
+            obj = FichierTA(self, titre=titre, path=path)
         elif ext == 'tc':
-            obj = FichierTC(titre=titre, path=path)
+            obj = FichierTC(self, titre=titre, path=path)
         elif ext == 'wav':
-            obj = FichierWav(titre=titre, path=path)
+            obj = FichierWav(self, titre=titre, path=path)
         else:
             # Unknown file, just skip it
             return
