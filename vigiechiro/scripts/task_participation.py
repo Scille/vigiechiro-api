@@ -506,6 +506,10 @@ class ParticipationError(Exception): pass
 class Participation:
 
     def __init__(self, participation_id, pjs_ids, publique):
+        if TASK_PARTICIPATION_DATASTORE_CACHE:
+            participation_datastore = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, participation_id)
+            if not os.path.exists(participation_datastore):
+                os.mkdir(participation_datastore)
         from ..resources.participations import participations as p_resource
         self.participation_id = participation_id
         self.participation = p_resource.get_resource(participation_id, auto_abort=False)
@@ -660,7 +664,7 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
         with flask_app.app_context():
             fichier.fetch_data(wdir_path)
     with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-        fichiers_count += len(e.map(fetch_data, participation.get_waves(canal)))
+        fichiers_count += len(list(e.map(fetch_data, participation.get_waves(canal))))
     # Run tadarida
     logger.info('Starting tadaridaD with options `%s` and expansion x%s on %s files' %
                 (TADARIDA_D_OPTS or '<no_options>', expansion, fichiers_count))
