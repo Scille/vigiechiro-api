@@ -83,7 +83,7 @@ def main():
                     print('Submitted job %s' % job_id)
                     return
                 else:
-                    return context(task)(partication_id)
+                    return context(task)(participation_id)
         elif argv[1] == 'consume' and len(argv) == 3:
             if argv[2] == 'next_job':
                 return context(queuer.execute_next_job)()
