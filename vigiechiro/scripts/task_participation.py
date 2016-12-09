@@ -245,7 +245,6 @@ def process_participation(participation_id, pjs_ids=[], publique=True,
                           notify_mail=None, notify_msg=None):
     participation_id = ObjectId(participation_id)
     pjs_ids = [ObjectId(x) for x in pjs_ids]
-    from ..app import app as flask_app
     from ..resources.participations import participations as p_resource
     p = p_resource.find_one(participation_id, fields={
         'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
@@ -493,16 +492,11 @@ class Donnee:
         self.id = inserted['_id']
         logger.debug('Creating donnee {} ({})'.format(self.id, self.basename))
         from ..app import app as flask_app
-        def save_fichier(fichier, **kwargs):
-            with flask_app.app_context():
-                g.request_user = {'role': 'Administrateur'}
-                fichier.save(**kwargs)
-        with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-            for fichier in (self.wav, self.tc, self.ta):
-                if not fichier:
-                    continue
-                e.submit(save_fichier, fichier, donnee_id=self.id,
-                         participation_id=participation_id,
+        for fichier in (self.wav, self.tc, self.ta):
+            if not fichier:
+                continue
+            g.request_user = {'role': 'Administrateur'}
+            fichier.save(donnee_id=self.id, participation_id=participation_id,
                          proprietaire_id=proprietaire_id)
 
 
@@ -540,6 +534,7 @@ class Participation:
             'mime': {'$in': ALLOWED_MIMES_WAV}
         })
 
+        from ..app import app as flask_app
         def clean_fichier(fichier):
             with flask_app.app_context():
                 delete_fichier_and_s3(fichier)
@@ -552,10 +547,8 @@ class Participation:
             delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .wav, delete %s obsolete"
                         " .ta and .tc files" % delete_pjs.count())
-            # TODO: parallelize this ?
             with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-                for fichier in delete_pjs:
-                    e.submit(clean_fichier, fichier)
+                e.map(clean_fichier, delete_pjs)
             return
         ta_pjs = current_app.data.db.fichiers.find({
             'lien_participation': self.participation['_id'],
@@ -570,8 +563,7 @@ class Participation:
             logger.info("Participation base files are .ta, delete %s obsolete"
                         " .tc files" % delete_pjs.count())
             with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-                for fichier in delete_pjs:
-                    e.submit(clean_fichier, fichier)
+                e.map(clean_fichier, delete_pjs)
             return
 
     def load_pjs(self):
@@ -668,10 +660,7 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
         with flask_app.app_context():
             fichier.fetch_data(wdir_path)
     with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-        for fichier in participation.get_waves(canal):
-            # e.submit(fichier.fetch_data, wdir_path)
-            e.submit(fetch_data, fichier)
-            fichiers_count += 1
+        fichiers_count += len(e.map(fetch_data, participation.get_waves(canal)))
     # Run tadarida
     logger.info('Starting tadaridaD with options `%s` and expansion x%s on %s files' %
                 (TADARIDA_D_OPTS or '<no_options>', expansion, fichiers_count))
@@ -710,8 +699,7 @@ def _run_tadaridaC(wdir_path, participation, fichiers_batch):
         with flask_app.app_context():
             fichier.fetch_data(wdir_path)
     with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-        for fichier in fichiers_batch:
-            e.submit(fetch_data, fichier)
+        e.map(fetch_data, fichiers_batch)
     # Run tadarida
     logger.info('Starting tadaridaC with options `%s` on %s files %s (%s) to %s (%s)' %
                 (TADARIDA_C_OPTS or '<no_options>', len(fichiers_batch),
