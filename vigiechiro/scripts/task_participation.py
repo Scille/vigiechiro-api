@@ -26,7 +26,8 @@ from traceback import format_exc
 from flask.ext.mail import Message
 
 from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
-                        TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE, TASK_PARTICIPATION_BATCH_SIZE)
+                        TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE, TASK_PARTICIPATION_BATCH_SIZE,
+                        TASK_PARTICIPATION_DATASTORE_CACHE)
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
                                   delete_fichier_and_s3, get_file_from_s3)
@@ -64,7 +65,7 @@ REQUESTS_TIMEOUT = 90
 
 
 def _create_working_dir(subdirs=()):
-    wdir  = tempfile.mkdtemp()
+    wdir = tempfile.mkdtemp()
     for subdir in subdirs:
         os.mkdir(wdir + '/' + subdir)
     return wdir
@@ -325,19 +326,71 @@ class Fichier:
         if self.titre:
             return self.titre.rsplit('.', 1)[0]
 
-    def fetch_data(self, path=''):
-        if not self.doc and not self.data_path:
-            raise ValueError('No data to fetch')
+    def _get_from_datastore(self, target_path):
+        assert TASK_PARTICIPATION_DATASTORE_CACHE
+        datastore_target = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, self.titre)
+        if not os.path.exists(TASK_PARTICIPATION_DATASTORE_CACHE):
+            return False
+        else:
+            os.symlink(datastore_target, target_path)
+            return True
+
+    def _populate_datastore_from_s3(self):
+        assert TASK_PARTICIPATION_DATASTORE_CACHE
         if self.doc:
-            data_path = '/'.join((path, self.doc['titre']))
-            r = get_file_from_s3(self.doc, data_path)
+            self._get_from_s3(TASK_PARTICIPATION_DATASTORE_CACHE)
+            return True
+        else:
+            return False
+
+    def _populate_datastore_from_disk(self):
+        assert TASK_PARTICIPATION_DATASTORE_CACHE
+        datastore_target = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, self.titre)
+        if self.data_path:
+            shutil.copy(self.data_path, datastore_target)
+            return True
+        else:
+            return False
+
+    def _get_from_s3(self, target_path):
+        r = get_file_from_s3(self.doc, target_path)
+        if r.status_code != 200:
+            logger.error('Cannot get back file {} ({}) : error {}'.format(
+                self.id, self.doc['titre'], r.status_code))
+
+    def _fetch_data_with_datastore(self, target_path):
+        assert TASK_PARTICIPATION_DATASTORE_CACHE
+        ret = self._get_from_datastore(target_path)
+        if not ret:
+            # Cache miss, try to populate through disk then S3
+            if self._populate_datastore_from_disk():
+                self._get_from_datastore(target_path)
+            elif self._populate_datastore_from_s3():
+                self._get_from_datastore(target_path)
+            else:
+                raise RuntimeError('Cannot fetch data for %s' % target_path)
+
+    def _fetch_data(self, target_path):
+        if self.doc:
+            r = get_file_from_s3(self.doc, target_path)
             if r.status_code != 200:
                 logger.error('Cannot get back file {} ({}) : error {}'.format(
                     self.id, self.doc['titre'], r.status_code))
         elif self.data_path:
-            data_path = '/'.join((path, self.titre))
-            os.link(self.data_path, data_path)
-        return data_path
+            os.link(self.data_path, target_path)
+        else:
+            raise RuntimeError('Cannot fetch data for %s' % target_path)
+        return target_path
+
+    def fetch_data(self, path=''):
+        if not self.doc and not self.data_path:
+            raise ValueError('No data to fetch')
+        target_path = '/'.join((path, self.titre))
+        if TASK_PARTICIPATION_DATASTORE_CACHE:
+            self._fetch_data_with_datastore(path)
+        else:
+            self._fetch_data(path)
+        return target_path
 
     def save(self, donnee_id, participation_id, proprietaire_id):
         if self.id:
@@ -482,6 +535,11 @@ class Participation:
             'lien_participation': self.participation['_id'],
             'mime': {'$in': ALLOWED_MIMES_WAV}
         })
+
+        def clean_fichier(fichier):
+            with flask_app.app_context():
+                delete_fichier_and_s3(fichier)
+
         if wav_pjs.count():
             delete_pjs = current_app.data.db.fichiers.find({
                 'lien_participation': self.participation['_id'],
@@ -490,8 +548,10 @@ class Participation:
             delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .wav, delete %s obsolete"
                         " .ta and .tc files" % delete_pjs.count())
-            for fichier in delete_pjs:
-                delete_fichier_and_s3(fichier)
+            # TODO: parallelize this ?
+            with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
+                for fichier in delete_pjs:
+                    e.submit(clean_fichier, fichier)
             return
         ta_pjs = current_app.data.db.fichiers.find({
             'lien_participation': self.participation['_id'],
@@ -505,8 +565,9 @@ class Participation:
             delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .ta, delete %s obsolete"
                         " .tc files" % delete_pjs.count())
-            for fichier in delete_pjs:
-                delete_fichier_and_s3(fichier)
+            with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
+                for fichier in delete_pjs:
+                    e.submit(clean_fichier, fichier)
             return
 
     def load_pjs(self):
