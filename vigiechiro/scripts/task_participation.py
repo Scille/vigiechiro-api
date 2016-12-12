@@ -27,14 +27,25 @@ from flask.ext.mail import Message
 
 from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE, TASK_PARTICIPATION_BATCH_SIZE,
-                        TASK_PARTICIPATION_DATASTORE_CACHE)
+                        TASK_PARTICIPATION_DATASTORE_CACHE, TASK_PARTICIPATION_DATASTORE_USE_SYMLINKS,
+                        TASK_PARTICIPATION_PARALLELE_POOL, TASK_PARTICIPATION_KEEP_TMP_DIR)
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
                                   delete_fichier_and_s3, get_file_from_s3)
 from .queuer import task
 
 
-DOWNLOAD_POOL_SIZE = 10
+def parallel_executor(task, elements):
+    if not TASK_PARTICIPATION_PARALLELE_POOL or TASK_PARTICIPATION_PARALLELE_POOL == 1:
+        return [task(elem) for elem in elements]
+
+    from ..app import app as flask_app
+    def wrapp_task(element):
+        with flask_app.app_context():
+            return task(element)
+
+    with ThreadPoolExecutor(max_workers=TASK_PARTICIPATION_PARALLELE_POOL) as e:
+        return list(e.map(wrapp_task, elements))
 
 
 class ProxyLogger:
@@ -278,6 +289,8 @@ def process_participation(participation_id, pjs_ids=[], publique=True,
 def _process_participation(participation_id, pjs_ids=[], publique=True):
     participation_id = str(participation_id)
     wdir = _create_working_dir(('D', 'C'))
+    if TASK_PARTICIPATION_KEEP_TMP_DIR:
+        print('++++  Working dir: %s  ++++' % wdir)
     logger.info("Starting building participation %s" % participation_id)
     g.request_user = {'role': 'Administrateur'}
     try:
@@ -290,7 +303,8 @@ def _process_participation(participation_id, pjs_ids=[], publique=True):
     run_tadaridaD(wdir + '/D', participation)
     run_tadaridaC(wdir + '/C', participation)
     participation.save()
-    shutil.rmtree(wdir)
+    if not TASK_PARTICIPATION_KEEP_TMP_DIR:
+        shutil.rmtree(wdir)
     participation_generate_bilan(participation_id)
 
 
@@ -327,6 +341,11 @@ class Fichier:
         if self.titre:
             return self.titre.rsplit('.', 1)[0]
 
+    def force_populate_datastore(self):
+        assert self.data_path
+        if TASK_PARTICIPATION_DATASTORE_CACHE:
+            shutil.copy(self.data_path, self.datastore_path)
+
     @property
     def datastore_path(self):
         assert TASK_PARTICIPATION_DATASTORE_CACHE
@@ -337,7 +356,10 @@ class Fichier:
         if not os.path.exists(self.datastore_path):
             return False
         else:
-            os.symlink(self.datastore_path, target_path)
+            if TASK_PARTICIPATION_DATASTORE_USE_SYMLINKS:
+                os.symlink(self.datastore_path, target_path)
+            else:
+                shutil.copy(self.datastore_path, target_path)
             return True
 
     def _populate_datastore_from_s3(self):
@@ -492,7 +514,6 @@ class Donnee:
         inserted = d_resource.insert(payload)
         self.id = inserted['_id']
         logger.debug('Creating donnee {} ({})'.format(self.id, self.basename))
-        from ..app import app as flask_app
         for fichier in (self.wav, self.tc, self.ta):
             if not fichier:
                 continue
@@ -539,11 +560,6 @@ class Participation:
             'mime': {'$in': ALLOWED_MIMES_WAV}
         })
 
-        from ..app import app as flask_app
-        def clean_fichier(fichier):
-            with flask_app.app_context():
-                delete_fichier_and_s3(fichier)
-
         if wav_pjs.count():
             delete_pjs = current_app.data.db.fichiers.find({
                 'lien_participation': self.participation['_id'],
@@ -552,8 +568,7 @@ class Participation:
             delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .wav, delete %s obsolete"
                         " .ta and .tc files" % delete_pjs.count())
-            with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-                e.map(clean_fichier, delete_pjs)
+            parallel_executor(delete_fichier_and_s3, delete_pjs)
             return
         ta_pjs = current_app.data.db.fichiers.find({
             'lien_participation': self.participation['_id'],
@@ -567,8 +582,7 @@ class Participation:
             delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .ta, delete %s obsolete"
                         " .tc files" % delete_pjs.count())
-            with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-                e.map(clean_fichier, delete_pjs)
+            parallel_executor(delete_fichier_and_s3, delete_pjs)
             return
 
     def load_pjs(self):
@@ -602,10 +616,11 @@ class Participation:
                 yield d.wav
 
     def save(self):
-        for d in self.donnees.values():
+        def save_donnee(d):
             d.save(self.participation['_id'],
                    self.participation['observateur'],
                    self.publique)
+        parallel_executor(save_donnee, self.donnees.values())
         from ..resources.participations import participations as p_resource
         logger.debug('Saving %s logs items in participation' % len(logger.LOGS))
         titre = 'participation-%s-logs' % (self.participation['_id'])
@@ -635,6 +650,7 @@ class Participation:
         else:
             # Unknown file, just skip it
             return
+        obj.force_populate_datastore()
         self._insert_file_obj(obj)
 
 
@@ -660,12 +676,11 @@ def _run_tadaridaD(wdir_path, participation, expansion=10, canal=None):
         raise ValueError()
     logger.debug('Working in %s' % wdir_path)
     fichiers_count = 0
-    from ..app import app as flask_app
+
     def fetch_data(fichier):
-        with flask_app.app_context():
-            fichier.fetch_data(wdir_path)
-    with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-        fichiers_count += len(list(e.map(fetch_data, participation.get_waves(canal))))
+        fichier.fetch_data(wdir_path)
+    fichiers_count += len(parallel_executor(fetch_data, participation.get_waves(canal)))
+
     # Run tadarida
     logger.info('Starting tadaridaD with options `%s` and expansion x%s on %s files' %
                 (TADARIDA_D_OPTS or '<no_options>', expansion, fichiers_count))
@@ -699,12 +714,11 @@ def _run_tadaridaC(wdir_path, participation, fichiers_batch):
         return
     if not os.path.isdir(wdir_path):
         os.mkdir(wdir_path)
-    from ..app import app as flask_app
+
     def fetch_data(fichier):
-        with flask_app.app_context():
-            fichier.fetch_data(wdir_path)
-    with ThreadPoolExecutor(max_workers=DOWNLOAD_POOL_SIZE) as e:
-        e.map(fetch_data, fichiers_batch)
+        fichier.fetch_data(wdir_path)
+    parallel_executor(fetch_data, fichiers_batch)
+
     # Run tadarida
     logger.info('Starting tadaridaC with options `%s` on %s files %s (%s) to %s (%s)' %
                 (TADARIDA_C_OPTS or '<no_options>', len(fichiers_batch),
@@ -742,7 +756,6 @@ def run_tadaridaC(wdir_path, participation):
 
 if __name__ == '__main__':
     import sys
-    from bson import ObjectId
     if len(sys.argv) != 2:
         raise SystemExit("usage: %s <participtaion_id>" %
                          os.path.basename(sys.argv[0]))
