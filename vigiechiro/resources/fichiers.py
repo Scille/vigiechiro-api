@@ -74,7 +74,7 @@ def delete_fichier_and_s3(fichier):
                              sign_head='uploadId=' + fichier['s3_upload_multipart_id'])
     else:
         sign = _sign_request(verb='DELETE', object_name=fichier['s3_id'])
-    r = requests.delete(sign['signed_url'])
+    r = requests.delete(sign['signed_url'], timeout=settings.REQUESTS_TIMEOUT)
     if r.status_code != 204:
         logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
         return r
@@ -90,7 +90,7 @@ def get_file_from_s3(fichier, data_path):
         signed_url = _sign_request(verb='GET', object_name=object_name)['signed_url']
     else:
         signed_url = settings.DEV_FAKE_S3_URL + '/' + object_name
-    r = requests.get(signed_url, stream=True)
+    r = requests.get(signed_url, stream=True, timeout=settings.REQUESTS_TIMEOUT)
     with open(data_path, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
             if chunk: # filter out keep-alive new chunks
@@ -302,7 +302,7 @@ def fichier_delete(file_id):
         # Destroy the unfinished file on S3
         sign = _sign_request(verb='DELETE', object_name=file_resource['s3_id'],
                              sign_head='uploadId=' + file_resource['s3_upload_multipart_id'])
-        r = requests.delete(sign['signed_url'])
+        r = requests.delete(sign['signed_url'], timeout=settings.REQUESTS_TIMEOUT)
         if r.status_code != 204:
             logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
             abort(500, 'S3 has rejected file creation request')
@@ -343,7 +343,7 @@ def fichier_upload_done(file_id):
         if not settings.DEV_FAKE_S3_URL:
             r = requests.post(sign['signed_url'],
                              headers={'Content-Type': content_type},
-                             data=xml_body)
+                             data=xml_body, timeout=settings.REQUESTS_TIMEOUT)
             if r.status_code != 200:
                 logging.error('Completing {} error {} : {}'.format(
                     sign['signed_url'], r.status_code, r.text))
