@@ -18,7 +18,7 @@ def iter_participation_files(participation_id, **kwargs):
         params = {'max_results': max_results, 'page': current_page}
         params.update(kwargs)
         r = requests.get(BACKEND_DOMAIN + '/participations/%s/pieces_jointes' % participation_id,
-                         params=params, auth=AUTH)
+                         params=params, auth=AUTH, timeout=90)
         if r.status_code != 200:
             logging.error('Retrieving participation {} error {} : {}'.format(
                 participation_id, r.status_code, r.text))
@@ -39,7 +39,7 @@ def get_participation_files(participation_id):
     os.mkdir(wdir)
     for i, fichier_data in enumerate(iter_participation_files(participation_id, ta=True)):
         r = requests.get(BACKEND_DOMAIN + '/fichiers/%s/acces' % fichier_data['_id'],
-                         params={'redirection': True}, stream=True, auth=AUTH)
+                         params={'redirection': True}, stream=True, auth=AUTH, , timeout=90)
         data_path = '/'.join((wdir, fichier_data['titre']))
         with open(data_path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024):

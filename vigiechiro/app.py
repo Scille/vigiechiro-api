@@ -69,7 +69,7 @@ def init_app():
                 redirect('%s/%s' % (app.config['FRONTEND_DOMAIN'], path))
             if redirect_url:
                 target = '{}/{}'.format(redirect_url, path)
-                r = requests.get(target)
+                r = requests.get(target, timeout=settings.REQUESTS_TIMEOUT)
                 if r.status_code != 200:
                     app.logger.error('cannot fetch {}, error {} : {}'.format(
                         target, r.status_code, r.content))
