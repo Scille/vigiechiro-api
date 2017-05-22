@@ -46,7 +46,7 @@ BACKEND_DOMAIN = environ.get(
     'BACKEND_DOMAIN', 'http://localhost:{}{}'.format(PORT, BACKEND_URL_PREFIX))
 FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN',
     'http://localhost:%s' % PORT if FRONTEND_HOSTED else 'http://localhost:9000')
-REQUESTS_TIMEOUT = 90
+REQUESTS_TIMEOUT = int(environ.get('REQUESTS_TIMEOUT', 90))
 
 
 ### Redis ###
