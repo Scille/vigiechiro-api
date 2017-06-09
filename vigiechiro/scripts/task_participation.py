@@ -29,7 +29,7 @@ from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE, TASK_PARTICIPATION_BATCH_SIZE,
                         TASK_PARTICIPATION_DATASTORE_CACHE, TASK_PARTICIPATION_DATASTORE_USE_SYMLINKS,
                         TASK_PARTICIPATION_PARALLELE_POOL, TASK_PARTICIPATION_KEEP_TMP_DIR,
-                        REQUESTS_TIMEOUT)
+                        TASK_PARTICIPATION_MAX_RETRY, REQUESTS_TIMEOUT)
 from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
                                   delete_fichier_and_s3, get_file_from_s3)
@@ -254,7 +254,7 @@ def participation_generate_bilan(participation_id):
 
 @task
 def process_participation(participation_id, pjs_ids=[], publique=True,
-                          notify_mail=None, notify_msg=None):
+                          notify_mail=None, notify_msg=None, retry_count=0):
     participation_id = ObjectId(participation_id)
     pjs_ids = [ObjectId(x) for x in pjs_ids]
     from ..resources.participations import participations as p_resource
@@ -267,9 +267,17 @@ def process_participation(participation_id, pjs_ids=[], publique=True,
     except:
         msg = format_exc()
         logger.error(msg)
-        traitement['etat'] = 'ERREUR'
-        traitement['date_fin'] = datetime.utcnow()
-        traitement['message'] = msg
+        if retry_count < TASK_PARTICIPATION_MAX_RETRY:
+            process_participation.delay(participation_id, pjs_ids, publique,
+                                        notify_mail, notify_msg, retry_count + 1)
+            traitement['etat'] = 'RETRY'
+            traitement['retry'] = retry_count + 1
+            traitement['date_fin'] = datetime.utcnow()
+            traitement['message'] = msg
+        else:
+            traitement['etat'] = 'ERREUR'
+            traitement['date_fin'] = datetime.utcnow()
+            traitement['message'] = msg
         p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
     else:
         traitement['etat'] = 'FINI'
@@ -279,7 +287,6 @@ def process_participation(participation_id, pjs_ids=[], publique=True,
         return
     if isinstance(notify_mail, str):
         notify_mail = [notify_mail]
-    site_name = p['site']['titre']
     msg = Message(
         subject="Votre participation vient d'être traitée !",
         recipients=notify_mail, body=notify_msg)
