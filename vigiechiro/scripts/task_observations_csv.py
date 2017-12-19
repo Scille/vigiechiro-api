@@ -51,7 +51,7 @@ def generate_observations_csv(participation_id):
     for do in donnees.find({'participation': participation_id}, sort=[('titre', 1)])[0]:
         for obs in do.get('observations', []):
             w.writerow(format_row(obs, do.get('titre', '')))
-    return bytearray(buff.getvalue().encode('UTF-16LE'))
+    return bytearray(buff.getvalue().encode('utf-8'))
 
 
 @task
