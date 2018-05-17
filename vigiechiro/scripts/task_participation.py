@@ -30,9 +30,11 @@ from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TASK_PARTICIPATION_DATASTORE_CACHE, TASK_PARTICIPATION_DATASTORE_USE_SYMLINKS,
                         TASK_PARTICIPATION_PARALLELE_POOL, TASK_PARTICIPATION_KEEP_TMP_DIR,
                         TASK_PARTICIPATION_MAX_RETRY, REQUESTS_TIMEOUT)
-from ..resources.fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
+from ..resources.fichiers import (fichiers as f_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
-                                  delete_fichier_and_s3, get_file_from_s3)
+                                  delete_fichier_and_s3, get_file_from_s3, _sign_request)
+from ..resources.participations import participations as p_resource
+from ..resources.donnees import donnees as d_resource
 from .queuer import task
 
 
@@ -91,7 +93,6 @@ def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, **
         s3_dir = 'tc/'
     else:
         s3_dir = 'others/'
-    from ..resources.fichiers import fichiers as f_resource, _sign_request
     payload = {'titre': titre,
                'proprietaire': proprietaire,
                'mime': mime,
@@ -257,7 +258,6 @@ def process_participation(participation_id, extra_pjs_ids=[], publique=True,
                           notify_mail=None, notify_msg=None, retry_count=0):
     participation_id = ObjectId(participation_id)
     extra_pjs_ids = [ObjectId(x) for x in extra_pjs_ids]
-    from ..resources.participations import participations as p_resource
     p = p_resource.find_one(participation_id, fields={
         'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
@@ -512,7 +512,6 @@ class Donnee:
     def save(self, participation_id, proprietaire_id, publique):
         if self.id:
             return
-        from ..resources.donnees import donnees as d_resource
         self._build_observations()
         payload = {
             'titre': self.basename,
@@ -542,7 +541,6 @@ class Participation:
             participation_datastore = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, participation_id)
             if not os.path.exists(participation_datastore):
                 os.mkdir(participation_datastore)
-        from ..resources.participations import participations as p_resource
         self.participation_id = participation_id
         self.participation = p_resource.get_resource(participation_id, auto_abort=False)
         if not self.participation:
@@ -631,7 +629,6 @@ class Participation:
                    self.participation['observateur'],
                    self.publique)
         parallel_executor(save_donnee, self.donnees.values())
-        from ..resources.participations import participations as p_resource
         logger.debug('Saving %s logs items in participation' % len(logger.LOGS))
         titre = 'participation-%s-logs' % (self.participation['_id'])
         new_logs = _create_fichier(titre, 'text/plain',
