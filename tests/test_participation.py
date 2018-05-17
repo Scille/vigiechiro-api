@@ -54,7 +54,7 @@ def test_pieces_jointes_access(participation_ready, file_uploaded,
     assert r.status_code == 201, r.text
     participations_url = '/participations/{}'.format(r.json()['_id'])
     # Observateur wants to keep it work private
-    r = observateur.patch('/moi', json={'donnees_publiques': False})
+    r = administrateur.patch(observateur.url, json={'donnees_publiques': False})
     assert r.status_code == 200, r.text
     # Other observateurs still can see it participations
     r = observateur_other.get(participations_url)
@@ -68,7 +68,7 @@ def test_pieces_jointes_access(participation_ready, file_uploaded,
     r = administrateur.get(participations_url + '/pieces_jointes')
     assert r.status_code == 200, r.text
     # Now switch back to public
-    r = observateur.patch('/moi', json={'donnees_publiques': True})
+    r = administrateur.patch(observateur.url, json={'donnees_publiques': True})
     assert r.status_code == 200, r.text
     # Other observateur are now allowed
     r = observateur_other.get(participations_url + '/pieces_jointes')
