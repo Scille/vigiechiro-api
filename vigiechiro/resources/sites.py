@@ -225,10 +225,9 @@ def create_site():
             query={'name': 'increments'},
             update={'$inc': {'protocole_routier_count': 1}}, new=True)
         if not routier_count:
-            logging.error('Cannot increment `protocole_routier_count`, is '
-                          '`configuration` collection containing an '
-                          '`increments` document ?')
-            abort(500)
+            raise RuntimeError('Cannot increment `protocole_routier_count`, is '
+                               '`configuration` collection containing an '
+                               '`increments` document ?')
         payload['titre'] = "{}-{}".format(protocole_resource['titre'],
                                           routier_count['protocole_routier_count'])
     inserted_payload = sites.insert(payload)
