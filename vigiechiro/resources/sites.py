@@ -18,6 +18,7 @@ from ..xin.snippets import Paginator, get_payload, get_resource, get_url_params
 
 from .actualites import create_actuality_nouveau_site, create_actuality_verrouille_site
 from .protocoles import check_configuration_participation
+from .grille_stoc import grille_stoc
 from ..scripts import clean_deleted_site
 
 
@@ -156,9 +157,19 @@ def list_protocole_sites(protocole_id):
 def list_protocole_sites_grille_stoc(protocole_id):
     """Return a list of sites with grille_stoc for a protocol"""
     pagination = Paginator()
-    found = sites.find({'protocole': protocole_id}, {'grille_stoc': 1},
-                       skip=pagination.skip, limit=pagination.max_results)
-    return pagination.make_response(*found)
+    protocoles = current_app.data.db[sites.name].find(
+        {'protocole': protocole_id}, {'grille_stoc': 1},
+        skip=pagination.skip, limit=pagination.max_results)
+    # Fetch all grilles stoc in one query to improve perfs
+    total = protocoles.count(with_limit_and_skip=False)
+    protocoles = list(protocoles)
+    grille_ids = [x['grille_stoc'] for x in protocoles]
+    grilles_per_id = {x['_id']: x for x in grille_stoc.find({'_id': {'$in': grille_ids}})[0]}
+    for item in protocoles:
+        item['grille_stoc'] = {
+            '_id': grilles_per_id[item['grille_stoc']],
+        }
+    return pagination.make_response(protocoles, total=total)
 
 
 @sites.route('/protocoles/<objectid:protocole_id>/sites/tracet', methods=['GET'])
