@@ -256,8 +256,9 @@ def _s3_create_multipart(payload):
     if not settings.DEV_FAKE_S3_URL:
         r = requests.post(sign['signed_url'], headers={'Content-Type': payload.get('mime', '')})
         if r.status_code != 200:
-            logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
-            abort(500, 'S3 has rejected file creation request')
+            raise RuntimeError(
+                'S3 has rejected file creation request: on {} error {} : {}'.format(
+                    sign['signed_url'], r.status_code, r.text))
         # Why AWS doesn't provide a JSON api ???
         payload['s3_upload_multipart_id'] = re.search('<UploadId>(.+)</UploadId>', r.text).group(1)
     else:
@@ -304,8 +305,9 @@ def fichier_delete(file_id):
                              sign_head='uploadId=' + file_resource['s3_upload_multipart_id'])
         r = requests.delete(sign['signed_url'], timeout=settings.REQUESTS_TIMEOUT)
         if r.status_code != 204:
-            logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
-            abort(500, 'S3 has rejected file creation request')
+            raise RuntimeError(
+                'S3 has rejected file creation request: on {} error {} : {}'.format(
+                    sign['signed_url'], r.status_code, r.text))
     fichiers.remove({'_id': file_resource['_id']})
     return {}, 204
 
@@ -345,9 +347,8 @@ def fichier_upload_done(file_id):
                              headers={'Content-Type': content_type},
                              data=xml_body, timeout=settings.REQUESTS_TIMEOUT)
             if r.status_code != 200:
-                logging.error('Completing {} error {} : {}'.format(
+                raise RuntimeError('Error with S3: on {} error {} : {}'.format(
                     sign['signed_url'], r.status_code, r.text))
-                abort(500, 'Error with S3')
     # Finally update the resource status
     result = fichiers.update(file_id, {'disponible': True})
     return result
