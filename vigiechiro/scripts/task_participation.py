@@ -31,7 +31,8 @@ from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TASK_PARTICIPATION_PARALLELE_POOL, TASK_PARTICIPATION_KEEP_TMP_DIR,
                         TASK_PARTICIPATION_MAX_RETRY, REQUESTS_TIMEOUT)
 from ..resources.fichiers import (fichiers as f_resource, ALLOWED_MIMES_PHOTOS,
-                                  ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV,
+                                  ALLOWED_MIMES_TA, ALLOWED_MIMES_TC,
+                                  ALLOWED_MIMES_WAV, ALLOWED_MIMES_ZIPPED, detect_mime
                                   delete_fichier_and_s3, get_file_from_s3, _sign_request)
 from ..resources.participations import participations as p_resource
 from ..resources.donnees import donnees as d_resource
@@ -85,11 +86,11 @@ def _create_working_dir(subdirs=()):
 
 
 def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, **kwargs):
-    if mime == 'audio/wav':
+    if mime in ALLOWED_MIMES_WAV:
         s3_dir = 'wav/'
-    elif mime == 'application/ta':
+    elif mime in ALLOWED_MIMES_TA:
         s3_dir = 'ta/'
-    elif mime == 'application/tc':
+    elif mime in ALLOWED_MIMES_TC:
         s3_dir = 'tc/'
     else:
         s3_dir = 'others/'
@@ -253,6 +254,51 @@ def participation_generate_bilan(participation_id):
     return 0
 
 
+def extract_zipped_files_in_participation(participation_id):
+    zipped_pjs = current_app.data.db.fichiers.find({
+        'lien_participation': participation_id,
+        'mime': {'$in': ALLOWED_MIMES_ZIPPED}
+    })
+    for zippj in zipped_pjs:
+        wdir = _create_working_dir()
+
+        # Download the zip and extract it in a temp dir
+
+        zippath = '%s/%s' % (wdir, zippj['titre'])
+        r = get_file_from_s3(zippj, wdir)
+        if r.status_code != 200:
+            logger.error('Cannot get back file {} ({}) : error {}'.format(
+                zippj['_id'], zippj['titre'], r.status_code))
+            continue
+
+        with zipfile.ZipFile(path_to_zip_file, 'r') as zref:
+            zref.extractall(wdir)
+
+        # Now individuly store each file present in the zip
+        for root, _, files in os.walk(wdir_path + '/log'):
+            for file_name in files:
+                file_path = '/'.join((root, file_name))
+                mime = detect_mime(file_name)
+                if not mime:
+                    logger.warning('Unknown file {} in zip {} ({}), skipping...'.format(
+                        file_name, zippj['_id'], zippj['titre']))
+                    continue
+                f_resource.insert({
+                    'titre': file_name,
+                    'mime': mime,
+                    'proprietaire': zippj['proprietaire'],
+                    'disponible': False,
+                    'lien_participation': participation_id,
+                })
+                obj = FichierTA(None, titre=file_name, path=file_path, mime=mime)
+                obj.force_populate_datastore()
+
+        # Remove the zip from the backend to avoid duplication next time we
+        # run process_participation
+        delete_fichier_and_s3(zippj)
+        shutil.rmtree(wdir)
+
+
 @task
 def process_participation(participation_id, extra_pjs_ids=[], publique=True,
                           notify_mail=None, notify_msg=None, retry_count=0):
@@ -305,6 +351,9 @@ def _process_participation(participation_id, extra_pjs_ids=[], publique=True):
     except ParticipationError as e:
         logger.error(e)
         return
+
+    extract_zipped_files_in_participation(participation_id)
+
     participation.reset_pjs_state()
     participation.load_pjs()
     run_tadaridaD(wdir + '/D', participation)
