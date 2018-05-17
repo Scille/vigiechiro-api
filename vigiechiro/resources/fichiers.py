@@ -36,6 +36,24 @@ ALLOWED_MIMES_PHOTOS = ['image/bmp', 'image/png', 'image/jpg', 'image/jpeg']
 ALLOWED_MIMES_TA = ['application/ta', 'application/tac']
 ALLOWED_MIMES_TC = ['application/tc', 'application/tcc']
 ALLOWED_MIMES_WAV = ['audio/wav', 'audio/x-wav']
+# Zipped file are short lived: they are only used to easier the upload and
+# will then be replaced by the files they contains during the
+# `process_participation` task. Hence is there is no need to try to display
+# them in the user-exposed APIs.
+ALLOWED_MIMES_ZIPPED = ['application/ta+zip', 'application/tc+zip', 'application/wav+zip']
+UNZIPPED_ALLOWED_MIMES = ALLOWED_MIMES_PHOTOS + ALLOWED_MIMES_TA + ALLOWED_MIMES_TC + ALLOWED_MIMES_WAV
+
+
+def detect_mime(title):
+    match = re.match(r'^[a-zA-Z0-9_\-.]+\.([a-zA-Z0-9]+)$', title)
+    if not match:
+        return None
+    extension = match.groups()[0]
+    for mime in UNZIPPED_ALLOWED_MIMES:
+        if mime.endswith(extension):
+            return mime
+    else:
+        return None
 
 
 def _validate_donnee(context, donnee):
@@ -206,6 +224,10 @@ def fichier_create():
     elif mime in ALLOWED_MIMES_WAV:
         path = 'wav/'
         if not validate_donnee_name(titre):
+            abort(422, {'titre': 'invalid name ' + titre})
+    elif mime in ALLOWED_MIMES_ZIPPED:
+        path = 'zip/'
+        if not titre.endswith('.zip') or not validate_donnee_name(titre[:-4]):
             abort(422, {'titre': 'invalid name ' + titre})
     else:
         path = 'others/'
