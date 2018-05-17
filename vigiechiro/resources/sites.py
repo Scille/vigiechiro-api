@@ -166,9 +166,7 @@ def list_protocole_sites_grille_stoc(protocole_id):
     grille_ids = [x['grille_stoc'] for x in protocoles]
     grilles_per_id = {x['_id']: x for x in grille_stoc.find({'_id': {'$in': grille_ids}})[0]}
     for item in protocoles:
-        item['grille_stoc'] = {
-            '_id': grilles_per_id[item['grille_stoc']],
-        }
+        item['grille_stoc'] = grilles_per_id[item['grille_stoc']]
     return pagination.make_response(protocoles, total=total)
 
 
