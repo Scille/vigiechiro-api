@@ -21,6 +21,7 @@ def users_base(request):
        'pseudo': 'n00b',
        'telephone': '01 23 45 67 89',
        'donnees_publiques': False,
+       'charte_acceptee': False,
        'email': 'john.doe@gmail.com',
        'email_public': 'john.doe.public@gmail.com',
        'role': 'Observateur',
@@ -31,6 +32,7 @@ def users_base(request):
          'pseudo': 'gr0k',
          'email': 'guido@python.org',
          'donnees_publiques': True,
+         'charte_acceptee': True,
          'tags': ['Python', 'BDFL'],
          'organisation': 'Python fundation',
          'role': 'Administrateur',
@@ -77,23 +79,33 @@ def test_user_route(observateur):
     assert observateur.user['commentaire'] == 'New comment'
 
 
-def test_rights_write(observateur, administrateur):
-    # Change data for myself is allowed...
+def test_donnee_publiques_only_for_admin(observateur, administrateur):
+    # Cannot change this field by myself...
     payload = {'donnees_publiques': True}
     r = observateur.patch('/moi', json=payload)
+    assert r.status_code == 422, r.text
+    # ...but admin can !
+    r = administrateur.patch(observateur.url, json=payload)
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['donnees_publiques']
+
+
+def test_rights_write(observateur, administrateur):
+    # Change data for myself is allowed...
+    payload = {'charte_acceptee': True}
+    r = observateur.patch('/moi', json=payload)
+    assert r.status_code == 200, r.text
+    observateur.update_user()
+    assert observateur.user['charte_acceptee']
     # ...but I can't change for others !
     r = observateur.patch(administrateur.url, json=payload)
     assert r.status_code == 403, r.text
     # Same thing, cannot change my own rights
-    r = observateur.patch('/utilisateurs/{}'.format(observateur.user_id),
-                          json={'role': 'Administrateur'})
+    r = observateur.patch(observateur.url, json={'role': 'Administrateur'})
     assert r.status_code == 403, r.text
     # Of courses, admin can
-    r = administrateur.patch('/utilisateurs/{}'.format(observateur.user_id),
-                             json={'role': 'Validateur'})
+    r = administrateur.patch(observateur.url, json={'role': 'Validateur'})
     assert r.status_code == 200, r.text
     observateur.update_user()
     assert observateur.user['role'] == 'Validateur'
@@ -105,7 +117,7 @@ def test_rights_write(observateur, administrateur):
         assert r.status_code == 200, r.text
 
 
-def test_rigths_read(observateur, validateur):
+def test_rights_read(observateur, validateur):
     # Observateur has limited view on others user's profile
     r = observateur.get('/utilisateurs')
     assert r.status_code == 200, r.text

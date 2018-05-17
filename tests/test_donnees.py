@@ -142,7 +142,7 @@ def test_access(clean_donnees, donnee_env, observateur_other, validateur, admini
     observateur, protocole, site, participation, donnee = donnee_env
     donnee_url = '/donnees/{}'.format(donnee['_id'])
     # Observateur wants to keep it work private
-    r = observateur.patch('/moi', json={'donnees_publiques': False})
+    r = administrateur.patch(observateur.url, json={'donnees_publiques': False})
     assert r.status_code == 200, r.text
     # Other observateurs can't see it
     r = observateur_other.get(donnee_url)
@@ -159,7 +159,7 @@ def test_access(clean_donnees, donnee_env, observateur_other, validateur, admini
     assert r.status_code == 200, r.text
     assert(len(r.json()['_items']) == 1), r.json()
     # Now switch back to public
-    r = observateur.patch('/moi', json={'donnees_publiques': True})
+    r = administrateur.patch(observateur.url, json={'donnees_publiques': True})
     assert r.status_code == 200, r.text
     # Other observateur are now allowed
     r = observateur_other.get(donnee_url)
@@ -174,7 +174,7 @@ def test_messages(donnee_env, observateur_other, validateur, administrateur):
     donnee_url = '/donnees/{}'.format(donnee['_id'])
     donnee_comment_url = donnee_url + '/observations/0/messages'
     # Observateur wants to keep it work private
-    r = observateur.patch('/moi', json={'donnees_publiques': False})
+    r = administrateur.patch(observateur.url, json={'donnees_publiques': False})
     # Make sure he can still comment
     r = observateur.put(donnee_comment_url, json={'message': "What do you think of this ?"})
     assert r.status_code == 200, r.text
@@ -187,7 +187,7 @@ def test_messages(donnee_env, observateur_other, validateur, administrateur):
     r = administrateur.put(donnee_comment_url, json={'message': "administrateur can comment"})
     assert r.status_code == 200, r.text
     # Now switch back to public
-    r = observateur.patch('/moi', json={'donnees_publiques': True})
+    r = administrateur.patch(observateur.url, json={'donnees_publiques': True})
     assert r.status_code == 200, r.text
     # Other observateur are now allowed
     r = observateur_other.put(donnee_comment_url, json={'message': "finally I can comment !"})

@@ -36,7 +36,8 @@ SCHEMA = {
         'schema': {'type': 'string'}
     },
     'professionnel': {'type': 'boolean'},
-    'donnees_publiques': {'type': 'boolean'},
+    'donnees_publiques': {'type': 'boolean', 'writerights': 'Administrateur'},
+    'charte_acceptee': {'type': 'boolean'},
     'role': choice(['Administrateur', 'Validateur', 'Observateur'],
                    writerights='Administrateur'),
     'tags': {
@@ -142,7 +143,8 @@ def get_user_profile(user_id):
 def _utilisateur_patch(user_id, additional_context=None):
     allowed_fields = {'pseudo', 'email_publique', 'nom', 'prenom',
                       'telephone', 'adresse', 'commentaire', 'organisation',
-                      'professionnel', 'donnees_publiques', 'email', 'role'}
+                      'professionnel', 'donnees_publiques', 'email', 'role',
+                      'charte_acceptee'}
     payload = get_payload(allowed_fields)
     result = utilisateurs.update(user_id, payload,
                                  additional_context=additional_context)
