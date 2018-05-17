@@ -253,22 +253,22 @@ def participation_generate_bilan(participation_id):
 
 
 @task
-def process_participation(participation_id, pjs_ids=[], publique=True,
+def process_participation(participation_id, extra_pjs_ids=[], publique=True,
                           notify_mail=None, notify_msg=None, retry_count=0):
     participation_id = ObjectId(participation_id)
-    pjs_ids = [ObjectId(x) for x in pjs_ids]
+    extra_pjs_ids = [ObjectId(x) for x in extra_pjs_ids]
     from ..resources.participations import participations as p_resource
     p = p_resource.find_one(participation_id, fields={
         'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
     p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
     try:
-        _process_participation(participation_id, pjs_ids=pjs_ids, publique=publique)
-    except:
+        _process_participation(participation_id, extra_pjs_ids=extra_pjs_ids, publique=publique)
+    except Exception:
         msg = format_exc()
         logger.error(msg)
         if retry_count < TASK_PARTICIPATION_MAX_RETRY:
-            process_participation.delay(participation_id, pjs_ids, publique,
+            process_participation.delay(participation_id, extra_pjs_ids, publique,
                                         notify_mail, notify_msg, retry_count + 1)
             traitement['etat'] = 'RETRY'
             traitement['retry'] = retry_count + 1
@@ -293,7 +293,7 @@ def process_participation(participation_id, pjs_ids=[], publique=True,
     current_app.mail.send(msg)
 
 
-def _process_participation(participation_id, pjs_ids=[], publique=True):
+def _process_participation(participation_id, extra_pjs_ids=[], publique=True):
     participation_id = str(participation_id)
     wdir = _create_working_dir(('D', 'C'))
     if TASK_PARTICIPATION_KEEP_TMP_DIR:
@@ -301,7 +301,7 @@ def _process_participation(participation_id, pjs_ids=[], publique=True):
     logger.info("Starting building participation %s" % participation_id)
     g.request_user = {'role': 'Administrateur'}
     try:
-        participation = Participation(participation_id, pjs_ids, publique)
+        participation = Participation(participation_id, extra_pjs_ids, publique)
     except ParticipationError as e:
         logger.error(e)
         return
@@ -537,7 +537,7 @@ class ParticipationError(Exception): pass
 
 class Participation:
 
-    def __init__(self, participation_id, pjs_ids, publique):
+    def __init__(self, participation_id, extra_pjs_ids, publique):
         if TASK_PARTICIPATION_DATASTORE_CACHE:
             participation_datastore = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, participation_id)
             if not os.path.exists(participation_datastore):
@@ -555,7 +555,7 @@ class Participation:
         self.cir_expansion = config.get('canal_expansion_temps')
         self.cir_direct = config.get('canal_enregistrement_direct')
         # Register additional pjs as part of the participation
-        current_app.data.db.fichiers.update({'_id': {'$in': pjs_ids}},
+        current_app.data.db.fichiers.update({'_id': {'$in': extra_pjs_ids}},
             {'$set': {'lien_participation': self.participation['_id']}}, multi=True)
 
     def reset_pjs_state(self):
