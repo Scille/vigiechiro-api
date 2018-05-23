@@ -32,10 +32,8 @@ from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TASK_PARTICIPATION_MAX_RETRY, REQUESTS_TIMEOUT)
 from ..resources.fichiers import (fichiers as f_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC,
-                                  ALLOWED_MIMES_WAV, ALLOWED_MIMES_ZIPPED, detect_mime
+                                  ALLOWED_MIMES_WAV, ALLOWED_MIMES_ZIPPED, detect_mime,
                                   delete_fichier_and_s3, get_file_from_s3, _sign_request)
-from ..resources.participations import participations as p_resource
-from ..resources.donnees import donnees as d_resource
 from .queuer import task
 
 
@@ -302,6 +300,8 @@ def extract_zipped_files_in_participation(participation_id):
 @task
 def process_participation(participation_id, extra_pjs_ids=[], publique=True,
                           notify_mail=None, notify_msg=None, retry_count=0):
+    from ..resources.participations import participations as p_resource
+
     participation_id = ObjectId(participation_id)
     extra_pjs_ids = [ObjectId(x) for x in extra_pjs_ids]
     p = p_resource.find_one(participation_id, fields={
@@ -559,6 +559,8 @@ class Donnee:
 
 
     def save(self, participation_id, proprietaire_id, publique):
+        from ..resources.donnees import donnees as d_resource
+
         if self.id:
             return
         self._build_observations()
@@ -586,6 +588,8 @@ class ParticipationError(Exception): pass
 class Participation:
 
     def __init__(self, participation_id, extra_pjs_ids, publique):
+        from ..resources.participations import participations as p_resource
+
         if TASK_PARTICIPATION_DATASTORE_CACHE:
             participation_datastore = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, participation_id)
             if not os.path.exists(participation_datastore):
@@ -673,6 +677,8 @@ class Participation:
                 yield d.wav
 
     def save(self):
+        from ..resources.participations import participations as p_resource
+
         def save_donnee(d):
             d.save(self.participation['_id'],
                    self.participation['observateur'],
