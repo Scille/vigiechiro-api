@@ -13,6 +13,8 @@
 """
 
 import base64
+import json
+import datetime
 import urllib
 import time
 import logging
@@ -71,7 +73,7 @@ SCHEMA = {
     'mime': {'type': 'string', 'postonly': True, 'required': True},
     'proprietaire': relation('utilisateurs', postonly=True, required=True),
     'disponible': {'type': 'boolean'},
-    's3_id': {'type': 'string', 'postonly': True},
+    's3_id': {'type': 'string', 'postonly': True, 'unique': True},
     's3_upload_multipart_id': {'type': 'string', 'postonly': True},
     'lien_protocole': relation('protocoles'),
     'lien_donnee': relation('donnees', validator=_validate_donnee),
@@ -177,6 +179,16 @@ def _sign_request(**kwargs):
     return sign
 
 
+def _aws_sign(to_sign):
+    if not isinstance(to_sign, bytes):
+        to_sign = to_sign.encode('utf8')
+    signature = base64.b64encode(hmac.new(
+            current_app.config['AWS_SECRET_ACCESS_KEY'].encode(),
+            base64.b64encode(to_sign),
+            sha1).digest())
+    return signature.strip().decode()
+
+
 @fichiers.route('/fichiers/<objectid:fichier_id>', methods=['GET'])
 @requires_auth(roles='Observateur')
 def display_fichier(fichier_id):
@@ -216,11 +228,11 @@ def fichier_create():
     elif mime in ALLOWED_MIMES_TA:
         path = 'ta/'
         if not validate_donnee_name(titre):
-            abort(422, {'titre': 'invalid name ' + titre })
+            abort(422, {'titre': 'invalid name ' + titre})
     elif mime in ALLOWED_MIMES_TC:
         path = 'tc/'
         if not validate_donnee_name(titre):
-            abort(422, {'titre': 'invalid name'})
+            abort(422, {'titre': 'invalid name ' + titre})
     elif mime in ALLOWED_MIMES_WAV:
         path = 'wav/'
         if not validate_donnee_name(titre):
@@ -236,8 +248,6 @@ def fichier_create():
         'mime': mime,
         'proprietaire': proprietaire,
         'disponible': False,
-        # Add uuid to make sure the file name is unique
-        's3_id': path + titre + '.' + uuid.uuid4().hex,
     }
     if async_process:
         payload['_async_process'] = async_process
@@ -245,47 +255,41 @@ def fichier_create():
         payload['lien_donnee'] = lien_donnee
     if lien_participation:
         payload['lien_participation'] = lien_participation
+        payload['s3_id'] = "%spa%s/%s" % (path, lien_participation, titre)
+    else:
+        payload['s3_id'] = "%s%s" % (path, titre)
     if lien_protocole:
         payload['lien_protocole'] = lien_protocole
     if multipart:
-        result = _s3_create_multipart(payload)
+        abort(422, {'errors': {'multipart': 'Multipart upload not supported'}})
     else:
         result = _s3_create_singlepart(payload)
+        if not settings.DEV_FAKE_S3_URL:
+            sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
+                                 content_type=payload['mime'])
+            result[0]['s3_signed_url'] = sign['signed_url']
+        else:
+            result[0]['s3_signed_url'] = settings.DEV_FAKE_S3_URL + '/' + payload['s3_id']
     if delay_work:
         delay_work(result[0]['_id'])
     return result
 
 
 def _s3_create_singlepart(payload):
-    sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
-                         content_type=payload['mime'])
     # Insert the file representation in the files resource
     inserted = fichiers.insert(payload)
-    # signed_request is not stored in the database but transfered once
-    if not settings.DEV_FAKE_S3_URL:
-        inserted['s3_signed_url'] = sign['signed_url']
-    else:
-        inserted['s3_signed_url'] = settings.DEV_FAKE_S3_URL + '/' + payload['s3_id']
-    return inserted, 201
-
-
-def _s3_create_multipart(payload):
-    amz_headers = {'x-amz-meta-title': payload['titre']}
-    amz_headers['Content-Type'] = payload['mime']
-    sign = _sign_request(verb='POST', object_name=payload['s3_id'],
-                         content_type=payload['mime'], sign_head='uploads')
-    # Create the multipart object on s3 using the signed request
-    if not settings.DEV_FAKE_S3_URL:
-        r = requests.post(sign['signed_url'], headers={'Content-Type': payload.get('mime', '')})
-        if r.status_code != 200:
-            raise RuntimeError(
-                'S3 has rejected file creation request: on {} error {} : {}'.format(
-                    sign['signed_url'], r.status_code, r.text))
-        # Why AWS doesn't provide a JSON api ???
-        payload['s3_upload_multipart_id'] = re.search('<UploadId>(.+)</UploadId>', r.text).group(1)
-    else:
-        payload['s3_upload_multipart_id'] = uuid.uuid4().hex
-    inserted = fichiers.insert(payload)
+    expiration = datetime.datetime.utcnow() + datetime.timedelta(seconds=3600)
+    policy = json.dumps({
+        "expiration": expiration.isoformat() + 'Z',
+        "conditions": [
+            {"acl": "private"},
+            {"key": payload['s3_id']},
+            {"bucket": current_app.config['AWS_S3_BUCKET']}
+        ]
+    })
+    inserted['s3_policy'] = base64.b64encode(policy.encode('utf8')).decode()
+    inserted['s3_signature'] = _aws_sign(policy)
+    inserted['s3_aws_access_key_id'] = current_app.config['AWS_ACCESS_KEY_ID']
     return inserted, 201
 
 
