@@ -68,7 +68,7 @@ class ProxyLogger:
 logger = ProxyLogger()
 
 
-MIN_PROBA_TAXON = 0.20
+MIN_PROBA_TAXON = 0.00
 TADARIDA_C = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaC'
 TADARIDA_D = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD'
 ORDER_NAMES = [('Chiroptera', 'chiropteres'), ('Orthoptera', 'orthopteres')]
@@ -478,7 +478,10 @@ class Donnee:
                 taxons = []
                 obs = {}
                 for head, cell in zip(headers, line):
-                    if head in ['Group.1', 'Ordre', 'VersionD', 'VersionC']:
+                    if head in ['Group.1', 'Order', 'Ordre', 'OrderNum', 'VersionD',
+                                'VersionC', 'Version', 'FreqP', 'FreqC', 'NbCris', 'DurMed',
+                                'Dur90', 'Ampm50', 'Ampm90', 'AmpSMd', 'DiffME', 'SR', 'Ind',
+                                'Duree', 'SpMaxF2', 'SuccessProb']:
                         continue
                     elif head == 'FreqM':
                         obs['frequence_mediane'] = float(cell)
