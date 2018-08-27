@@ -1,5 +1,3 @@
-
-
 #! /usr/bin/env python3
 
 """
@@ -12,6 +10,7 @@ base_logger = logging.getLogger('task')
 base_logger.setLevel(logging.INFO)
 from datetime import datetime
 from uuid import uuid4
+import zipfile
 import csv
 import shutil
 import tempfile
@@ -269,11 +268,11 @@ def extract_zipped_files_in_participation(participation_id):
                 zippj['_id'], zippj['titre'], r.status_code))
             continue
 
-        with zipfile.ZipFile(path_to_zip_file, 'r') as zref:
+        with zipfile.ZipFile(zippath, 'r') as zref:
             zref.extractall(wdir)
 
         # Now individuly store each file present in the zip
-        for root, _, files in os.walk(wdir_path + '/log'):
+        for root, _, files in os.walk(wdir):
             for file_name in files:
                 file_path = '/'.join((root, file_name))
                 mime = detect_mime(file_name)
