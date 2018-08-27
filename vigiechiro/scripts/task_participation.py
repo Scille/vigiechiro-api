@@ -69,8 +69,8 @@ logger = ProxyLogger()
 
 
 MIN_PROBA_TAXON = 0.00
-TADARIDA_C = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaC'
-TADARIDA_D = os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD'
+TADARIDA_C = os.environ.get('TADARIDAC_BIN', os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaC')
+TADARIDA_D = os.environ.get('TADARIDAD_BIN', os.path.abspath(os.path.dirname(__file__)) + '/../../bin/tadaridaD')
 ORDER_NAMES = [('Chiroptera', 'chiropteres'), ('Orthoptera', 'orthopteres')]
 AUTH = (SCRIPT_WORKER_TOKEN, None)
 
