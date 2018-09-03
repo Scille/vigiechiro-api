@@ -533,9 +533,9 @@ class Donnee:
                         continue
                     elif head == 'FreqM':
                         obs['frequence_mediane'] = float(cell)
-                    elif head == 'TDeb':
+                    elif head in ('TDeb', 'Tstart'):
                         obs['temps_debut'] = float(cell)
-                    elif head == 'TFin':
+                    elif head in ('TFin', 'Tend'):
                         obs['temps_fin'] = float(cell)
                     elif float(cell) >= MIN_PROBA_TAXON:
                         # Interesting taxon
@@ -545,8 +545,7 @@ class Donnee:
                             continue
                         taxon = {'taxon': taxon_data['_id'],
                                  'probabilite': float(cell)}
-                        if taxon:
-                            taxons.append(taxon)
+                        taxons.append(taxon)
                 # Sort taxons by proba and retrieve taxon' resources in backend
                 taxons = sorted(taxons, key=lambda x: x['probabilite'])
                 if len(taxons):
