@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 . ./venv/bin/activate
 ./bin/init_db.py reset
