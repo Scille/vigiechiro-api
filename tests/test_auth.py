@@ -39,7 +39,6 @@ def test_expiration_token(observateur):
                            {'$set': {'tokens.'+observateur.token: token_expire}})
     r = observateur.get('/moi')
     assert r.status_code == 401, r.text
-    content = r.json()
 
 
 def test_single_login():

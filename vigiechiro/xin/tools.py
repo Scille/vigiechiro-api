@@ -11,7 +11,7 @@ import bson
 import hashlib
 from werkzeug import Response
 from flask import app, current_app, abort, request
-from flask.ext.pymongo import PyMongo
+from flask_pymongo import PyMongo
 from bson.json_util import dumps
 from werkzeug.routing import BaseConverter, ValidationError
 

@@ -22,7 +22,7 @@ from bson import ObjectId
 from flask import current_app, g
 from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
-from flask.ext.mail import Message
+from flask_mail import Message
 
 from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE, TASK_PARTICIPATION_BATCH_SIZE,

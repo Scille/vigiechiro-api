@@ -1,6 +1,7 @@
 import os
 import re
 import pytest
+import time
 import shutil
 import requests
 import tempfile
@@ -41,6 +42,14 @@ def fake_s3(request):
         shutil.rmtree(wdir)
         print(' Done !')
     request.addfinalizer(finalizer)
+    # Wait for server ready
+    while True:
+        try:
+            ret = requests.get(S3_ADDRESS)
+            assert ret.ok
+            break
+        except requests.exceptions.ConnectionError:
+            time.sleep(0.1)
     return wdir
 
 
