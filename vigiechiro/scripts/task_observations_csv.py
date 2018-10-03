@@ -2,7 +2,7 @@ from bson import ObjectId
 from io import StringIO
 import csv
 from flask import current_app
-from flask.ext.mail import Message
+from flask_mail import Message
 
 from .queuer import task
 

@@ -48,11 +48,6 @@ FRONTEND_DOMAIN = environ.get('FRONTEND_DOMAIN',
     'http://localhost:%s' % PORT if FRONTEND_HOSTED else 'http://localhost:9000')
 REQUESTS_TIMEOUT = int(environ.get('REQUESTS_TIMEOUT', 90))
 
-
-### Redis ###
-REDIS_PORT = environ.get('REDIS_PORT', 6379)
-REDIS_HOST = environ.get('REDIS_HOST', 'localhost')
-
 ### MongoDB ###
 MONGO_HOST = MONGO_URI = environ.get('MONGO_HOST', 'mongodb://localhost:27017/vigiechiro')
 
@@ -81,11 +76,6 @@ AUTHOMATIC = {
 AWS_S3_BUCKET = environ.get('AWS_S3_BUCKET', '')
 AWS_ACCESS_KEY_ID = environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = environ.get('AWS_SECRET_ACCESS_KEY', '')
-
-### Celery broker ###
-CELERY_BROKER_URL = environ.get('CELERY_BROKER_URL', MONGO_HOST)
-HIREFIRE_TOKEN = environ.get('HIREFIRE_TOKEN', 'development')
-
 
 ### Flask Mail ###
 MAIL_SERVER = environ.get('MAIL_SERVER')

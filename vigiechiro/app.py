@@ -4,11 +4,9 @@ import requests
 import logging
 from os.path import abspath, dirname
 from flask import Flask, send_from_directory, make_response, request, redirect
-from flask.ext.pymongo import PyMongo
-from flask.ext.cache import Cache
-from flask.ext.mail import Mail
-from hirefire.procs.celery import CeleryProc
-from hirefire.contrib.flask.blueprint import build_hirefire_blueprint
+from flask_pymongo import PyMongo
+from flask_cache import Cache
+from flask_mail import Mail
 
 from . import settings
 from . import resources
@@ -44,7 +42,7 @@ def make_json_app(app):
         return add_cors_headers(response)
 
     for code in default_exceptions.keys():
-        app.error_handler_spec[None][code] = make_json_error
+        app.error_handler_spec[code] = make_json_error
 
 
 def init_app():
