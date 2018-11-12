@@ -243,7 +243,7 @@ def fichier_create():
         payload['lien_donnee'] = lien_donnee
     if lien_participation:
         payload['lien_participation'] = lien_participation
-        payload['s3_id'] = "%spa%s/%s" % (path, lien_participation, titre)
+        payload['s3_id'] = "%spa-%s/%s" % (path, lien_participation, titre)
     else:
         payload['s3_id'] = "%s%s" % (path, titre)
     if lien_protocole:
@@ -260,7 +260,14 @@ def fichier_create():
 
 def _s3_create_singlepart(payload):
     # Insert the file representation in the files resource
-    inserted = fichiers.insert(payload)
+    exists = fichiers.find_one({'titre': payload['s3_id']})
+    if exists:
+        if exists.get('disponible', False):
+            abort(422, 'upload is already done')
+        else:
+            inserted = exists
+    else:
+        inserted = fichiers.insert(payload)
     # signed_request is not stored in the database but transfered once
     if not settings.DEV_FAKE_S3_URL:
         sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
@@ -286,7 +293,15 @@ def _s3_create_multipart(payload):
         payload['s3_upload_multipart_id'] = re.search('<UploadId>(.+)</UploadId>', r.text).group(1)
     else:
         payload['s3_upload_multipart_id'] = uuid.uuid4().hex
-    inserted = fichiers.insert(payload)
+
+    exists = fichiers.find_one({'titre': payload['s3_id']})
+    if exists:
+        if exists.get('disponible', False):
+            abort(422, 'upload is already done')
+        else:
+            inserted = exists
+    else:
+        inserted = fichiers.insert(payload)
     return inserted, 201
 
 

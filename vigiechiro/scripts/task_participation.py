@@ -6,6 +6,7 @@ Participation bilan task worker
 
 import logging
 logging.basicConfig()
+logging.getLogger('requests').setLevel(logging.WARNING)
 base_logger = logging.getLogger('task')
 base_logger.setLevel(logging.INFO)
 from datetime import datetime
@@ -251,20 +252,22 @@ def participation_generate_bilan(participation_id):
     return 0
 
 
-def extract_zipped_files_in_participation(participation_id):
+def extract_zipped_files_in_participation(participation):
+    participation_id = ObjectId(participation.participation_id)
     zipped_pjs = current_app.data.db.fichiers.find({
         'lien_participation': participation_id,
         'mime': {'$in': ALLOWED_MIMES_ZIPPED}
     })
     for zippj in zipped_pjs:
         wdir = _create_working_dir()
+        logger.info('Extracting zip file %s in %s' % (zippj['titre'], wdir))
 
         # Download the zip and extract it in a temp dir
 
         zippath = '%s/%s' % (wdir, zippj['titre'])
-        r = get_file_from_s3(zippj, wdir)
+        r = get_file_from_s3(zippj, zippath)
         if r.status_code != 200:
-            logger.error('Cannot get back file {} ({}) : error {}'.format(
+            logger.error('Cannot get back zip file {} ({}) : error {}'.format(
                 zippj['_id'], zippj['titre'], r.status_code))
             continue
 
@@ -287,7 +290,7 @@ def extract_zipped_files_in_participation(participation_id):
                     'disponible': False,
                     'lien_participation': participation_id,
                 })
-                obj = FichierTA(None, titre=file_name, path=file_path, mime=mime)
+                obj = FichierTA(participation, titre=file_name, path=file_path, mime=mime)
                 obj.force_populate_datastore()
 
         # Remove the zip from the backend to avoid duplication next time we
@@ -351,7 +354,7 @@ def _process_participation(participation_id, extra_pjs_ids=[], publique=True):
         logger.error(e)
         return
 
-    extract_zipped_files_in_participation(participation_id)
+    extract_zipped_files_in_participation(participation)
 
     participation.reset_pjs_state()
     participation.load_pjs()
