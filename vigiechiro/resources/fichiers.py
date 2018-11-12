@@ -260,7 +260,7 @@ def fichier_create():
 
 def _s3_create_singlepart(payload):
     # Insert the file representation in the files resource
-    exists = fichiers.find_one({'titre': payload['s3_id']})
+    exists = fichiers.find_one({'titre': payload['s3_id']}, auto_abort=False)
     if exists:
         if exists.get('disponible', False):
             abort(422, 'upload is already done')
@@ -294,7 +294,7 @@ def _s3_create_multipart(payload):
     else:
         payload['s3_upload_multipart_id'] = uuid.uuid4().hex
 
-    exists = fichiers.find_one({'titre': payload['s3_id']})
+    exists = fichiers.find_one({'titre': payload['s3_id']}, auto_abort=False)
     if exists:
         if exists.get('disponible', False):
             abort(422, 'upload is already done')
