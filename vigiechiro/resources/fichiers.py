@@ -40,7 +40,7 @@ ALLOWED_MIMES_WAV = ['audio/wav', 'audio/x-wav']
 # will then be replaced by the files they contains during the
 # `process_participation` task. Hence is there is no need to try to display
 # them in the user-exposed APIs.
-ALLOWED_MIMES_ZIPPED = ['application/ta+zip', 'application/tc+zip', 'application/wav+zip']
+ALLOWED_MIMES_ZIPPED = ['application/zip', 'application/ta+zip', 'application/tc+zip', 'application/wav+zip']
 UNZIPPED_ALLOWED_MIMES = ALLOWED_MIMES_PHOTOS + ALLOWED_MIMES_TA + ALLOWED_MIMES_TC + ALLOWED_MIMES_WAV
 
 
@@ -227,8 +227,6 @@ def fichier_create():
             abort(422, {'titre': 'invalid name ' + titre})
     elif mime in ALLOWED_MIMES_ZIPPED:
         path = 'zip/'
-        if not titre.endswith('.zip') or not validate_donnee_name(titre[:-4]):
-            abort(422, {'titre': 'invalid name ' + titre})
     else:
         path = 'others/'
     payload = {

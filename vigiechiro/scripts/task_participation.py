@@ -9,6 +9,7 @@ logging.basicConfig()
 logging.getLogger('requests').setLevel(logging.WARNING)
 base_logger = logging.getLogger('task')
 base_logger.setLevel(logging.INFO)
+from collections import defaultdict
 from datetime import datetime
 from uuid import uuid4
 import zipfile
@@ -258,18 +259,49 @@ def extract_zipped_files_in_participation(participation):
         'lien_participation': participation_id,
         'mime': {'$in': ALLOWED_MIMES_ZIPPED}
     })
+
+    # Group split archive parts together
+    zip_groups = defaultdict(dict)
     for zippj in zipped_pjs:
-        wdir = _create_working_dir()
-        logger.info('Extracting zip file %s in %s' % (zippj['titre'], wdir))
+        # Accepted formats: <name>.z01, <name>.zip.001
+        pj_titre = zippj['titre']
 
-        # Download the zip and extract it in a temp dir
+        match = re.match(r'^([a-zA-Z_0-9\-.])\.zip\.[0-9]+$', pj_titre)
+        if match:
+            group = match.group(1)
+            zip_groups[group][pj_titre] = zippj
 
-        zippath = '%s/%s' % (wdir, zippj['titre'])
-        r = get_file_from_s3(zippj, zippath)
-        if r.status_code != 200:
-            logger.error('Cannot get back zip file {} ({}) : error {}'.format(
-                zippj['_id'], zippj['titre'], r.status_code))
+        match = re.match(r'^([a-zA-Z_0-9\-.])\.z[0-9]+$', pj_titre)
+        if match:
+            group = match.group(1)
+            zip_groups[group][pj_titre] = zippj
+
+        match = re.match(r'^([a-zA-Z_0-9\-.])\.zip', pj_titre)
+        if match:
+            group = match.group(1)
+            zip_groups[group][pj_titre] = zippj
+
+    for group_name, group_pjs in zip_groups.items():
+        main_pj = group_name + '.zip'
+        if main_pj not in group_pjs:
+            logger.warning(
+                'Cannot extract split archive %s, missing main file `%s`.' % (
+                    group_pjs, main_pj)
+            )
             continue
+
+        wdir = _create_working_dir()
+        logger.info('Extracting zip file %s in %s' % (main_pj, wdir))
+        # Download the zip and extract it in a temp dir
+        for pj_titre, zippj in group_pjs.items():
+            logger.info('Download %s from S3', pj_titre)
+
+            zippath = '%s/%s' % (wdir, pj_titre)
+            r = get_file_from_s3(zippj, zippath)
+            if r.status_code != 200:
+                logger.error('Cannot get back zip file {} ({}) : error {}'.format(
+                    zippj['_id'], pj_titre, r.status_code))
+                continue
 
         with zipfile.ZipFile(zippath, 'r') as zref:
             zref.extractall(wdir)
@@ -281,7 +313,7 @@ def extract_zipped_files_in_participation(participation):
                 mime = detect_mime(file_name)
                 if not mime:
                     logger.warning('Unknown file {} in zip {} ({}), skipping...'.format(
-                        file_name, zippj['_id'], zippj['titre']))
+                        file_name, zippj['_id'], pj_titre))
                     continue
                 f_resource.insert({
                     'titre': file_name,
@@ -295,7 +327,8 @@ def extract_zipped_files_in_participation(participation):
 
         # Remove the zip from the backend to avoid duplication next time we
         # run process_participation
-        delete_fichier_and_s3(zippj)
+        for zippj in group_pjs.values():
+            delete_fichier_and_s3(zippj)
         shutil.rmtree(wdir)
 
 
