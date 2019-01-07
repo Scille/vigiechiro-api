@@ -261,25 +261,28 @@ def extract_zipped_files_in_participation(participation):
     })
 
     # Group split archive parts together
+    logger.info('Extracting %s zipped files' % len(zipped_pjs))
     zip_groups = defaultdict(dict)
     for zippj in zipped_pjs:
         # Accepted formats: <name>.z01, <name>.zip.001
         pj_titre = zippj['titre']
 
-        match = re.match(r'^([a-zA-Z_0-9\-.])\.zip\.[0-9]+$', pj_titre)
+        match = re.match(r'^([a-zA-Z_0-9\-.]+)\.zip\.[0-9]+$', pj_titre)
         if match:
             group = match.group(1)
             zip_groups[group][pj_titre] = zippj
 
-        match = re.match(r'^([a-zA-Z_0-9\-.])\.z[0-9]+$', pj_titre)
+        match = re.match(r'^([a-zA-Z_0-9\-.]+)\.z[0-9]+$', pj_titre)
         if match:
             group = match.group(1)
             zip_groups[group][pj_titre] = zippj
 
-        match = re.match(r'^([a-zA-Z_0-9\-.])\.zip', pj_titre)
+        match = re.match(r'^([a-zA-Z_0-9\-.]+)\.zip', pj_titre)
         if match:
             group = match.group(1)
             zip_groups[group][pj_titre] = zippj
+
+    logger.info('Extracting %s zipped files' % len(zipped_pjs))
 
     for group_name, group_pjs in zip_groups.items():
         main_pj = group_name + '.zip'
