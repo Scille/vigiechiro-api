@@ -261,7 +261,7 @@ def extract_zipped_files_in_participation(participation):
     })
 
     # Group split archive parts together
-    logger.info('Extracting %s zipped files' % len(zipped_pjs))
+    logger.info('Extracting %s zipped files' % zipped_pjs.count())
     zip_groups = defaultdict(dict)
     for zippj in zipped_pjs:
         # Accepted formats: <name>.z01, <name>.zip.001
@@ -281,8 +281,6 @@ def extract_zipped_files_in_participation(participation):
         if match:
             group = match.group(1)
             zip_groups[group][pj_titre] = zippj
-
-    logger.info('Extracting %s zipped files' % len(zipped_pjs))
 
     for group_name, group_pjs in zip_groups.items():
         main_pj = group_name + '.zip'
