@@ -287,18 +287,20 @@ def extract_zipped_files_in_participation(participation):
         splitted_archive = len(group_pjs) > 1
 
         if splitted_archive:
-            main_pj = group_pjs.keys()[0]
-            logger.info('Starting work on archive for %s in %s' % (main_pj, wdir))
-        else:
             main_pj = group_name + '.joined.zip'
             logger.info('Starting work on splitted archive %s in %s' % (group_name, wdir))
+        else:
+            main_pj = list(group_pjs.keys())[0]
+            logger.info('Starting work on archive for %s in %s' % (main_pj, wdir))
 
         # Download the zip and extract it in a temp dir
         for pj_titre, zippj in group_pjs.items():
-            logger.info('Download %s from S3', pj_titre)
-
+            logger.info('Download %s from S3 ()' % (pj_titre, zippj['s3_id']))
             zippath = '%s/%s' % (wdir, pj_titre)
             r = get_file_from_s3(zippj, zippath)
+            if r is None:
+                logger.warning("%s has not s3_id field: %s" % (pj_titre, zippj))
+                continue
             if r.status_code != 200:
                 logger.error('Cannot get back zip file {} ({}) : error {}'.format(
                     zippj['_id'], pj_titre, r.status_code))
