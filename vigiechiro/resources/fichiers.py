@@ -45,15 +45,25 @@ UNZIPPED_ALLOWED_MIMES = ALLOWED_MIMES_PHOTOS + ALLOWED_MIMES_TA + ALLOWED_MIMES
 
 
 def detect_mime(title):
+    if re.match(r'^[a-zA-Z_0-9\-.]+\.zip\.[0-9]+$', title):
+        return  'application/zip'
+
+    if re.match(r'^([a-zA-Z_0-9\-.]+)\.z[0-9]+$', title):
+        return  'application/zip'
+
+    if re.match(r'^([a-zA-Z_0-9\-.]+)\.zip', title):
+        return  'application/zip'
+
     match = re.match(r'^[a-zA-Z0-9_\-.]+\.([a-zA-Z0-9]+)$', title)
     if not match:
         return None
+
     extension = match.groups()[0]
     for mime in UNZIPPED_ALLOWED_MIMES:
         if mime.endswith(extension):
             return mime
-    else:
-        return None
+
+    return None
 
 
 def _validate_donnee(context, donnee):
@@ -133,7 +143,7 @@ def _sign_request(**kwargs):
     verb = kwargs.pop('verb', 'GET')
     content_md5 = kwargs.pop('content_md5', '')
     content_type = kwargs.pop('content_type', '')
-    expires = kwargs.pop('expires', int(time.time() + 3600))
+    expires = kwargs.pop('expires', int(time.time() + 3600 * 10))
     amz_headers = kwargs.pop('amz_headers', '')
     params = kwargs.pop('params', {})
     sign_head = kwargs.pop('sign_head', {})
@@ -190,13 +200,15 @@ def display_fichier(fichier_id):
 def fichier_create():
     payload = get_payload()
     # Check for mandatory fields
-    missing_fields = [f for f in ['titre', 'mime'] if f not in payload]
+    missing_fields = [f for f in ['titre'] if f not in payload]
     if missing_fields:
         abort(422, {f: 'missing field' for f in missing_fields})
     titre = payload.pop('titre')
     if not re.match(r'^[a-zA-Z0-9_\-.]+$', titre):
         abort(422, {'titre': 'string contains forbidden characters'})
-    mime = payload.pop('mime')
+    mime = detect_mime(titre)
+    if not mime:
+        abort(422, {'titre': 'unknown file type'})
     multipart = payload.pop('multipart', False)
     lien_donnee = payload.pop('lien_donnee', None)
     lien_participation = payload.pop('lien_participation', None)
@@ -258,10 +270,10 @@ def fichier_create():
 
 def _s3_create_singlepart(payload):
     # Insert the file representation in the files resource
-    exists = fichiers.find_one({'titre': payload['s3_id']}, auto_abort=False)
+    exists = fichiers.find_one({'s3_id': payload['s3_id']}, auto_abort=False)
     if exists:
         if exists.get('disponible', False):
-            abort(422, 'upload is already done')
+            abort(409, 'upload is already done')
         else:
             inserted = exists
     else:
@@ -292,10 +304,10 @@ def _s3_create_multipart(payload):
     else:
         payload['s3_upload_multipart_id'] = uuid.uuid4().hex
 
-    exists = fichiers.find_one({'titre': payload['s3_id']}, auto_abort=False)
+    exists = fichiers.find_one({'s3_id': payload['s3_id']}, auto_abort=False)
     if exists:
         if exists.get('disponible', False):
-            abort(422, 'upload is already done')
+            abort(409, 'upload is already done')
         else:
             inserted = exists
     else:
@@ -356,7 +368,7 @@ def fichier_upload_done(file_id):
         file_resource['proprietaire'] != g.request_user['_id']):
         abort(403)
     if 's3_id' not in file_resource or file_resource.get('disponible', False):
-        abort(422, 'upload is already done')
+        abort(409, 'upload is already done')
     if 's3_upload_multipart_id' in file_resource:
         # Finalize the file on S3
         payload = get_payload()
