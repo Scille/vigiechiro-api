@@ -81,11 +81,11 @@ def test_donnees(participation_ready, observateur):
     tadarida_file_template = "Car170517-2014-Pass1-C1-1_20140702_225107_{:0>3}.{}"
     ta_ids = []
     for i, mime in enumerate(['application/ta', 'application/tac']):
-        res = custom_upload_file({'titre': tadarida_file_template.format(i, 'ta'), 'mime': mime}, observateur)
+        res = custom_upload_file({'titre': tadarida_file_template.format(i, 'ta')}, observateur)
         ta_ids.append(res['_id'])
     wav_ids = []
     for i, mime in enumerate(['audio/wav', 'audio/x-wav']):
-        res = custom_upload_file({'titre': tadarida_file_template.format(i, 'wav'), 'mime': mime}, observateur)
+        res = custom_upload_file({'titre': tadarida_file_template.format(i, 'wav')}, observateur)
         wav_ids.append(res['_id'])
     participations_url = '/sites/{}/participations'.format(site['_id'])
     r = observateur.post(participations_url,
@@ -129,8 +129,8 @@ def test_participation(participation_ready, file_uploaded, observateur_other):
     assert r.status_code == 200, r.text
     # Send multiple files with different allowed mime types
     photos_ids = []
-    for i, mime in enumerate(['image/bmp', 'image/png', 'image/jpg']):
-        res = custom_upload_file({'titre': 'file_photo_{}'.format(i), 'mime': mime}, observateur)
+    for i, extension in enumerate(['bmp', 'png', 'jpg']):
+        res = custom_upload_file({'titre': 'file_photo_{}.{}'.format(i, extension)}, observateur)
         photos_ids.append(res['_id'])
     r = observateur.put(pieces_jointes_url, json={'pieces_jointes': photos_ids})
     photos_ids.append(file_uploaded['_id'])
@@ -161,13 +161,11 @@ def test_participation_bad_file(participation_ready, file_init):
                         json={'photos': [file_init['_id']]})
     assert r.status_code == 422, r.text
     # Try to send a file with bad mime type
-    for i, mime in enumerate(['application/json', '', 'application/octet-stream',
-                              'application/zip', 'audio/mpeg', 'text/plain']):
-        # Create file & finish it upload
-        res = custom_upload_file({'titre': 'file_{}'.format(i), 'mime': mime}, observateur)
-        r = observateur.put(pieces_jointes_url,
-                            json={'photos': [res['_id']]})
-        assert r.status_code == 422, r.text
+    # Create file & finish it upload
+    res = custom_upload_file({'titre': 'not_a_picture.zip'}, observateur)
+    r = observateur.put(pieces_jointes_url,
+                        json={'photos': [res['_id']]})
+    assert r.status_code == 422, r.text
 
 
 @pytest.mark.xfail(reason="Validation & verrouille participation has been disabled")

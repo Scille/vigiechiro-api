@@ -106,7 +106,7 @@ def test_participation(fake_s3, clean_fichiers, participation_ready):
     for wav in waves:
         title = wav['title']
         # First register the file in the backend
-        r = observateur.post('/fichiers', json={'titre': title, 'mime': 'audio/wav'})
+        r = observateur.post('/fichiers', json={'titre': title})
         assert r.status_code == 201, r.text
         wav['data'] = r.json()
         # Then post it to s3 with the signed url

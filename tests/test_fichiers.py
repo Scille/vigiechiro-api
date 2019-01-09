@@ -21,7 +21,7 @@ def clean_fichiers(request):
 
 @pytest.fixture
 def file_init(clean_fichiers, observateur):
-    r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
+    r = observateur.post('/fichiers', json={'titre': 'test.png'})
     assert r.status_code == 201, r.text
     return r.json()
 
@@ -30,13 +30,13 @@ def file_init(clean_fichiers, observateur):
 def file_bad_name(observateur):
     bad_titres = ['', '*', '../test', 'éééé']
     for titre in bad_titres:
-        r = observateur.post('/fichiers', json={'titre': titre, 'mime': 'image/png'})
+        r = observateur.post('/fichiers', json={'titre': titre})
         assert r.status_code == 422, r.text
 
 
 @pytest.fixture
 def file_uploaded(clean_fichiers, observateur):
-    r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
+    r = observateur.post('/fichiers', json={'titre': 'test.png'})
     assert r.status_code == 201, r.text
     r = observateur.post('/fichiers/' + r.json()['_id'])
     assert r.status_code == 200, r.text
@@ -54,10 +54,11 @@ def custom_upload_file(payload, user, upload_done=True):
 
 def test_singlepart_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url
-    r = observateur.post('/fichiers', json={'titre': 'test', 'mime': 'image/png'})
+    r = observateur.post('/fichiers', json={'titre': 'test.png'})
     assert r.status_code == 201, r.text
     response = r.json()
     assert 's3_signed_url' in response
+    assert response['mime'] == 'image/png'
     # We should be uploading to S3 here...
     # Once the upload is done, we have to signify it to the server
     r = observateur.post('/fichiers/' + response['_id'])
@@ -70,10 +71,11 @@ def test_singlepart_upload(clean_fichiers, observateur):
 def test_multipart_upload(clean_fichiers, observateur):
     # First declare the file to get a signed request url
     r = observateur.post('/fichiers',
-        json={'titre': 'test', 'mime': 'image/png', 'multipart': True})
+        json={'titre': 'test.png', 'multipart': True})
     assert r.status_code == 201, r.text
     response = r.json()
     assert 's3_upload_multipart_id' in response
+    assert response['mime'] == 'image/png'
     # Request part upload signed url
     fichier_url = '/fichiers/' + response['_id']
     r = observateur.put(fichier_url + '/multipart',
@@ -153,21 +155,22 @@ def test_not_loggedin(file_uploaded):
 
 def test_same_file_name(clean_fichiers, obs_sites_base):
     observateur, sites = obs_sites_base
-    json_payload = {'titre': 'test', 'mime': 'image/png'}
+    json_payload = {'titre': 'test.png'}
     # First declare the file to get a signed request url
     r = observateur.post('/fichiers', json=json_payload)
     assert r.status_code == 201, r.text
     response = r.json()
-    # Try to upload with the same (titre, mime) is not allowed
+    # Try to re-upload the same is allowed because the upload
+    # is not flagged as finished
     r = observateur.post('/fichiers', json=json_payload)
-    assert r.status_code == 422, r.text
+    assert r.status_code == 201, r.text
     # We should be uploading to S3 here...
     # Once the upload is done, we have to signify it to the server
     r = observateur.post('/fichiers/' + response['_id'])
     assert r.status_code == 200, r.text
-    # Still not allowed to upload with the same (titre, mime)
+    # Now we are no longer allowed to upload with the same file
     r = observateur.post('/fichiers', json=json_payload)
-    assert r.status_code == 422, r.text
+    assert r.status_code == 409, r.text
 
     participations_url = '/sites/{}/participations'.format(sites[0]['_id'])
     r = observateur.post(participations_url,
@@ -180,11 +183,14 @@ def test_same_file_name(clean_fichiers, obs_sites_base):
     participation2 = r.json()
 
     # Same thing within the same participation
-    json_payload = {'titre': 'test2', 'lien_participation': participation1['_id'], 'mime': 'image/png'}
+    json_payload = {'titre': 'test2.png', 'lien_participation': participation1['_id']}
     r = observateur.post('/fichiers', json=json_payload)
     assert r.status_code == 201, r.text
+    response = r.json()
+    r = observateur.post('/fichiers/' + response['_id'])
+    assert r.status_code == 200, r.text
     r = observateur.post('/fichiers', json=json_payload)
-    assert r.status_code == 422, r.text
+    assert r.status_code == 409, r.text
 
     # Same name in different participation is allowed
     json_payload["lien_participation"] = participation2['_id']
