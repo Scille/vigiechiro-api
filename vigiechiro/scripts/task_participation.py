@@ -254,6 +254,8 @@ def participation_generate_bilan(participation_id):
 
 
 def extract_zipped_files_in_participation(participation):
+    wdirs = []
+
     participation_id = ObjectId(participation.participation_id)
     zipped_pjs = current_app.data.db.fichiers.find({
         'lien_participation': participation_id,
@@ -264,6 +266,9 @@ def extract_zipped_files_in_participation(participation):
     logger.info('Extracting %s zipped files' % zipped_pjs.count())
     zip_groups = defaultdict(dict)
     for zippj in zipped_pjs:
+        if not zippj['disponible']:
+            logger.info('Ignoring %s (id: %s) (upload not finished)' % (zippj['titre'], zippj['_id']))
+            continue
         # Accepted formats: <name>.z01, <name>.zip.001
         pj_titre = zippj['titre']
 
@@ -284,6 +289,7 @@ def extract_zipped_files_in_participation(participation):
 
     for group_name, group_pjs in zip_groups.items():
         wdir = _create_working_dir()
+        wdirs.append(wdir)
         splitted_archive = len(group_pjs) > 1
 
         if splitted_archive:
@@ -347,8 +353,7 @@ def extract_zipped_files_in_participation(participation):
         for zippj in group_pjs.values():
             delete_fichier_and_s3(zippj)
 
-        logger.info('Cleaning workdir %s' % wdir)
-        shutil.rmtree(wdir)
+    return wdirs
 
 
 @task
@@ -397,7 +402,7 @@ def _process_participation(participation_id, extra_pjs_ids=[], publique=True):
     participation_id = str(participation_id)
     wdir = _create_working_dir(('D', 'C'))
     if TASK_PARTICIPATION_KEEP_TMP_DIR:
-        print('++++  Working dir: %s  ++++' % wdir)
+        logger.info('++++  Working dir: %s  ++++' % wdir)
     logger.info("Starting building participation %s" % participation_id)
     g.request_user = {'role': 'Administrateur'}
     try:
@@ -406,7 +411,7 @@ def _process_participation(participation_id, extra_pjs_ids=[], publique=True):
         logger.error(e)
         return
 
-    extract_zipped_files_in_participation(participation)
+    zipwdirs = extract_zipped_files_in_participation(participation)
 
     participation.reset_pjs_state()
     participation.load_pjs()
@@ -414,6 +419,10 @@ def _process_participation(participation_id, extra_pjs_ids=[], publique=True):
     run_tadaridaC(wdir + '/C', participation)
     participation.save()
     if not TASK_PARTICIPATION_KEEP_TMP_DIR:
+        for zipwdir in zipwdirs:
+            logger.info('Cleaning workdir %s' % zipwdir)
+            shutil.rmtree(zipwdir)
+        logger.info('Cleaning workdir %s' % wdir)
         shutil.rmtree(wdir)
     participation_generate_bilan(participation_id)
 
