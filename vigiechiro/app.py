@@ -42,8 +42,7 @@ def make_json_app(app):
         return add_cors_headers(response)
 
     # cf: http://flask.pocoo.org/docs/1.0/api/#flask.Flask.error_handler_spec
-    for code in default_exceptions.keys():
-        app.error_handler_spec[None][code] = make_json_error
+    app.register_error_handler(Exception, make_json_error)
 
 
 def init_app():
