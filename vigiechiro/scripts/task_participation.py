@@ -283,16 +283,16 @@ def extract_zipped_files_in_participation(participation):
             zip_groups[group][pj_titre] = zippj
 
     for group_name, group_pjs in zip_groups.items():
-        main_pj = group_name + '.zip'
-        if main_pj not in group_pjs:
-            logger.warning(
-                'Cannot extract split archive %s, missing main file `%s`.' % (
-                    group_pjs, main_pj)
-            )
-            continue
-
         wdir = _create_working_dir()
-        logger.info('Extracting zip file %s in %s' % (main_pj, wdir))
+        splitted_archive = len(group_pjs) > 1
+
+        if splitted_archive:
+            main_pj = group_pjs.keys()[0]
+            logger.info('Starting work on archive for %s in %s' % (main_pj, wdir))
+        else:
+            main_pj = group_name + '.joined.zip'
+            logger.info('Starting work on splitted archive %s in %s' % (group_name, wdir))
+
         # Download the zip and extract it in a temp dir
         for pj_titre, zippj in group_pjs.items():
             logger.info('Download %s from S3', pj_titre)
@@ -304,15 +304,26 @@ def extract_zipped_files_in_participation(participation):
                     zippj['_id'], pj_titre, r.status_code))
                 continue
 
+        if splitted_archive:
+            cmd = 'zip -F {} --out {}'.format(group_name, main_pj)
+            logger.info('Joining archive parts into %s (run %s)' % (main_pj, cmd))
+            ret = subprocess.run(cmd.split())
+            if ret.returncode != 0:
+                logger.warning('Error while joining archive: returned %s' % ret.returncode)
+                continue
+
+        zippath = '%s/%s' % (wdir, main_pj)
         with zipfile.ZipFile(zippath, 'r') as zref:
             zref.extractall(wdir)
 
         # Now individuly store each file present in the zip
+        counts = {}
         for root, _, files in os.walk(wdir):
             for file_name in files:
                 file_path = '/'.join((root, file_name))
-                mime = detect_mime(file_name)
-                if not mime:
+                mime = detect_mime(file_name) or '<unknown>'
+                counts[mime] = counts.get(mime, 0) + 1
+                if mime == '<unknown>':
                     logger.warning('Unknown file {} in zip {} ({}), skipping...'.format(
                         file_name, zippj['_id'], pj_titre))
                     continue
@@ -326,10 +337,15 @@ def extract_zipped_files_in_participation(participation):
                 obj = FichierTA(participation, titre=file_name, path=file_path, mime=mime)
                 obj.force_populate_datastore()
 
+        logger.info('Archive contained: %s' % counts)
+
         # Remove the zip from the backend to avoid duplication next time we
         # run process_participation
+        logger.info('Removing zip archives from db and S3')
         for zippj in group_pjs.values():
             delete_fichier_and_s3(zippj)
+
+        logger.info('Cleaning workdir %s' % wdir)
         shutil.rmtree(wdir)
 
 
