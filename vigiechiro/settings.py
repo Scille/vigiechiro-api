@@ -6,9 +6,7 @@
 """
 
 from os import environ
-from urllib.parse import quote
 from authomatic.providers import oauth2
-from enum import Enum
 
 
 # RFC 1123 (ex RFC 822)
@@ -52,7 +50,7 @@ REQUESTS_TIMEOUT = int(environ.get('REQUESTS_TIMEOUT', 90))
 MONGO_HOST = MONGO_URI = environ.get('MONGO_HOST', 'mongodb://localhost:27017/vigiechiro')
 
 ### CORS ###
-X_DOMAINS = FRONTEND_DOMAIN
+X_DOMAINS = environ.get('CORS_ORIGIN', FRONTEND_DOMAIN)
 X_HEADERS = ['Accept', 'Content-type', 'Authorization', 'If-Match', 'If-None-Match', 'Cache-Control']
 X_EXPOSE_HEADERS = X_HEADERS
 
