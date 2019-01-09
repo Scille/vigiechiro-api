@@ -295,7 +295,7 @@ def extract_zipped_files_in_participation(participation):
 
         # Download the zip and extract it in a temp dir
         for pj_titre, zippj in group_pjs.items():
-            logger.info('Download %s from S3 ()' % (pj_titre, zippj['s3_id']))
+            logger.info('Download %s from S3' % pj_titre)
             zippath = '%s/%s' % (wdir, pj_titre)
             r = get_file_from_s3(zippj, zippath)
             if r is None:
