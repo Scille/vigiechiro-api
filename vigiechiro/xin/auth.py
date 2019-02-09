@@ -54,6 +54,38 @@ class FlaskAuthomatic(Authomatic):
 
     def session_saver(self):
         session.modified = True
+
+
+# Google+ oauth is deprecated, hence mock authomatic until release with
+# https://github.com/authomatic/authomatic/pull/162 is available
+
+from authomatic.providers.oauth2 import Google
+
+
+def _fixed_x_user_parser(user, data):
+    emails = data.get('emails', [])
+    if emails:
+        user.email = emails[0].get('value')
+        for email in emails:
+            if email.get('type') == 'account':
+                user.email = email.get('value')
+                break
+
+    user.id = data.get('sub')
+    user.name = data.get('name')
+    user.first_name = data.get('given_name', '')
+    user.last_name = data.get('family_name', '')
+    user.locale = data.get('locale', '')
+    user.picture = data.get('picture', '')
+
+    user.email_verified = data.get("email_verified")
+    user.hosted_domain = data.get("hd")
+    return user
+
+Google.user_info_url = 'https://www.googleapis.com/oauth2/v3/userinfo?alt=json'
+Google._x_user_parser = staticmethod(_fixed_x_user_parser)
+
+
 ### END OF HACK ###
 
 
