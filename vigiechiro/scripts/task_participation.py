@@ -115,7 +115,7 @@ def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, **
     if r.status_code != 200:
         logger.error('Uploading to S3 {} error {} : {}'.format(
             payload, r.status_code, r.text))
-        return 1
+        return None
     # Then store it representation in database
     return f_resource.insert(payload)
 
@@ -433,8 +433,9 @@ class Fichier:
                                    data_path=self.data_path,
                                    lien_donnee=donnee_id,
                                    lien_participation=participation_id,)
-        self.id = inserted['_id']
-        logger.debug('Fichier created: {} ({})'.format(self.id, self.titre))
+        if inserted:
+            self.id = inserted['_id']
+            logger.debug('Fichier created: {} ({})'.format(self.id, self.titre))
 
 
 class FichierWav(Fichier):
