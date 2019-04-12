@@ -214,13 +214,13 @@ class Bilan:
         return self.bilan_order[order_name]
 
     def add_contact_min(self, taxon, proba):
-        if proba > 0.75:
+        if proba > 0.98:
             order = self._define_taxon_order(taxon)
             order[taxon['_id']]['contact_min'] += 1
 
     def add_contact_max(self, taxon, proba):
-        order = self._define_taxon_order(taxon)
-        order[taxon['_id']]['contact_max'] += 1
+                order = self._define_taxon_order(taxon)
+                order[taxon['_id']]['contact_max'] += 1
 
     def generate_payload(self):
         payload = {'problemes': self.problemes}
@@ -591,10 +591,12 @@ class Donnee:
                 taxons = []
                 obs = {}
                 for head, cell in zip(headers, line):
-                    if head in ['Group.1', 'Order', 'Ordre', 'OrderNum', 'VersionD',
+                    if head in ['Group.1', 'Order', 'Ordre', 'OrderNum', 'OrderInit','VersionD',
                                 'VersionC', 'Version', 'FreqP', 'FreqC', 'NbCris', 'DurMed',
                                 'Dur90', 'Ampm50', 'Ampm90', 'AmpSMd', 'DiffME', 'SR', 'Ind',
-                                'Duree', 'SpMaxF2', 'SuccessProb']:
+                                'Duree', 'SpMaxF2', 'SuccessProb','Score','SpMax1','SpMax2'
+								,'Filename','SpMax0','Date','PF','Pedestre','Date','Q25','Q50'
+								,'Q75','Q90','Q95','Q98','Q100']:
                         continue
                     elif head == 'FreqM':
                         obs['frequence_mediane'] = float(cell)
