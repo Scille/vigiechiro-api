@@ -16,6 +16,16 @@ from .xin.tools import ObjectIdConverter
 from .xin.cors import add_cors_headers_factory
 
 
+def _monkeypatch_flask_cache():
+    """
+    Flask-Cache still use old style extension imports
+    see https://github.com/thadeusb/flask-cache/issues/193
+    """
+    import sys
+    import flask_cache
+    sys.modules['flask.ext.cache'] = flask_cache
+
+
 def make_json_app(app):
     from flask import jsonify
     from werkzeug.exceptions import default_exceptions
@@ -54,6 +64,7 @@ def init_app():
         app.logger.addHandler(stream_handler)
     # Configure static hosting of the front
     if app.config['FRONTEND_HOSTED']:
+        _monkeypatch_flask_cache()
         cache = Cache(app, config={'CACHE_TYPE': 'simple'})
         app.root_path = abspath(dirname(__file__) + '/..')
         redirect_url = app.config['FRONTEND_HOSTED_REDIRECT_URL']
