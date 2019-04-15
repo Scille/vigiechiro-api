@@ -15,11 +15,30 @@
 ### Start as daemon
 #$ -q demon -l demon=1
 
+
+function get_scheduled_workers() {{
+    echo 'import subprocess
+count = 0
+job_name = "w-{env_name}"
+jobs = subprocess.check_output("qstat").decode().split("\n")[2:]
+for job in jobs:
+    job_fields = [x for x in job.split() if x]
+    if not job_fields:
+        continue
+    if not job_name.startswith(job_fields[2]):
+        continue
+    if job_fields[4] == "qw":
+        count += 1
+print(count)
+' | python
+}}
+
+
 # Run the script for 60 * 600 == 10 hours
 for i in `seq 600`
 do
     PENDINGS=`python {vigiechiro_dir}/vigiechiro-api/bin/queuer.py pendings`
-    SCHEDULED_WORKERS=`qstat -j w-$VIGIECHIRO_ENV_NAME 2>/dev/null | grep job_state | grep -v r | grep -v d | wc -l`
+    SCHEDULED_WORKERS=`get_scheduled_workers`
     NEEDED_TO_START=$(($PENDINGS - $SCHEDULED_WORKERS))
     if ( [ "$NEEDED_TO_START" -ne 0 ] )
     then
