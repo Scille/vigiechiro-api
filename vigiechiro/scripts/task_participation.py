@@ -12,7 +12,6 @@ base_logger.setLevel(logging.INFO)
 from collections import defaultdict
 from datetime import datetime
 from uuid import uuid4
-import zipfile
 import csv
 import shutil
 import tempfile
@@ -317,12 +316,15 @@ def extract_zipped_files_in_participation(participation):
             logger.info('Joining archive parts into %s (run %s)' % (main_pj, cmd))
             ret = subprocess.run(cmd.split(), cwd=wdir)
             if ret.returncode != 0:
-                logger.warning('Error while joining archive: returned %s' % ret.returncode)
+                logger.warning('Error while joining archive %s: returned %s' % (main_pj, ret.returncode))
                 continue
 
-        zippath = '%s/%s' % (wdir, main_pj)
-        with zipfile.ZipFile(zippath, 'r') as zref:
-            zref.extractall(wdir)
+        # Don't use python's ziplib given it doesn't support DEFLATE64 mode
+        cmd = 'unzip {}'.format(main_pj)
+        ret = subprocess.run(cmd.split(), cwd=wdir)
+        if ret.returncode != 0:
+            logger.warning('Error while extracting archive %s: returned %s' % (main_pj, ret.returncode))
+            continue
 
         # Now individuly store each file present in the zip
         counts = {}
