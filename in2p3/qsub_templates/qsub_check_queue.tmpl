@@ -40,7 +40,7 @@ do
     PENDINGS=`python {vigiechiro_dir}/vigiechiro-api/bin/queuer.py pendings`
     SCHEDULED_WORKERS=`get_scheduled_workers`
     NEEDED_TO_START=$(($PENDINGS - $SCHEDULED_WORKERS))
-    if ( [ "$NEEDED_TO_START" -ne 0 ] )
+    if ( [ "$NEEDED_TO_START" -gt 0 ] )
     then
         printf "[$(date)] $PENDINGS pending jobs, starting worker\n"
         qsub {vigiechiro_dir}/qsub_worker.sh
