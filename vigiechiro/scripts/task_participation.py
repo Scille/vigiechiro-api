@@ -320,6 +320,7 @@ def extract_zipped_files_in_participation(participation):
                 continue
 
         # Don't use python's ziplib given it doesn't support DEFLATE64 mode
+        logger.info('Extracting %s' % main_pj)
         cmd = 'unzip {}'.format(main_pj)
         ret = subprocess.run(cmd.split(), cwd=wdir)
         if ret.returncode != 0:
@@ -344,7 +345,7 @@ def extract_zipped_files_in_participation(participation):
                     'disponible': False,
                     'lien_participation': participation_id,
                 })
-                obj = FichierTA(participation, titre=file_name, path=file_path, mime=mime)
+                obj = Fichier(participation, titre=file_name, path=file_path, mime=mime)
                 obj.force_populate_datastore()
 
         logger.info('Archive contained: %s' % counts)
@@ -440,7 +441,7 @@ class Fichier:
         else:
             self.id = kwargs.get('id')
             self.titre = kwargs.get('titre')
-            self.mime = kwargs.get('mime', self.DEFAULT_MIME)
+            self.mime = kwargs.get('mime') or self.DEFAULT_MIME
             self.data_path = kwargs.get('path')
         self.doc = fichier
 
