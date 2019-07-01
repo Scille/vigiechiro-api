@@ -29,7 +29,7 @@ from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE, TASK_PARTICIPATION_BATCH_SIZE,
                         TASK_PARTICIPATION_DATASTORE_CACHE, TASK_PARTICIPATION_DATASTORE_USE_SYMLINKS,
                         TASK_PARTICIPATION_PARALLELE_POOL, TASK_PARTICIPATION_KEEP_TMP_DIR,
-                        TASK_PARTICIPATION_MAX_RETRY, REQUESTS_TIMEOUT)
+                        TASK_PARTICIPATION_MAX_RETRY, TASK_PARTICIPATION_UPLOAD_GENERATED_FILES, REQUESTS_TIMEOUT)
 from ..resources.fichiers import (fichiers as f_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC,
                                   ALLOWED_MIMES_WAV, ALLOWED_MIMES_ZIPPED, detect_mime,
@@ -543,6 +543,8 @@ class Fichier:
     def save(self, donnee_id, participation_id, proprietaire_id):
         if self.id:
             # Fichier already in database, nothing to do...
+            return
+        if not TASK_PARTICIPATION_UPLOAD_GENERATED_FILES:
             return
         inserted = _create_fichier(self.titre, self.mime, proprietaire_id,
                                    data_path=self.data_path,
