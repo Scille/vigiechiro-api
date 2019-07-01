@@ -95,27 +95,28 @@ def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, **
     payload = {'titre': titre,
                'proprietaire': proprietaire,
                'mime': mime,
-               's3_id': s3_dir + titre + '.' + uuid4().hex,
-               'disponible': True}
+               'disponible': TASK_PARTICIPATION_UPLOAD_GENERATED_FILES}
     payload.update(kwargs)
-    # Upload the fichier to S3
-    sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
-                         content_type=payload['mime'])
-    if data_path:
-        with open(data_path, 'rb') as fd:
+    if payload['disponible']:
+        payload['s3_id'] = s3_dir + titre + '.' + uuid4().hex
+        # Upload the fichier to S3
+        sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
+                             content_type=payload['mime'])
+        if data_path:
+            with open(data_path, 'rb') as fd:
+                r = requests.put(sign['signed_url'],
+                                 headers={'Content-Type': mime}, data=fd,
+                                 timeout=REQUESTS_TIMEOUT)
+        elif data_raw:
             r = requests.put(sign['signed_url'],
-                             headers={'Content-Type': mime}, data=fd,
+                             headers={'Content-Type': mime},
+                             data=data_raw,
                              timeout=REQUESTS_TIMEOUT)
-    elif data_raw:
-        r = requests.put(sign['signed_url'],
-                         headers={'Content-Type': mime},
-                         data=data_raw,
-                         timeout=REQUESTS_TIMEOUT)
-                         # files={'file': ('', data_raw)})
-    if r.status_code != 200:
-        logger.error('Uploading to S3 {} error {} : {}'.format(
-            payload, r.status_code, r.text))
-        return None
+                             # files={'file': ('', data_raw)})
+        if r.status_code != 200:
+            logger.error('Uploading to S3 {} error {} : {}'.format(
+                payload, r.status_code, r.text))
+            return None
     # Then store it representation in database
     return f_resource.insert(payload)
 
@@ -543,8 +544,6 @@ class Fichier:
     def save(self, donnee_id, participation_id, proprietaire_id):
         if self.id:
             # Fichier already in database, nothing to do...
-            return
-        if not TASK_PARTICIPATION_UPLOAD_GENERATED_FILES:
             return
         inserted = _create_fichier(self.titre, self.mime, proprietaire_id,
                                    data_path=self.data_path,
