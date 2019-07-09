@@ -313,9 +313,9 @@ def extract_zipped_files_in_participation(participation):
                 continue
 
         if splitted_archive:
-            cmd = 'zip -FF {} --out {}'.format(group_name, main_pj)
+            cmd = 'cat {}* > {}'.format(group_name, main_pj)
             logger.info('Joining archive parts into %s (run %s)' % (main_pj, cmd))
-            ret = subprocess.run(cmd.split(), cwd=wdir)
+            ret = subprocess.run(cmd, cwd=wdir, shell=True)
             if ret.returncode != 0:
                 logger.warning('Error while joining archive %s: returned %s' % (main_pj, ret.returncode))
                 continue
