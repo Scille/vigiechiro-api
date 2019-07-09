@@ -96,16 +96,18 @@ fichiers = Resource('fichiers', __name__, schema=SCHEMA)
 def delete_fichier_and_s3(fichier):
     if not isinstance(fichier, dict):
         fichier = fichiers.get_resource(fichier)
-    # Destroy the unfinished file on S3
-    if fichier.get('s3_upload_multipart_id', False):
-        sign = _sign_request(verb='DELETE', object_name=fichier['s3_id'],
-                             sign_head='uploadId=' + fichier['s3_upload_multipart_id'])
-    else:
-        sign = _sign_request(verb='DELETE', object_name=fichier['s3_id'])
-    r = requests.delete(sign['signed_url'], timeout=settings.REQUESTS_TIMEOUT)
-    if r.status_code != 204:
-        logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
-        return r
+    s3_id = fichier.get('s3_id')
+    if s3_id:
+        # Destroy the unfinished file on S3
+        if fichier.get('s3_upload_multipart_id', False):
+            sign = _sign_request(verb='DELETE', object_name=s3_id,
+                                 sign_head='uploadId=' + fichier['s3_upload_multipart_id'])
+        else:
+            sign = _sign_request(verb='DELETE', object_name=s3_id)
+        r = requests.delete(sign['signed_url'], timeout=settings.REQUESTS_TIMEOUT)
+        if r.status_code != 204:
+            logging.error('S3 {} error {} : {}'.format(sign['signed_url'], r.status_code, r.text))
+            return r
     fichiers.remove({'_id': fichier['_id']})
     return None
 
