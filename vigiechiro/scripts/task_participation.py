@@ -313,7 +313,7 @@ def extract_zipped_files_in_participation(participation):
                 continue
 
         if splitted_archive:
-            cmd = 'zip -F {} --out {}'.format(group_name, main_pj)
+            cmd = 'zip -FF {} --out {}'.format(group_name, main_pj)
             logger.info('Joining archive parts into %s (run %s)' % (main_pj, cmd))
             ret = subprocess.run(cmd.split(), cwd=wdir)
             if ret.returncode != 0:
