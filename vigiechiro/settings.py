@@ -66,7 +66,8 @@ AUTHOMATIC = {
         'class_': oauth2.Facebook,
         'consumer_key': environ.get('FACEBOOK_API_KEY', ''),
         'consumer_secret': environ.get('FACEBOOK_API_SECRET', ''),
-        'scope': oauth2.Facebook.user_info_scope
+        # 'scope': oauth2.Facebook.user_info_scope
+        'scope': ['email', 'public_profile']
     }
 }
 
