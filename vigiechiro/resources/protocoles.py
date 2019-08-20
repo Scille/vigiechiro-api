@@ -173,14 +173,14 @@ def do_user_join_protocoles(user_id, protocoles, inscription_validee=False):
         '$push': {'protocoles': {'$each': inscriptions}},
         '$addToSet': {'actualites_suivies': {'$each': protocoles}}
     }
-    utilisateurs_resource.update(
+    user = utilisateurs_resource.update(
         user_id,
         mongo_update=mongo_update,
         payload=payload
     )
     # Finally create corresponding actuality
     create_actuality_inscription_protocole_batch(user_id, protocoles, inscription_validee=inscription_validee)
-    return inscriptions
+    return user, inscriptions
 
 
 @protocoles.route('/moi/protocoles/<objectid:protocole_id>', methods=['PUT'])
@@ -199,7 +199,7 @@ def user_join_protocole(protocole_id):
     # Autovalidation for admin
     inscription_validee = g.request_user['role'] == 'Administrateur'
     user_id = g.request_user['_id']
-    inscription, *_ = do_user_join_protocoles(user_id, [protocole_id], inscription_validee=inscription_validee)
+    _, (inscription, *_) = do_user_join_protocoles(user_id, [protocole_id], inscription_validee=inscription_validee)
     return jsonify(**inscription)
 
 

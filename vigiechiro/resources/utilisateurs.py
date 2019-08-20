@@ -159,8 +159,10 @@ def _utilisateur_patch(user_id, additional_context=None):
 
     if payload.get('charte_acceptee') is True:
         from .protocoles import do_user_join_protocoles, get_default_protocoles
-        protocoles_ids = [p['_id'] for p in get_default_protocoles()]
-        do_user_join_protocoles(g.request_user['_id'], protocoles_ids, inscription_validee=True)
+        already_joined = {p['protocole'] for p in result.get('protocoles', [])}
+        protocoles_ids = [p['_id'] for p in get_default_protocoles() if p['_id'] not in already_joined]
+        if protocoles_ids:
+            result, _ = do_user_join_protocoles(g.request_user['_id'], protocoles_ids, inscription_validee=True)
 
     return result
 
