@@ -1,5 +1,6 @@
 import requests
 from pymongo import MongoClient
+from unittest.mock import ANY
 import pytest
 
 from .common import db, administrateur, observateur, with_flask_context
@@ -171,3 +172,43 @@ def test_list_protocole_users(protocoles_base, observateur, administrateur):
     assert r.status_code == 200, r.text
     assert len(r.json()['_items']) == 1
     assert r.json()['_items'][0]['_id'] == observateur.user_id
+
+
+def test_autojoin_protocole(protocoles_base, observateur, administrateur):
+    protocole = protocoles_base[1]
+    protocole_id = str(protocole['_id'])
+    another_protocole = protocoles_base[2]
+    another_protocole_id = str(another_protocole['_id'])
+
+    # Mark protocoles as autojoin
+    r = administrateur.patch(
+        '/protocoles/' + protocole_id,
+        headers={'If-Match': protocole['_etag']},
+        json={'autojoin': True}
+    )
+    assert r.status_code == 200, r.text
+    r = administrateur.patch(
+        '/protocoles/' + another_protocole_id,
+        headers={'If-Match': another_protocole['_etag']},
+        json={'autojoin': True}
+    )
+    assert r.status_code == 200, r.text
+
+    # Observateur accept charte, autojoin should kicks in
+    r = observateur.patch('/moi', json={'charte_acceptee': True})
+    assert r.status_code == 200, r.text
+
+    observateur.update_user()
+    assert observateur.user['charte_acceptee'] is True
+    assert observateur.user['protocoles'] == [
+        {
+            'date_inscription': ANY,
+            'protocole': protocole['_id'],
+            'valide': True
+        },
+        {
+            'date_inscription': ANY,
+            'protocole': another_protocole['_id'],
+            'valide': True
+        }
+    ]

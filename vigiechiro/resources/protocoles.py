@@ -122,7 +122,8 @@ def display_protocole(protocole_id):
 @requires_auth(roles='Administrateur')
 def edit_protocole(protocole_id):
     payload = get_payload()
-    _check_macro_protocole_type_site(payload)
+    if payload.get('macro_protocole') is not None:
+        _check_macro_protocole_type_site(payload)
     check_configuration_participation(payload)
     result = protocoles.update(protocole_id, payload, if_match=get_if_match())
     return jsonify(result)
@@ -155,7 +156,7 @@ def get_resume_list():
 
 
 def get_default_protocoles():
-    return list(protocoles.find({'autojoin': True}))
+    return protocoles.find({'autojoin': True})[0]
 
 
 def do_user_join_protocoles(user_id, protocoles, inscription_validee=False):
@@ -172,8 +173,6 @@ def do_user_join_protocoles(user_id, protocoles, inscription_validee=False):
         '$push': {'protocoles': {'$each': inscriptions}},
         '$addToSet': {'actualites_suivies': {'$each': protocoles}}
     }
-    if inscription_validee:
-        mongo_update['inscription_validee'] = True
     utilisateurs_resource.update(
         user_id,
         mongo_update=mongo_update,
