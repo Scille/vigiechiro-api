@@ -146,11 +146,22 @@ def _utilisateur_patch(user_id, additional_context=None):
                       'professionnel', 'donnees_publiques', 'email', 'role',
                       'charte_acceptee'}
     payload = get_payload(allowed_fields)
+
+    if payload.get('charte_acceptee') is False and g.request_user['charte_acceptee']:
+        abort(422, "Charte déjà validée")
+
     result = utilisateurs.update(user_id, payload,
                                  additional_context=additional_context)
+
     if 'donnees_publiques' in payload:
         from .donnees import update_donnees_publique
         update_donnees_publique(user_id, payload['donnees_publiques'])
+
+    if payload.get('charte_acceptee') is True:
+        from .protocoles import do_user_join_protocoles, get_default_protocoles
+        protocoles_ids = [p['_id'] for p in get_default_protocoles()]
+        do_user_join_protocoles(g.request_user['_id'], protocoles_ids, inscription_validee=True)
+
     return result
 
 

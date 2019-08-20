@@ -83,14 +83,18 @@ def create_actuality_nouvelle_participation(participation):
     return _create_actuality(document)
 
 
-def create_actuality_inscription_protocole(protocole, utilisateur):
-    protocole_id = protocole['_id']
-    sujet_id = utilisateur['_id']
-    document = {'action': 'INSCRIPTION_PROTOCOLE',
-                'protocole': protocole_id,
-                'sujet': sujet_id,
-                'resources': [protocole_id, sujet_id]}
-    return _create_actuality(document)
+def create_actuality_inscription_protocole_batch(sujet_id, protocoles, inscription_validee=False):
+    now = datetime.utcnow()
+    for protocole_id in protocoles:
+        document = {
+            'action': 'INSCRIPTION_PROTOCOLE',
+            'protocole': protocole_id,
+            'sujet': sujet_id,
+            'resources': [protocole_id, sujet_id]
+        }
+        if inscription_validee:
+            document['date_validation'] = now
+        _create_actuality(document)
 
 
 def create_actuality_validation_protocole(protocole, utilisateur):

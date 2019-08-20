@@ -16,7 +16,7 @@ from ..xin.snippets import (Paginator, get_lookup_from_q, get_payload,
                             get_if_match, get_url_params)
 
 from .actualites import (create_actuality_validation_protocole,
-                         create_actuality_inscription_protocole,
+                         create_actuality_inscription_protocole_batch,
                          create_actuality_reject_protocole)
 from .utilisateurs import (utilisateurs as utilisateurs_resource,
                            get_payload_add_following)
@@ -27,6 +27,7 @@ SCHEMA = {
     'description': {'type': 'string'},
     'parent': relation('protocoles'),
     'macro_protocole': {'type': 'boolean'},
+    'autojoin': {'type': "boolean"},
     'tags': {
         'type': 'list',
         'schema': {'type': 'string'}
@@ -94,6 +95,8 @@ def _check_macro_protocole_type_site(payload):
     if payload.get('macro_protocole', False):
         if payload.get('type_site', None):
             abort(422, {'type_site': 'macro protocole should not contain a type_site'})
+        if payload.get('autojoin', None):
+            abort(422, {'type_site': 'macro protocole cannot be autojoined'})
     else:
         if not payload.get('type_site', None):
             abort(422, {'type_site': 'non macro protocole must contain a type_site'})
@@ -151,6 +154,36 @@ def get_resume_list():
     return jsonify(_items=[i for i in items])
 
 
+def get_default_protocoles():
+    return list(protocoles.find({'autojoin': True}))
+
+
+def do_user_join_protocoles(user_id, protocoles, inscription_validee=False):
+    now = datetime.utcnow()
+    inscriptions = [
+        {'protocole': protocole_id,
+        'date_inscription': now,
+        'valide': inscription_validee}
+        for protocole_id in protocoles
+    ]
+    payload = {'protocoles': inscriptions}
+    # User automatically follow the protocole
+    mongo_update = {
+        '$push': {'protocoles': {'$each': inscriptions}},
+        '$addToSet': {'actualites_suivies': {'$each': protocoles}}
+    }
+    if inscription_validee:
+        mongo_update['inscription_validee'] = True
+    utilisateurs_resource.update(
+        user_id,
+        mongo_update=mongo_update,
+        payload=payload
+    )
+    # Finally create corresponding actuality
+    create_actuality_inscription_protocole_batch(user_id, protocoles, inscription_validee=inscription_validee)
+    return inscriptions
+
+
 @protocoles.route('/moi/protocoles/<objectid:protocole_id>', methods=['PUT'])
 @requires_auth(roles='Observateur')
 def user_join_protocole(protocole_id):
@@ -164,25 +197,10 @@ def user_join_protocole(protocole_id):
     # Cannot join a macro protocole
     if protocole_resource.get('macro_protocole', False):
         abort(422, "Cannot join a macro protocole")
-    # Update user's protocole list
-    inscription = {'protocole': protocole_id,
-                   'date_inscription': datetime.utcnow(),
-                   'valide': False}
     # Autovalidation for admin
-    if g.request_user['role'] == 'Administrateur':
-        inscription['valide'] = True
-    payload = {'protocoles': [inscription]}
-    # User automatically follow the protocole
-    mongo_update = {'$push': {'protocoles': inscription},
-                    '$addToSet': {'actualites_suivies': protocole_id}}
-    utilisateurs_resource.update(g.request_user['_id'],
-        mongo_update=mongo_update, payload=payload)
-    # Finally create corresponding actuality
-    create_actuality_inscription_protocole(protocole_resource, g.request_user)
-    # Autovalidation actuality for admin
-    if g.request_user['role'] == 'Administrateur':
-      user_resource = utilisateurs_resource.get_resource(g.request_user.get('_id'))
-      create_actuality_validation_protocole({'_id': protocole_id}, user_resource)
+    inscription_validee = g.request_user['role'] == 'Administrateur'
+    user_id = g.request_user['_id']
+    inscription, *_ = do_user_join_protocoles(user_id, [protocole_id], inscription_validee=inscription_validee)
     return jsonify(**inscription)
 
 
