@@ -147,7 +147,7 @@ def _utilisateur_patch(user_id, additional_context=None):
                       'charte_acceptee'}
     payload = get_payload(allowed_fields)
 
-    if payload.get('charte_acceptee') is False and g.request_user['charte_acceptee']:
+    if payload.get('charte_acceptee') is False and g.request_user.get('charte_acceptee'):
         abort(422, "Charte déjà validée")
 
     result = utilisateurs.update(user_id, payload,
