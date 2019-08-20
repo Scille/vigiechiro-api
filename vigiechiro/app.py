@@ -48,6 +48,8 @@ def make_json_app(app):
             payload['_errors'] = ex.description
         response = jsonify(**payload)
         response.status_code = (ex.code if isinstance(ex, HTTPException) else 500)
+        if response.status_code == 500:
+            app.logger.error('Unhandled exception', exc_info=True)
         # Don't forget to add CORS headers !
         return add_cors_headers(response)
 
