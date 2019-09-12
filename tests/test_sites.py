@@ -144,9 +144,8 @@ def test_create_site_not_valide(observateur, protocoles_base):
         'protocole': protocole_id,
         'commentaire': 'My little site'
     }
-    for _ in range(3):
-        r = observateur.post('/sites', json=site_payload)
-        assert r.status_code == 201, r.text
+    r = observateur.post('/sites', json=site_payload)
+    assert r.status_code == 422, r.text
 
 
 def test_create_site(administrateur, observateur, protocoles_base):

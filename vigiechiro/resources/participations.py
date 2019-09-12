@@ -18,7 +18,7 @@ from ..xin.snippets import (Paginator, get_payload, get_resource,
 from .actualites import create_actuality_nouvelle_participation
 from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
                        ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
-from .utilisateurs import utilisateurs as utilisateurs_resource
+from .utilisateurs import utilisateurs as utilisateurs_resource, ensure_protocole_joined_and_validated
 from .donnees import donnees as donnees_resource
 
 from ..scripts import (process_participation, clean_deleted_participation,
@@ -266,10 +266,9 @@ def create_participation(site_id):
     protocole_id = site_resource['protocole']
     payload['protocole'] = protocole_id
     # Make sure observateur has joined protocole and is validated
-    joined = next((p for p in g.request_user.get('protocoles', [])
-                   if p['protocole'] == protocole_id), None)
-    if not joined:
-        abort(422, {'site': 'not registered to corresponding protocole'})
+    err = ensure_protocole_joined_and_validated(protocole_id)
+    if err:
+        abort(422, err)
     # Create the participation
     document = participations.insert(payload)
     # Finally create corresponding actuality

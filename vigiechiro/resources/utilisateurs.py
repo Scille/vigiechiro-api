@@ -81,6 +81,16 @@ def get_payload_add_following(ids):
     return payload
 
 
+def ensure_protocole_joined_and_validated(protocole_id):
+    joined = next((p for p in g.request_user.get('protocoles', [])
+                   if p['protocole'] == protocole_id), None)
+    if not joined:
+        return 'not registered to protocole'
+    if not joined.get('valide', False):
+        return 'protocole registration not yet validated'
+    return None
+
+
 def _expend_joined_protocoles(document):
     if 'protocoles' not in document:
         return document

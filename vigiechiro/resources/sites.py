@@ -19,6 +19,7 @@ from ..xin.snippets import Paginator, get_payload, get_resource, get_url_params
 from .actualites import create_actuality_nouveau_site, create_actuality_verrouille_site
 from .protocoles import check_configuration_participation
 from .grille_stoc import grille_stoc
+from .utilisateurs import ensure_protocole_joined_and_validated
 from ..scripts import clean_deleted_site
 
 
@@ -198,13 +199,9 @@ def create_site():
     if not protocole_resource:
         abort(422, {'protocole': 'invalid or missing field'})
     # Make sure observateur has joined protocole and is validated
-    protocole_id = protocole_resource['_id']
-    joined = next((p for p in g.request_user.get('protocoles', [])
-                   if p['protocole'] == protocole_id), None)
-    if not joined:
-        abort(422, 'not registered to protocole')
-    if joined.get('verrouille', False):
-        abort(422, 'protocole must be validate before creating site')
+    err = ensure_protocole_joined_and_validated(protocole_resource['_id'])
+    if err:
+        abort(422, err)
     # Get grille stoc resource
     grille_stoc_resource = get_resource('grille_stoc',
         payload.get('grille_stoc', None), auto_abort=False)
