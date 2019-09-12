@@ -83,7 +83,7 @@ def _create_working_dir(subdirs=()):
     return wdir
 
 
-def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, **kwargs):
+def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, force_upload=False, **kwargs):
     if mime in ALLOWED_MIMES_WAV:
         s3_dir = 'wav/'
     elif mime in ALLOWED_MIMES_TA:
@@ -95,7 +95,7 @@ def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, **
     payload = {'titre': titre,
                'proprietaire': proprietaire,
                'mime': mime,
-               'disponible': TASK_PARTICIPATION_UPLOAD_GENERATED_FILES}
+               'disponible': force_upload or TASK_PARTICIPATION_UPLOAD_GENERATED_FILES}
     payload.update(kwargs)
     if payload['disponible']:
         payload['s3_id'] = s3_dir + titre + '.' + uuid4().hex
@@ -758,7 +758,8 @@ class Participation:
         new_logs = _create_fichier(titre, 'text/plain',
                                    self.participation['observateur'],
                                    data_raw=str(logger.LOGS),
-                                   lien_participation=self.participation['_id'])
+                                   lien_participation=self.participation['_id'],
+                                   force_upload=True)
         old_logs = self.participation.get('logs')
         if old_logs:
             delete_fichier_and_s3(old_logs)
