@@ -157,8 +157,8 @@ def _utilisateur_patch(user_id, additional_context=None):
                       'charte_acceptee'}
     payload = get_payload(allowed_fields)
 
-    if payload.get('charte_acceptee') is False and g.request_user.get('charte_acceptee'):
-        abort(422, "Charte déjà validée")
+    if 'charte_acceptee' in payload and payload['charte_acceptee'] is not True:
+        abort(422, "Invalid value for charte_acceptee: only accept `True` !")
 
     result = utilisateurs.update(user_id, payload,
                                  additional_context=additional_context)
@@ -189,3 +189,9 @@ def route_moi_patch():
 def route_utilisateur_patch(user_id):
     return _utilisateur_patch(user_id,
                               additional_context=_hide_email())
+
+
+@utilisateurs.route('/utilisateurs/<objectid:user_id>/reset_charte', methods=['POST'])
+@requires_auth(roles='Administrateur')
+def route_utilisateur_reset_charte(user_id):
+    return utilisateurs.update(user_id, {"charte_acceptee": False}, additional_context=_hide_email())
