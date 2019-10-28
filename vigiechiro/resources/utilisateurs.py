@@ -150,15 +150,16 @@ def get_user_profile(user_id):
     return utilisateurs.find_one(user_id, additional_context=_hide_email())
 
 
-def _utilisateur_patch(user_id, additional_context=None):
+def _utilisateur_patch(user, additional_context=None):
+    user_id = user['_id']
     allowed_fields = {'pseudo', 'email_publique', 'nom', 'prenom',
                       'telephone', 'adresse', 'commentaire', 'organisation',
                       'professionnel', 'donnees_publiques', 'email', 'role',
                       'charte_acceptee'}
     payload = get_payload(allowed_fields)
 
-    if 'charte_acceptee' in payload and payload['charte_acceptee'] is not True:
-        abort(422, "Invalid value for charte_acceptee: only accept `True` !")
+    if payload.get('charte_acceptee') is False and user.get('charte_acceptee') is True:
+        abort(422, "Charte déjà acceptée !")
 
     result = utilisateurs.update(user_id, payload,
                                  additional_context=additional_context)
@@ -180,15 +181,20 @@ def _utilisateur_patch(user_id, additional_context=None):
 @utilisateurs.route('/moi', methods=['PATCH'])
 @requires_auth(roles='Observateur')
 def route_moi_patch():
-    return _utilisateur_patch(g.request_user['_id'],
-                              additional_context=_hide_email(False))
+    return _utilisateur_patch(
+        g.request_user,
+        additional_context=_hide_email(False)
+    )
 
 
 @utilisateurs.route('/utilisateurs/<objectid:user_id>', methods=['PATCH'])
 @requires_auth(roles='Administrateur')
 def route_utilisateur_patch(user_id):
-    return _utilisateur_patch(user_id,
-                              additional_context=_hide_email())
+    user = utilisateurs.find_one(user_id)
+    return _utilisateur_patch(
+        user,
+        additional_context=_hide_email()
+    )
 
 
 @utilisateurs.route('/utilisateurs/<objectid:user_id>/reset_charte', methods=['POST'])
@@ -196,6 +202,7 @@ def route_utilisateur_patch(user_id):
 def route_utilisateur_reset_charte(user_id):
     return utilisateurs.update(
         user_id,
-        {"charte_acceptee": False},
+        {},
+        mongo_update={"$set": {"charte_acceptee": None, "protocoles": []}},
         additional_context=_hide_email()
     )
