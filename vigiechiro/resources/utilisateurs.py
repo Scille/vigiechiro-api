@@ -169,7 +169,7 @@ def _utilisateur_patch(user_id, additional_context=None):
 
     if payload.get('charte_acceptee') is True:
         from .protocoles import do_user_join_protocoles, get_default_protocoles
-        already_joined = {p['protocole'] for p in result.get('protocoles', [])}
+        already_joined = {p['protocole']['_id'] for p in result.get('protocoles', []) if p['valide']}
         protocoles_ids = [p['_id'] for p in get_default_protocoles() if p['_id'] not in already_joined]
         if protocoles_ids:
             result, _ = do_user_join_protocoles(g.request_user['_id'], protocoles_ids, inscription_validee=True)
@@ -194,4 +194,8 @@ def route_utilisateur_patch(user_id):
 @utilisateurs.route('/utilisateurs/<objectid:user_id>/reset_charte', methods=['POST'])
 @requires_auth(roles='Administrateur')
 def route_utilisateur_reset_charte(user_id):
-    return utilisateurs.update(user_id, {"charte_acceptee": False}, additional_context=_hide_email())
+    return utilisateurs.update(
+        user_id,
+        {"charte_acceptee": False},
+        additional_context=_hide_email()
+    )
