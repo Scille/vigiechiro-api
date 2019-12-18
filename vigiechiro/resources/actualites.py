@@ -35,9 +35,9 @@ SCHEMA = {
 actualites = Resource('actualites', __name__, schema=SCHEMA)
 
 
-def _create_actuality(document):
+def _create_actuality(lookup, document):
     try:
-        result = actualites.insert(document, auto_abort=False)
+        result = actualites.insert_or_replace(lookup, document, auto_abort=False)
         return result
     except DocumentException as e:
         logging.error('error inserting actuality {} : {}'.format(
@@ -51,14 +51,15 @@ def create_actuality_nouveau_site(site_id, observateur_id, protocole_id):
                 'sujet': observateur_id,
                 'protocole': protocole_id,
                 'resources': [site_id, observateur_id, protocole_id]}
-    return _create_actuality(document)
+    lookup = {'action': 'NOUVEAU_SITE',
+              'site': site_id}
+    return _create_actuality(lookup, document)
 
 
 def create_actuality_verrouille_site(site_id, utilisateur_id):
     # Update previously created NOUVEAU_SITE actuality to
     # notify the lock date
     lookup = {'action': 'NOUVEAU_SITE',
-              'sujet': utilisateur_id,
               'site': site_id}
     try:
         result = actualites.update(lookup,
@@ -80,7 +81,9 @@ def create_actuality_nouvelle_participation(participation):
                 'sujet': sujet_id,
                 'site': site_id,
                 'resources': [participation_id, sujet_id, site_id]}
-    return _create_actuality(document)
+    lookup = {'action': 'NOUVELLE_PARTICIPATION',
+              'participation': participation_id}
+    return _create_actuality(lookup, document)
 
 
 def create_actuality_inscription_protocole_batch(sujet_id, protocoles, inscription_validee=False):
@@ -92,9 +95,14 @@ def create_actuality_inscription_protocole_batch(sujet_id, protocoles, inscripti
             'sujet': sujet_id,
             'resources': [protocole_id, sujet_id]
         }
+        lookup = {
+            'action': 'INSCRIPTION_PROTOCOLE',
+            'protocole': protocole_id,
+            'sujet': sujet_id,
+        }
         if inscription_validee:
             document['date_validation'] = now
-        _create_actuality(document)
+        _create_actuality(lookup, document)
 
 
 def create_actuality_validation_protocole(protocole, utilisateur):

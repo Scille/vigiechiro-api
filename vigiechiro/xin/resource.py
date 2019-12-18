@@ -155,6 +155,28 @@ class Resource(Blueprint):
             return (412, 'If-Match condition has failed')
         return (200, new_document)
 
+    def insert_or_replace(self, lookup, payload, auto_abort=True):
+        def error(code, msg=None):
+            if auto_abort:
+                abort(code, msg)
+            else:
+                raise DocumentException((code, msg))
+        mongo_update = payload.copy()
+        mongo_update['_created'] = mongo_update['_updated'] = datetime.utcnow().replace(microsecond=0)
+        mongo_update['_etag'] = uuid4().hex
+        # Retrieve previous version of the document
+        if isinstance(lookup, ObjectId):
+            lookup = {'_id': lookup}
+        if not isinstance(lookup, dict):
+            raise ValueError("lookup must be ObjectId or dict")
+        resource_db = current_app.data.db[self.name]
+        new_document = resource_db.find_and_modify(
+            query=lookup,
+            update=mongo_update, new=True, upsert=True)
+        if not new_document:
+            return error(412, 'If-Match condition has failed')
+        return self._unserialize_document(new_document).document
+
     def update(self, lookup, payload, mongo_update=None, if_match=False,
                auto_abort=True, additional_context=None):
         """
