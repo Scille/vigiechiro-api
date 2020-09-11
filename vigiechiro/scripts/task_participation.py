@@ -305,12 +305,14 @@ def extract_zipped_files_in_participation(participation):
             zippath = '%s/%s' % (wdir, pj_titre)
             r = get_file_from_s3(zippj, zippath)
             if r is None:
-                logger.warning("%s has not s3_id field: %s" % (pj_titre, zippj))
-                continue
-            if r.status_code != 200:
+                logger.warning(
+                    'Cannot get back zip file {} ({}) : file is not available in S3 (no s3_id field)'.format(
+                        zippj['_id'], pj_titre
+                    )
+                )
+            elif r.status_code != 200:
                 logger.error('Cannot get back zip file {} ({}) : error {}'.format(
                     zippj['_id'], pj_titre, r.status_code))
-                continue
 
         if splitted_archive:
             cmd = "for x in {}*; do cat $x >> {}; done".format(group_name, main_pj)
@@ -504,8 +506,12 @@ class Fichier:
     def _get_from_s3(self, target_path):
         r = get_file_from_s3(self.doc, target_path)
         if not r:
-            logger.warning('Cannot get back file {} ({}) : file is not available in S3'.format(self.id, self.doc['titre']))
-        if r.status_code != 200:
+            logger.warning(
+                'Cannot get back file {} ({}) : file is not available in S3 (no s3_id field)'.format(
+                    self.id, self.doc['titre']
+                )
+            )
+        elif r.status_code != 200:
             logger.error('Cannot get back file {} ({}) : error {}'.format(
                 self.id, self.doc['titre'], r.status_code))
 
@@ -525,8 +531,12 @@ class Fichier:
         if self.doc:
             r = get_file_from_s3(self.doc, target_path)
             if not r:
-                logger.warning('Cannot get back file {} ({}) : file is not available in S3'.format(self.id, self.doc['titre']))
-            if r.status_code != 200:
+                logger.warning(
+                    'Cannot get back file {} ({}) : file is not available in S3 (no s3_id field)'.format(
+                        self.id, self.doc['titre']
+                    )
+                )
+            elif r.status_code != 200:
                 logger.error('Cannot get back file {} ({}) : error {}'.format(
                     self.id, self.doc['titre'], r.status_code))
         elif self.data_path:
