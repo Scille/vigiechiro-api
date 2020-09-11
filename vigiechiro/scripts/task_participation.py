@@ -503,6 +503,8 @@ class Fichier:
 
     def _get_from_s3(self, target_path):
         r = get_file_from_s3(self.doc, target_path)
+        if not r:
+            logger.warning('Cannot get back file {} ({}) : file is not available in S3'.format(self.id, self.doc['titre']))
         if r.status_code != 200:
             logger.error('Cannot get back file {} ({}) : error {}'.format(
                 self.id, self.doc['titre'], r.status_code))
@@ -522,6 +524,8 @@ class Fichier:
     def _fetch_data(self, target_path):
         if self.doc:
             r = get_file_from_s3(self.doc, target_path)
+            if not r:
+                logger.warning('Cannot get back file {} ({}) : file is not available in S3'.format(self.id, self.doc['titre']))
             if r.status_code != 200:
                 logger.error('Cannot get back file {} ({}) : error {}'.format(
                     self.id, self.doc['titre'], r.status_code))
