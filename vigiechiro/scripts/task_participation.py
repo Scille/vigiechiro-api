@@ -367,7 +367,7 @@ def process_participation(participation_id, extra_pjs_ids=[], publique=True,
 
     participation_id = ObjectId(participation_id)
     extra_pjs_ids = [ObjectId(x) for x in extra_pjs_ids]
-    p = p_resource.find_one(participation_id, fields={
+    p = p_resource.find_one(participation_id, projection={
         'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
     p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)

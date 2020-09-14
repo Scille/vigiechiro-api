@@ -99,7 +99,7 @@ class Task:
         """
         if not queuer.collection.find_one(
                 {'name': self.name, 'args': args, 'kwargs': kwargs, 'status': 'READY'},
-                fields={}):
+                projection={}):
             return queuer.submit_job(self.name, *args, **kwargs)
 
     def __call__(self, *args, **kwargs):

@@ -18,7 +18,7 @@ idna==2.10                # via requests
 itsdangerous==1.1.0       # via -r requirements.in, flask
 jinja2==2.11.2            # via -r requirements.in, flask
 markupsafe==1.1.1         # via -r requirements.in, jinja2
-pymongo==2.9.5            # via -r requirements.in, flask-pymongo
+pymongo==3.11.0           # via -r requirements.in, flask-pymongo
 requests==2.24.0          # via -r requirements.in
 urllib3==1.25.10          # via requests
 werkzeug==1.0.1           # via flask

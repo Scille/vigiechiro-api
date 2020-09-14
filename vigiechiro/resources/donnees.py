@@ -182,7 +182,7 @@ def list_participation_donnees(participation_id):
         observations['observations']['$elemMatch'].update({'tadarida_taxon': ObjectId(request.args['tadarida_taxon'])})
         lookup.update(observations)
     found = donnees.find(lookup, skip=pagination.skip, limit=pagination.max_results,
-                         fields={'participation': False, 'proprietaire': False})
+                         projection={'participation': False, 'proprietaire': False})
     return pagination.make_response(*found)
 
 

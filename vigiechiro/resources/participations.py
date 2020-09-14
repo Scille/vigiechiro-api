@@ -137,7 +137,7 @@ def list_participations():
     # Filter the result fields for perf...
     found = participations.find(get_lookup_from_q(), skip=pagination.skip,
         limit=pagination.max_results,
-        fields={'protocole': False, 'messages': False,
+        projection={'protocole': False, 'messages': False,
                 'logs': False, 'bilan': False})
     return pagination.make_response(*found)
 
@@ -150,7 +150,7 @@ def list_user_participations():
     lookup.update(get_lookup_from_q() or {})
     found = participations.find(lookup, skip=pagination.skip,
         limit=pagination.max_results,
-        fields={'observateur': False, 'protocole': False, 'messages': False,
+        projection={'observateur': False, 'protocole': False, 'messages': False,
                 'logs': False, 'bilan': False})
     return pagination.make_response(*found)
 
@@ -163,7 +163,7 @@ def list_site_participations(site_id):
     lookup.update(get_lookup_from_q() or {})
     found = participations.find(lookup, skip=pagination.skip,
         limit=pagination.max_results,
-        fields={'protocole': False, 'site': False,
+        projection={'protocole': False, 'site': False,
                 'messages': False, 'logs': False, 'bilan': False})
     return pagination.make_response(*found)
 
@@ -189,7 +189,7 @@ def delete_participation(participation_id):
 @participations.route('/participations/<objectid:participation_id>/csv', methods=['POST'])
 @requires_auth(roles='Observateur')
 def participation_generate_csv(participation_id):
-    p = participations.find_one(participation_id, fields={
+    p = participations.find_one(participation_id, projection={
         'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     site_name = p['site']['titre']
     _check_read_access(p)
@@ -229,7 +229,7 @@ Vigiechiro
 @requires_auth(roles='Observateur')
 def participation_trigger_compute(participation_id):
     participation_resource = participations.find_one(participation_id,
-        fields={'protocole': False,
+        projection={'protocole': False,
                 'messages': False, 'logs': False, 'bilan': False})
     _check_edit_access(participation_resource)
     traitement = participation_resource.get('traitement', {})
@@ -322,7 +322,7 @@ def edit_participation(participation_id):
 def add_pieces_jointes(participation_id):
     # Deprecated route: use `lien_participation` param with `/fichiers` route instead
     participation_resource = participations.find_one(participation_id,
-        fields={'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
+        projection={'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     _check_edit_access(participation_resource)
     errors = {}
     pjs_ids_str = get_payload({'pieces_jointes': True})['pieces_jointes']
@@ -378,7 +378,7 @@ def get_pieces_jointes(participation_id):
             lookup['mime']['$in'] += mimes
     found = fichiers_resource.find(lookup, skip=pagination.skip,
         limit=pagination.max_results,
-        fields={'proprietaire': False, 'lien_participation': False,
+        projection={'proprietaire': False, 'lien_participation': False,
                 'lien_donnee': False, 'lien_protocole': False})
     return pagination.make_response(*found)
 
