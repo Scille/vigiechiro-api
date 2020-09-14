@@ -92,7 +92,7 @@ class AuthRequests:
         self.url = '/utilisateurs/' + self.user_id
 
     def finalizer(self):
-        db.utilisateurs.remove({'_id': ObjectId(self.user_id)})
+        db.utilisateurs.delete_one({'_id': ObjectId(self.user_id)})
 
     def _auth(self, url, kwargs):
         kwargs['auth'] = (self.token, None)

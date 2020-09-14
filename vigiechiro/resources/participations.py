@@ -179,7 +179,7 @@ def display_participation(participation_id):
 @requires_auth(roles='Administrateur')
 def delete_participation(participation_id):
     res = participations.remove({'_id': participation_id})
-    if res['n']:
+    if res.deleted_count:
         clean_deleted_participation.delay(participation_id)
         return {}, 204
     else:

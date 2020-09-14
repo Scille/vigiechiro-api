@@ -25,16 +25,17 @@ COLLECTIONS = [
 ]
 
 
-db = pymongo.MongoClient(host=settings.MONGO_HOST).get_default_database()
+conn = pymongo.MongoClient(host=settings.MONGO_HOST)
+db = conn.get_default_database()
 
 
 def clean_db():
-    db.connection.drop_database(db.name)
+    conn.drop_database(db.name)
 
 
 def ensure_indexes():
-    db.grille_stoc.ensure_index([('centre', pymongo.GEOSPHERE)])
-    db.utilisateurs.ensure_index([
+    db.grille_stoc.create_index([('centre', pymongo.GEOSPHERE)])
+    db.utilisateurs.create_index([
         ('email', pymongo.TEXT),
         ('pseudo', pymongo.TEXT),
         ('nom', pymongo.TEXT),
@@ -42,41 +43,41 @@ def ensure_indexes():
         ('organisation', pymongo.TEXT),
         ('tag', pymongo.TEXT)
     ], default_language='french', name='utilisateursTextIndex')
-    db.taxons.ensure_index([
+    db.taxons.create_index([
         ('libelle_long', pymongo.TEXT),
         ('libelle_court', pymongo.TEXT),
         ('tags', pymongo.TEXT)
     ], default_language='french', name='taxonsTextIndex')
-    db.taxons.ensure_index([('libelle_long', 1)])
-    db.protocoles.ensure_index([
+    db.taxons.create_index([('libelle_long', 1)])
+    db.protocoles.create_index([
         ('titre', pymongo.TEXT),
         ('tags', pymongo.TEXT)
     ], default_language='french', name='protocolesTextIndex')
-    db.sites.ensure_index([
+    db.sites.create_index([
         ('titre', pymongo.TEXT)
     ], default_language='french', name='sitesTextIndex')
-    db.sites.ensure_index([('titre', 1)])
-    db.sites.ensure_index([('protocole', 1)])
-    db.actualites.ensure_index([('_updated', -1)])
-    db.fichiers.ensure_index([('titre', 1), ('mime', 1)])
-    db.fichiers.ensure_index([('s3_id', 1)])
-    db.fichiers.ensure_index([("lien_participation", 1) , ("mime", 1)])
-    db.donnees.ensure_index([('proprietaire', 1), ('publique', 1)])
-    db.donnees.ensure_index([('participation', 1), ('titre', 1)])
-    db.donnees.ensure_index([("observations.tadarida_taxon", 1) , ("observations.tadarida_probabilite", 1), ("_created", 1)])
-    db.donnees.ensure_index([("observations.tadarida_taxon", 1) , ("participation" , 1)])
-    db.queuer.ensure_index([('status', 1)])
-    db.queuer.ensure_index([('submitted', 1)])
+    db.sites.create_index([('titre', 1)])
+    db.sites.create_index([('protocole', 1)])
+    db.actualites.create_index([('_updated', -1)])
+    db.fichiers.create_index([('titre', 1), ('mime', 1)])
+    db.fichiers.create_index([('s3_id', 1)])
+    db.fichiers.create_index([("lien_participation", 1) , ("mime", 1)])
+    db.donnees.create_index([('proprietaire', 1), ('publique', 1)])
+    db.donnees.create_index([('participation', 1), ('titre', 1)])
+    db.donnees.create_index([("observations.tadarida_taxon", 1) , ("observations.tadarida_probabilite", 1), ("_created", 1)])
+    db.donnees.create_index([("observations.tadarida_taxon", 1) , ("participation" , 1)])
+    db.queuer.create_index([('status', 1)])
+    db.queuer.create_index([('submitted', 1)])
 
 
 def insert_default_documents():
     # Increments document
-    db.configuration.insert({
+    db.configuration.insert_one({
         'name': 'increments',
         'protocole_routier_count': 600
     })
     # Script worker utilisateur
-    db.utilisateurs.insert({
+    db.utilisateurs.insert_one({
             'pseudo': 'script_worker',
             'email': 'script_worker@email.com',
             'role': 'Administrateur',

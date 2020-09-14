@@ -40,7 +40,7 @@ def context(f):
 
 @context
 def pending_jobs_count():
-    return queuer.get_pending_jobs().count()
+    return queuer.get_pending_jobs_count()
 
 
 @context

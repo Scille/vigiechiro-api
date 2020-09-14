@@ -34,31 +34,36 @@ class Queuer:
 
     def submit_job(self, task, *args, **kwargs):
         assert task in self.registered_tasks
-        return self.collection.insert({'name': task, 'args': args, 'kwargs': kwargs,
-                                       'submitted': datetime.utcnow(), 'status': 'READY'})
+        res = self.collection.insert_one({'name': task, 'args': args, 'kwargs': kwargs,
+                                          'submitted': datetime.utcnow(), 'status': 'READY'})
+        return res.inserted_id
+
+    def get_pending_jobs_count(self):
+        return self.collection.count_documents({'status': 'READY'})
 
     def get_pending_jobs(self):
         return self.collection.find({'status': 'READY'}).sort([('submitted', ASCENDING)])
 
     def execute_next_job(self):
         while True:
-            cursor = self.get_pending_jobs()
-            if cursor.count() == 0:
+            next_job = self.get_pending_jobs()[:1]
+            if not next_job:
                 raise QueuerError('No task to execute')
             else:
+                next_job = next_job[0]
                 try:
-                    return self.execute_job(cursor[0]['_id'])
+                    return self.execute_job(next_job['_id'])
                 except QueuerBadTaskError:
                     # Task has been taken by somebody else
                     continue
 
     def execute_job(self, job_id):
         # First try to reserve the task
-        ret = self.collection.update({'_id': job_id, 'status': 'READY'},
+        ret = self.collection.update_one({'_id': job_id, 'status': 'READY'},
             {'$set': {'status': 'RESERVED', 'reserved_at': datetime.utcnow()}})
-        if ret['n'] != 1:
+        if ret.matched_count != 1:
             raise RuntimeError('Error trying to reserve the task %s: %s' % (job_id, ret))
-        elif ret['nModified'] == 0:
+        elif ret.modified_count == 0:
             raise QueuerBadTaskError("Task %s doesn't exist or already taken" % job_id)
         job = self.collection.find_one({'_id': job_id})
         assert job['name'] in self.registered_tasks
@@ -68,12 +73,12 @@ class Queuer:
             ret = task(*job['args'], **job['kwargs'])
         except:
             print('Error executing job %s:\n%s' % (job_id, format_exc()))
-            self.collection.update(
+            self.collection.update_one(
                 {'_id': job_id},
                 {'$set': {'status': 'ERROR', 'errored_at': datetime.utcnow(), 'error': format_exc()}}
             )
         else:
-            self.collection.update(
+            self.collection.update_one(
                 {'_id': job_id},
                 {'$set': {'status': 'DONE', 'done_at': datetime.utcnow()}}
             )

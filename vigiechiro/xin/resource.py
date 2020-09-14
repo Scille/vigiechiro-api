@@ -105,7 +105,8 @@ class Resource(Blueprint):
         payload['_created'] = payload['_updated'] = datetime.utcnow().replace(microsecond=0)
         payload['_etag'] = uuid4().hex
         # Finally do the actual insert in db
-        payload['_id'] = current_app.data.db[self.name].insert(payload)
+        insert_result = current_app.data.db[self.name].insert_one(payload)
+        payload['_id'] = insert_result.inserted_id
         return payload
 
     def _atomic_update(self, lookup, payload, mongo_update=None,
@@ -222,7 +223,7 @@ class Resource(Blueprint):
         return docs, cursor.count(with_limit_and_skip=False)
 
     def remove(self, *args, **kwargs):
-        return current_app.data.db[self.name].remove(*args, **kwargs)
+        return current_app.data.db[self.name].delete_one(*args, **kwargs)
 
     def find_one(self, *args, additional_context=None, auto_abort=True, **kwargs):
         document = current_app.data.db[self.name].find_one(*args, **kwargs)
