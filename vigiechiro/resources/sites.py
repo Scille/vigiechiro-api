@@ -243,7 +243,7 @@ def display_site(site_id):
 @requires_auth(roles='Administrateur')
 def delete_site(site_id):
     res = sites.remove({'_id': site_id})
-    if res['n']:
+    if res.deleted_count:
         clean_deleted_site.delay(site_id)
         return {}, 204
     else:

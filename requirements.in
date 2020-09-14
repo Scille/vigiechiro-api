@@ -1,0 +1,14 @@
+-e git://github.com/authomatic/authomatic.git@e8b7c68a6b49005cf94c5fe8c56356bcd7cc17a7#egg=authomatic-0.1.0master
+
+flask~=1.1
+Flask-PyMongo~=0.3
+Flask-Cache~=0.13
+Flask-Mail~=0.9
+Jinja2~=2.10
+MarkupSafe~=1.1
+itsdangerous~=1.1
+pymongo~=3.0
+requests~=2.20
+
+# Application server
+gunicorn~=19.9

@@ -171,6 +171,6 @@ def get_actualites_validations():
         abort(422, {'type': 'bad param type'})
     expend = ['sujet', 'protocole']
     found = actualites.find(lookup, sort=[('_updated', -1)],
-                            expend=expend, skip=pagination.skip,
+                            skip=pagination.skip,
                             limit=pagination.max_results)
     return pagination.make_response(*found)

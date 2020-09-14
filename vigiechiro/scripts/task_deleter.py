@@ -8,10 +8,10 @@ def clean_deleted_participation(participation_id):
     print('Clean donnees&fichiers linked with participation %s' % participation_id)
     from ..resources.donnees import donnees
     from ..resources.fichiers import fichiers, delete_fichier_and_s3
-    ret = donnees.remove({'participation': participation_id})
-    if ret.get('ok') != 1:
-        raise RuntimeError('Error removing donnes: %s' % ret)
-    print('Removed %s donnees' % ret['n'])
+    res = donnees.remove({'participation': participation_id})
+    if res.deleted_count != 1:
+        raise RuntimeError('Error removing donnes for participation: %s' % participation_id)
+    print('Removed %s donnees' % res.deleted_count)
     fs, _ = fichiers.find({'participation': participation_id})
     for f in fs:
         delete_fichier_and_s3(f)
@@ -26,7 +26,7 @@ def clean_deleted_site(site_id):
     ps, _ = participations.find({'site': site_id})
     for p in ps:
         clean_deleted_participation(p['_id'])
-    ret = participations.remove({'site': site_id})
-    if ret.get('ok') != 1:
-        raise RuntimeError('Error removing participations: %s' % ret)
-    print('Removed %s participations' % ret['n'])
+    res = participations.remove({'site': site_id})
+    if res.deleted_count != 1:
+        raise RuntimeError('Error removing participations for site: %s' % site_id)
+    print('Removed %s participations' % res.deleted_count)

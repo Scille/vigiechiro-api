@@ -192,8 +192,8 @@ def auth_factory(services, mock_provider=False):
             users = current_app.data.db['utilisateurs']
             token_field = 'tokens.{}'.format(token)
             lookup = {token_field: {'$exists': True}}
-            result = users.update(lookup, {'$unset': {token_field: ""}})
-            if not result['n']:
+            res = users.update_one(lookup, {'$unset': {token_field: ""}})
+            if not res.modified_count:
                 abort(404)
             logging.info('Destroying token {}'.format(token))
         return jsonify({'_status': 'Disconnected'})
@@ -237,7 +237,7 @@ def login(authomatic, provider_name):
                         unset.append(token)
                 if unset:
                     mongo_update['$unset'] = {'tokens.{}'.format(t): True for t in unset}
-                users_db.update({'_id': document['_id']}, mongo_update)
+                users_db.update_one({'_id': document['_id']}, mongo_update)
             else:
                 # Creating a new utilisateur resource
                 user_payload = {
@@ -251,7 +251,7 @@ def login(authomatic, provider_name):
                     'role': 'Observateur',
                     'donnees_publiques': True
                 }
-                users_db.insert(user_payload)
+                users_db.insert_one(user_payload)
                 logging.info('Create new user : {}'.format(user.email))
             return redirect('{}/#/?token={}'.format(
                 current_app.config['FRONTEND_DOMAIN'], new_token), code=302)

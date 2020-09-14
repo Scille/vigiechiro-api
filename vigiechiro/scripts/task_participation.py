@@ -263,7 +263,7 @@ def extract_zipped_files_in_participation(participation):
     })
 
     # Group split archive parts together
-    logger.info('Extracting %s zipped files' % zipped_pjs.count())
+    logger.info('Extracting %s zipped files' % zipped_pjs.count_documents)
     zip_groups = defaultdict(dict)
     for zippj in zipped_pjs:
         if not zippj['disponible']:
@@ -369,7 +369,7 @@ def process_participation(participation_id, extra_pjs_ids=[], publique=True,
 
     participation_id = ObjectId(participation_id)
     extra_pjs_ids = [ObjectId(x) for x in extra_pjs_ids]
-    p = p_resource.find_one(participation_id, fields={
+    p = p_resource.find_one(participation_id, projection={
         'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
     traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
     p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
@@ -689,43 +689,43 @@ class Participation:
         self.cir_expansion = config.get('canal_expansion_temps')
         self.cir_direct = config.get('canal_enregistrement_direct')
         # Register additional pjs as part of the participation
-        current_app.data.db.fichiers.update({'_id': {'$in': extra_pjs_ids}},
+        current_app.data.db.fichiers.update_one({'_id': {'$in': extra_pjs_ids}},
             {'$set': {'lien_participation': self.participation['_id']}}, multi=True)
 
     def reset_pjs_state(self):
         # Donnees will be recreated, delete them all
-        ret = current_app.data.db.donnees.remove({
+        ret = current_app.data.db.donnees.delete_many({
             'participation': self.participation['_id']
         })
-        logger.info('Remove %s old donnees' % ret.get('n'))
+        logger.info('Remove %s old donnees' % ret.deleted_count)
         # Delete old .ta/.tc if needed to reset
         wav_pjs = current_app.data.db.fichiers.find({
             'lien_participation': self.participation['_id'],
             'mime': {'$in': ALLOWED_MIMES_WAV}
         })
 
-        if wav_pjs.count():
+        if wav_pjs.count_documents:
             delete_pjs = current_app.data.db.fichiers.find({
                 'lien_participation': self.participation['_id'],
                 'mime': {'$in': ALLOWED_MIMES_TA + ALLOWED_MIMES_TC}
             })
             delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .wav, delete %s obsolete"
-                        " .ta and .tc files" % delete_pjs.count())
+                        " .ta and .tc files" % delete_pjs.count_documents)
             parallel_executor(delete_fichier_and_s3, delete_pjs)
             return
         ta_pjs = current_app.data.db.fichiers.find({
             'lien_participation': self.participation['_id'],
             'mime': {'$in': ALLOWED_MIMES_TA}
         })
-        if ta_pjs.count():
+        if ta_pjs.count_documents:
             delete_pjs = current_app.data.db.fichiers.find({
                 'lien_participation': self.participation['_id'],
                 'mime': {'$in': ALLOWED_MIMES_TC}
             })
             delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .ta, delete %s obsolete"
-                        " .tc files" % delete_pjs.count())
+                        " .tc files" % delete_pjs.count_documents)
             parallel_executor(delete_fichier_and_s3, delete_pjs)
             return
 

@@ -105,7 +105,7 @@ def update_donnees_publique(user_id, donnees_publiques):
     if not isinstance(donnees_publiques, bool):
         raise RuntimeError('donnees_publiques must be a boolean')
     db = current_app.data.db[donnees.name]
-    db.update({'proprietaire': user_id}, {'$set': {'publique': donnees_publiques}})
+    db.update_one({'proprietaire': user_id}, {'$set': {'publique': donnees_publiques}})
 
 
 def _check_access_rights(donnee_resource):
@@ -182,7 +182,7 @@ def list_participation_donnees(participation_id):
         observations['observations']['$elemMatch'].update({'tadarida_taxon': ObjectId(request.args['tadarida_taxon'])})
         lookup.update(observations)
     found = donnees.find(lookup, skip=pagination.skip, limit=pagination.max_results,
-                         fields={'participation': False, 'proprietaire': False})
+                         projection={'participation': False, 'proprietaire': False})
     return pagination.make_response(*found)
 
 
