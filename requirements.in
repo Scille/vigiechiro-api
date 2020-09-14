@@ -1,0 +1,20 @@
+-e git://github.com/authomatic/authomatic.git@e8b7c68a6b49005cf94c5fe8c56356bcd7cc17a7#egg=authomatic-0.1.0master
+
+flask~=1.1.1
+Flask-PyMongo~=0.3.1
+Flask-Cache~=0.13.1
+Flask-Mail~=0.9.1
+Jinja2~=2.10.1
+MarkupSafe~=1.1.1
+Werkzeug~=0.15.6
+itsdangerous~=1.1.0
+pymongo~=2.8
+pytz~=2015.2
+requests~=2.20.1
+six~=1.9.0
+
+# 3rd party services
+newrelic~=2.50.0.39
+
+# Application server
+gunicorn~=19.9.0
