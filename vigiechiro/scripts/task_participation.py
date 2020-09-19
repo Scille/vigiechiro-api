@@ -263,7 +263,7 @@ def extract_zipped_files_in_participation(participation):
     })
 
     # Group split archive parts together
-    logger.info('Extracting %s zipped files' % zipped_pjs.count_documents)
+    logger.info('Extracting %s zipped files' % zipped_pjs.count())
     zip_groups = defaultdict(dict)
     for zippj in zipped_pjs:
         if not zippj['disponible']:
@@ -689,8 +689,8 @@ class Participation:
         self.cir_expansion = config.get('canal_expansion_temps')
         self.cir_direct = config.get('canal_enregistrement_direct')
         # Register additional pjs as part of the participation
-        current_app.data.db.fichiers.update_one({'_id': {'$in': extra_pjs_ids}},
-            {'$set': {'lien_participation': self.participation['_id']}}, multi=True)
+        current_app.data.db.fichiers.update_many({'_id': {'$in': extra_pjs_ids}},
+            {'$set': {'lien_participation': self.participation['_id']}})
 
     def reset_pjs_state(self):
         # Donnees will be recreated, delete them all
@@ -704,28 +704,28 @@ class Participation:
             'mime': {'$in': ALLOWED_MIMES_WAV}
         })
 
-        if wav_pjs.count_documents:
+        if wav_pjs.count():
             delete_pjs = current_app.data.db.fichiers.find({
                 'lien_participation': self.participation['_id'],
                 'mime': {'$in': ALLOWED_MIMES_TA + ALLOWED_MIMES_TC}
             })
             delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .wav, delete %s obsolete"
-                        " .ta and .tc files" % delete_pjs.count_documents)
+                        " .ta and .tc files" % delete_pjs.count())
             parallel_executor(delete_fichier_and_s3, delete_pjs)
             return
         ta_pjs = current_app.data.db.fichiers.find({
             'lien_participation': self.participation['_id'],
             'mime': {'$in': ALLOWED_MIMES_TA}
         })
-        if ta_pjs.count_documents:
+        if ta_pjs.count():
             delete_pjs = current_app.data.db.fichiers.find({
                 'lien_participation': self.participation['_id'],
                 'mime': {'$in': ALLOWED_MIMES_TC}
             })
             delete_pjs.batch_size(TASK_PARTICIPATION_BATCH_SIZE)
             logger.info("Participation base files are .ta, delete %s obsolete"
-                        " .tc files" % delete_pjs.count_documents)
+                        " .tc files" % delete_pjs.count())
             parallel_executor(delete_fichier_and_s3, delete_pjs)
             return
 

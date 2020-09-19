@@ -46,7 +46,7 @@ class Queuer:
 
     def execute_next_job(self):
         while True:
-            next_job = self.get_pending_jobs()[:1]
+            next_job = list(self.get_pending_jobs()[:1])
             if not next_job:
                 raise QueuerError('No task to execute')
             else:
