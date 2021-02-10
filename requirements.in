@@ -1,5 +1,4 @@
--e git://github.com/authomatic/authomatic.git@e8b7c68a6b49005cf94c5fe8c56356bcd7cc17a7#egg=authomatic-0.1.0master
-
+Authomatic~=1.0
 flask~=1.1
 Flask-PyMongo~=0.3
 Flask-Cache~=0.13
