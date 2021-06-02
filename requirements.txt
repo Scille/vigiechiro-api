@@ -48,7 +48,7 @@ pymongo==3.11.3
     #   flask-pymongo
 requests==2.25.1
     # via -r requirements.in
-urllib3==1.26.3
+urllib3==1.26.5
     # via requests
 werkzeug==1.0.1
     # via flask
