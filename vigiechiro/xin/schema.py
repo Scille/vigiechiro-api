@@ -281,7 +281,12 @@ class Unserializer(SchemaRunner):
             return
         data_relation = context.schema['data_relation']
         # Expend relation if asked for
-        if data_relation.get('expend', False):
+        expend_additional = context.additional_context.get('expend', {})
+        if isinstance(expend_additional, dict):
+            expend = expend_additional.get(context.get_current_path(), data_relation.get('expend', False))
+        else:
+            expend = expend_additional
+        if expend:
             resource_name = data_relation.get('resource', None)
             field = data_relation.get('field', None)
             projection = data_relation.get('projection', None)
