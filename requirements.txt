@@ -16,8 +16,6 @@ click==7.1.2
     # via flask
 flask-cache==0.13.1
     # via -r requirements.in
-flask-mail==0.9.1
-    # via -r requirements.in
 flask-pymongo==0.5.2
     # via -r requirements.in
 flask==1.1.4

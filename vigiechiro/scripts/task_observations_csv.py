@@ -2,7 +2,6 @@ from bson import ObjectId
 from io import StringIO
 import csv
 from flask import current_app
-from flask_mail import Message
 
 from .queuer import task
 
@@ -55,11 +54,17 @@ def generate_observations_csv(participation_id):
 
 
 @task
-def email_observations_csv(participation_id, recipients, body=None, subject=None):
-    if not isinstance(recipients, (list, tuple)):
-        recipients = [recipients, ]
-    msg = Message(subject=subject,
-                  recipients=recipients, body=body)
-    msg.attach("participation-%s-observations.csv" % participation_id,
-               "text/csv", generate_observations_csv(participation_id))
-    current_app.mail.send(msg)
+def email_observations_csv(participation_id, recipient, subject, body):
+    csv_data = generate_observations_csv(participation_id)
+    current_app.mail.send(
+        recipient=recipient,
+        subject=subject,
+        body=body,
+        attachements=[
+            (
+                "participation-%s-observations.csv" % participation_id,
+                "text/csv",
+                csv_data
+            )
+        ]
+    )

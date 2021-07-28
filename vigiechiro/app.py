@@ -6,11 +6,11 @@ from os.path import abspath, dirname
 from flask import Flask, send_from_directory, make_response, request, redirect
 from flask_pymongo import PyMongo
 from flask_cache import Cache
-from flask_mail import Mail
 
 from . import settings
 from . import resources
 
+from .xin.mail import Mail
 from .xin.auth import auth_factory
 from .xin.tools import ObjectIdConverter
 from .xin.cors import add_cors_headers_factory

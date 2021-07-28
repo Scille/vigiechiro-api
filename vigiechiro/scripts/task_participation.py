@@ -23,7 +23,6 @@ from bson import ObjectId
 from flask import current_app, g
 from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
-from flask_mail import Message
 
 from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE, TASK_PARTICIPATION_BATCH_SIZE,
@@ -398,10 +397,7 @@ def process_participation(participation_id, extra_pjs_ids=[], publique=True,
         return
     if isinstance(notify_mail, str):
         notify_mail = [notify_mail]
-    msg = Message(
-        subject="Votre participation vient d'être traitée !",
-        recipients=notify_mail, body=notify_msg)
-    current_app.mail.send(msg)
+    current_app.mail.send(recipient=notify_mail, subject="Votre participation vient d'être traitée !", body=notify_msg)
 
 
 def _process_participation(participation_id, extra_pjs_ids=[], publique=True):
