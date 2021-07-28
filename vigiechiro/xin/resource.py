@@ -214,13 +214,17 @@ class Resource(Blueprint):
         return self._unserialize_document(result[1]).document
 
     def find(self, *args, additional_context=None, **kwargs):
-        docs = []
         cursor = current_app.data.db[self.name].find(*args, **kwargs)
-        for document in cursor:
-            result = self._unserialize_document(document,
-                additional_context=additional_context)
-            docs.append(result.document)
-        return docs, cursor.count(with_limit_and_skip=False)
+
+        _lazy_fetch_and_unserialize = (
+            self._unserialize_document(
+                document,
+                additional_context=additional_context
+            ).document
+            for document in cursor
+        )
+
+        return _lazy_fetch_and_unserialize, cursor.count(with_limit_and_skip=False)
 
     def remove(self, *args, **kwargs):
         return current_app.data.db[self.name].delete_one(*args, **kwargs)

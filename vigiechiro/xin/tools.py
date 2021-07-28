@@ -109,6 +109,8 @@ class MongoJsonEncoder(json.JSONEncoder):
             return str(obj)
         elif isinstance(obj, set):
             return list(obj)
+        elif hasattr(obj, "__iter__"):
+            return list(obj)
         return json.JSONEncoder.default(self, obj)
 
 
