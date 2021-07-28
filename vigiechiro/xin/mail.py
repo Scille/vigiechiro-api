@@ -10,7 +10,7 @@ class Mail:
     def send(self, recipient, subject, body, attachements=[]):
         msg = EmailMessage()
         msg['Subject'] = subject
-        msg['From'] = self.app.config["MAIL_USERNAME"]
+        msg['From'] = self.app.config["MAIL_DEFAULT_SENDER"]
         msg['To'] = recipient
         msg.set_content(body)
         for filename, mime, data in attachements:
@@ -27,7 +27,7 @@ class Mail:
             server.ehlo()
             server.login(user=self.app.config["MAIL_USERNAME"], password=self.app.config["MAIL_PASSWORD"])
             server.send_message(
-                from_addr=self.app.config["MAIL_USERNAME"],
+                from_addr=self.app.config["MAIL_DEFAULT_SENDER"],
                 to_addrs=[recipient],
                 msg=msg,
             )
