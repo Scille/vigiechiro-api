@@ -12,10 +12,10 @@ def clean_deleted_participation(participation_id):
     if res.deleted_count != 1:
         raise RuntimeError('Error removing donnes for participation: %s' % participation_id)
     print('Removed %s donnees' % res.deleted_count)
-    fs, _ = fichiers.find({'participation': participation_id})
+    fs, total = fichiers.find({'participation': participation_id})
     for f in fs:
         delete_fichier_and_s3(f)
-    print('Removed %s fichiers' % len(fs))
+    print('Removed %s fichiers' % total)
 
 
 @task
