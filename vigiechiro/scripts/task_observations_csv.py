@@ -32,6 +32,7 @@ def generate_observations_csv(participation_id):
     def format_row(obs, titre):
         row = []
         for h in HEADERS:
+            value = ''
             if h == 'nom du fichier':
                 value = titre
             elif h == 'temps_debut':
@@ -41,11 +42,11 @@ def generate_observations_csv(participation_id):
             elif h == 'tadarida_taxon':
                 value = fetch_taxon_libelle_court(obs[h])
             elif h == 'tadarida_taxon_autre':
-                value = []
+                values = []
                 for a in obs.get(h, []):
                     if a['probabilite'] >= (obs.get('tadarida_probabilite', 0) / 2):
-                        value.append(fetch_taxon_libelle_court(a["taxon"]))
-                value = ', '.join(value)
+                        values.append(fetch_taxon_libelle_court(a["taxon"]))
+                value = ', '.join(values)
             elif h in ('observateur_taxon', 'validateur_taxon'):
                 taxon_id = obs.get(h, None)
                 if taxon_id is not None:
