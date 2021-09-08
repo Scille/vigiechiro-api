@@ -1,5 +1,6 @@
+from zipfile import ZipFile
 from bson import ObjectId
-from io import StringIO
+from io import BytesIO, StringIO
 import csv
 from flask import current_app
 
@@ -11,6 +12,8 @@ HEADERS = ['nom du fichier',
            'temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
            'tadarida_probabilite', 'tadarida_taxon_autre', 'observateur_taxon',
            'observateur_probabilite', 'validateur_taxon', 'validateur_probabilite']
+
+MAX_UNCOMPRESSED_ATTACHEMENT_SIZE = 1024 * 1024  # 1mo
 
 
 def generate_observations_csv(participation_id):
@@ -72,21 +75,35 @@ def generate_observations_csv(participation_id):
             print(f"{done}/{count}")
         for obs in do.get('observations', []):
             w.writerow(format_row(obs, do.get('titre', '')))
-    return bytearray(buff.getvalue().encode('utf-8'))
+    return buff.getvalue().encode('utf-8')
 
 
 @task
 def email_observations_csv(participation_id, recipient, subject, body):
     csv_data = generate_observations_csv(participation_id)
+    csv_name = "participation-%s-observations.csv" % participation_id
+
+    if len(csv_data) < MAX_UNCOMPRESSED_ATTACHEMENT_SIZE:
+        attachement = (
+                csv_name,
+                "text/csv",
+                bytearray(csv_data)
+            )
+    else:
+        # CSV is too big, zip it before attach
+        zip_data = BytesIO()
+        with ZipFile(zip_data, mode="w") as zf:
+            zf.writestr(csv_name, data=csv_data)
+
+        attachement = (
+                "%s.zip" % csv_name,
+                "application/zip",
+                bytearray(zip_data.getvalue())
+            )
+
     current_app.mail.send(
         recipient=recipient,
         subject=subject,
         body=body,
-        attachements=[
-            (
-                "participation-%s-observations.csv" % participation_id,
-                "text/csv",
-                csv_data
-            )
-        ]
+        attachements=[attachement]
     )
