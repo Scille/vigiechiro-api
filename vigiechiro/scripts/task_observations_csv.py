@@ -3,7 +3,7 @@ from bson import ObjectId
 from io import BytesIO, StringIO
 import csv
 from flask import current_app
-from smtp import SMTPSenderRefused
+from smtplib import SMTPSenderRefused
 
 from .queuer import task
 from ..resources.taxons import taxons
