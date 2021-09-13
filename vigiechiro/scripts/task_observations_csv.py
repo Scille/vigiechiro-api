@@ -1,3 +1,4 @@
+import os
 from zipfile import ZipFile
 from bson import ObjectId
 from io import BytesIO, StringIO
@@ -7,6 +8,7 @@ from smtplib import SMTPSenderRefused
 
 from .queuer import task
 from ..resources.taxons import taxons
+from ..settings import TASK_PARTICIPATION_DATASTORE_CACHE
 
 
 HEADERS = ['nom du fichier',
@@ -102,6 +104,17 @@ def email_observations_csv(participation_id, recipient, subject, body):
                 bytearray(zip_data.getvalue())
             )
 
+    # Save the CSV in datastore
+    if TASK_PARTICIPATION_DATASTORE_CACHE:
+        participation_datastore = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, participation_id)
+        if not os.path.exists(participation_datastore):
+            os.mkdir(participation_datastore)
+        csv_datastore_path = '%s/%s' % (participation_datastore, attachement[0])
+        with open(csv_datastore_path, "wb") as fd:
+            fd.write(attachement[2])
+    else:
+        csv_datastore_path = None
+
     try:
         current_app.mail.send(
             recipient=recipient,
@@ -111,8 +124,12 @@ def email_observations_csv(participation_id, recipient, subject, body):
         )
     except SMTPSenderRefused:
         # Consider the size limit is the issue, so send without attachement
+
         attachement_size_mo = float(len(attachement[2])) / (1024 ** 2)
-        body += "\n\nPS: Le CSV n'a pas pu être inclus car trop gros ({size:.2f}Mo zippé)".format(size=attachement_size_mo)
+        body += "\n\nPS: Le CSV n'a pas pu être inclus car trop gros ({size:.2f}Mo zippé)\n".format(size=attachement_size_mo)
+        if csv_datastore_path:
+            body += "Vous pouvez contacter le support en indiquant le chemin du fichier sur le serveur: {path}\n".format(path=csv_datastore_path)
+
         current_app.mail.send(
             recipient=recipient,
             subject=subject,
