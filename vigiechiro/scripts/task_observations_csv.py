@@ -3,6 +3,7 @@ from bson import ObjectId
 from io import BytesIO, StringIO
 import csv
 from flask import current_app
+from smtp import SMTPSenderRefused
 
 from .queuer import task
 from ..resources.taxons import taxons
@@ -101,9 +102,19 @@ def email_observations_csv(participation_id, recipient, subject, body):
                 bytearray(zip_data.getvalue())
             )
 
-    current_app.mail.send(
-        recipient=recipient,
-        subject=subject,
-        body=body,
-        attachements=[attachement]
-    )
+    try:
+        current_app.mail.send(
+            recipient=recipient,
+            subject=subject,
+            body=body,
+            attachements=[attachement]
+        )
+    except SMTPSenderRefused:
+        # Consider the size limit is the issue, so send without attachement
+        attachement_size_mo = float(len(attachement[2])) / (1024 ** 2)
+        body += "\n\nPS: Le CSV n'a pas pu être inclus car trop gros ({size:.2f}Mo zippé)".format(size=attachement_size_mo)
+        current_app.mail.send(
+            recipient=recipient,
+            subject=subject,
+            body=body
+        )
