@@ -1,5 +1,5 @@
 import os
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED
 from bson import ObjectId
 from io import BytesIO, StringIO
 import csv
@@ -95,7 +95,7 @@ def email_observations_csv(participation_id, recipient, subject, body):
     else:
         # CSV is too big, zip it before attach
         zip_data = BytesIO()
-        with ZipFile(zip_data, mode="w") as zf:
+        with ZipFile(zip_data, mode="w", compression=ZIP_DEFLATED) as zf:
             zf.writestr(csv_name, data=csv_data)
 
         attachement = (
