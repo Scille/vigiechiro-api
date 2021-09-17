@@ -91,7 +91,7 @@ Google._x_user_parser = staticmethod(_fixed_x_user_parser)
 
 def get_request_user():
     """Return the current user or an empty dict if anonymous user"""
-    return g.request_user if hasattr(g, request_user) else {}
+    return g.request_user if hasattr(g, "request_user") else {}
 
 
 def check_auth(token, allowed_roles):
@@ -215,6 +215,12 @@ def login(authomatic, provider_name):
             new_token_expire = (datetime.utcnow() +
                 timedelta(seconds=current_app.config['TOKEN_EXPIRE_TIME']))
             user = authomatic.result.user
+
+            for field in ("id", "email", "name"):
+                if not getattr(user, field, None):
+                    logging.error('Missing {} field in {} auth info : {}'.format(field, provider_name, user))
+                    abort(400)
+
             provider_id_name = provider_name + '_id'
             # Lookup for existing user by email and provider id
             users_db = current_app.data.db['utilisateurs']
@@ -238,6 +244,7 @@ def login(authomatic, provider_name):
                 if unset:
                     mongo_update['$unset'] = {'tokens.{}'.format(t): True for t in unset}
                 users_db.update_one({'_id': document['_id']}, mongo_update)
+                logging.info('user auth : {}'.format(user.email))
             else:
                 # Creating a new utilisateur resource
                 user_payload = {
