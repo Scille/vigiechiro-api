@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import requests
-import logging
+from logging.config import dictConfig
 from os.path import abspath, dirname
 from flask import Flask, send_from_directory, make_response, request, redirect
 from flask_pymongo import PyMongo
@@ -58,12 +58,25 @@ def make_json_app(app):
 
 
 def init_app():
+    dictConfig({
+        'version': 1,
+        'formatters': {'default': {
+            'format': '%(levelname)s:%(module)s: %(message)s',
+        }},
+        'handlers': {'wsgi': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://flask.logging.wsgi_errors_stream',
+            'formatter': 'default'
+        }},
+        'root': {
+            'level': 'INFO',
+            'handlers': ['wsgi']
+        }
+    })
+
     app = Flask(__name__)
     app.config.from_pyfile('settings.py')
-    if not app.config.get('DEBUG', False):
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.INFO)
-        app.logger.addHandler(stream_handler)
+
     # Configure static hosting of the front
     if app.config['FRONTEND_HOSTED']:
         _monkeypatch_flask_cache()
