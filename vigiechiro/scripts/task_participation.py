@@ -395,8 +395,6 @@ def process_participation(participation_id, extra_pjs_ids=[], publique=True,
         p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
     if not notify_mail:
         return
-    if isinstance(notify_mail, str):
-        notify_mail = [notify_mail]
     current_app.mail.send(recipient=notify_mail, subject="Votre participation vient d'être traitée !", body=notify_msg)
 
 
