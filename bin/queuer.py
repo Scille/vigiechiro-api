@@ -1,11 +1,8 @@
 #! /usr/bin/env python3
 
-import logging; logging.basicConfig(level=logging.INFO)
-import argparse
 from sys import argv
 from bson import ObjectId
 from pprint import pprint
-import json
 from functools import wraps
 
 from vigiechiro.scripts import queuer, participation_generate_bilan, process_participation

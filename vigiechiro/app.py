@@ -63,14 +63,21 @@ def init_app():
         'formatters': {'default': {
             'format': '%(levelname)s:%(module)s: %(message)s',
         }},
-        'handlers': {'wsgi': {
-            'class': 'logging.StreamHandler',
-            'stream': 'ext://flask.logging.wsgi_errors_stream',
-            'formatter': 'default'
-        }},
+        'handlers': {
+            'wsgi': {
+                'class': 'logging.StreamHandler',
+                'stream': 'ext://sys.stdout',
+                'stream': 'ext://flask.logging.wsgi_errors_stream',
+                'formatter': 'default'
+            },
+        },
         'root': {
             'level': 'INFO',
             'handlers': ['wsgi']
+        },
+        'loggers': {
+            'task': {'level': 'INFO'},
+            'requests': {'level': 'WARNING'}  # Avoid flooding in task_participation
         }
     })
 

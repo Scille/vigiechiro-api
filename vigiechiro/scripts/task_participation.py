@@ -5,10 +5,7 @@ Participation bilan task worker
 """
 
 import logging
-logging.basicConfig()
-logging.getLogger('requests').setLevel(logging.WARNING)
 base_logger = logging.getLogger('task')
-base_logger.setLevel(logging.INFO)
 from collections import defaultdict
 from datetime import datetime
 from uuid import uuid4
