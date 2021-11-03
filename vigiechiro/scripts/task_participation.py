@@ -25,7 +25,10 @@ from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TADARIDA_C_OPTS, TADARIDA_C_BATCH_SIZE, TASK_PARTICIPATION_BATCH_SIZE,
                         TASK_PARTICIPATION_DATASTORE_CACHE, TASK_PARTICIPATION_DATASTORE_USE_SYMLINKS,
                         TASK_PARTICIPATION_PARALLELE_POOL, TASK_PARTICIPATION_KEEP_TMP_DIR,
-                        TASK_PARTICIPATION_MAX_RETRY, TASK_PARTICIPATION_UPLOAD_GENERATED_FILES, REQUESTS_TIMEOUT)
+                        TASK_PARTICIPATION_MAX_RETRY, TASK_PARTICIPATION_UPLOAD_GENERATED_FILES,
+                        TASK_PARTICIPATION_EXTRACT_BACKEND,
+                        REQUESTS_TIMEOUT,
+)
 from ..resources.fichiers import (fichiers as f_resource, ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC,
                                   ALLOWED_MIMES_WAV, ALLOWED_MIMES_ZIPPED, detect_mime,
@@ -320,7 +323,10 @@ def extract_zipped_files_in_participation(participation):
 
         # Don't use python's ziplib given it doesn't support DEFLATE64 mode
         logger.info('Extracting %s' % main_pj)
-        cmd = 'unzip {}'.format(main_pj)
+        if TASK_PARTICIPATION_EXTRACT_BACKEND == "7zip":
+            cmd = '7z x {}'.format(main_pj)
+        else:  # unzip
+            cmd = 'unzip {}'.format(main_pj)
         ret = subprocess.run(cmd.split(), cwd=wdir)
         if ret.returncode != 0:
             logger.warning('Error while extracting archive %s: returned %s' % (main_pj, ret.returncode))
