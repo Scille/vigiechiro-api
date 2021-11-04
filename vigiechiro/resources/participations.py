@@ -17,7 +17,8 @@ from ..xin.snippets import (Paginator, get_payload, get_resource,
 
 from .actualites import create_actuality_nouvelle_participation
 from .fichiers import (fichiers as fichiers_resource, ALLOWED_MIMES_PHOTOS,
-                       ALLOWED_MIMES_TA, ALLOWED_MIMES_TC, ALLOWED_MIMES_WAV)
+                       ALLOWED_MIMES_TA, ALLOWED_MIMES_TC,
+                       ALLOWED_MIMES_WAV, ALLOWED_MIMES_PROCESSING_EXTRA)
 from .utilisateurs import utilisateurs as utilisateurs_resource, ensure_protocole_joined_and_validated
 from .donnees import donnees as donnees_resource
 
@@ -31,14 +32,6 @@ def _validate_site(context, site):
         return "observateur doesn't own this site"
     if not site.get('verrouille', False):
         return "cannot create protocole on an unlocked site"
-
-
-def _validate_piece_jointe(context, fichier):
-    print('validating fichier : {}'.format(fichier))
-    if fichier['mime'] not in ALLOWED_MIMES_PHOTOS:
-        return 'bad mime type, should be of {}'.format(ALLOWED_MIMES_PHOTOS)
-    if not fichier.get('disponible', False):
-        return 'upload is not done'.format(pj_id)
 
 
 SCHEMA = {
@@ -353,7 +346,8 @@ def get_pieces_jointes(participation_id):
     _check_read_access(participation_resource)
     pagination = Paginator()
     params = get_url_params({'ta': {'type': bool}, 'tc': {'type': bool},
-                             'wav': {'type': bool}, 'photos': {'type': bool}})
+                             'wav': {'type': bool}, 'photos': {'type': bool},
+                             'processing_extra': {'type': bool}})
     lookup = {'lien_participation': participation_id}
     lookup.update(get_lookup_from_q() or {})
     for rule, value in params.items():
@@ -364,6 +358,8 @@ def get_pieces_jointes(participation_id):
             mimes = ALLOWED_MIMES_TC
         elif rule == 'wav':
             mimes = ALLOWED_MIMES_WAV
+        elif rule == "processing_extra":
+            mimes = ALLOWED_MIMES_PROCESSING_EXTRA
         else:
             mimes = ALLOWED_MIMES_PHOTOS
         if 'mime' not in lookup:

@@ -36,6 +36,9 @@ ALLOWED_MIMES_PHOTOS = ['image/bmp', 'image/png', 'image/jpg', 'image/jpeg']
 ALLOWED_MIMES_TA = ['application/ta', 'application/tac']
 ALLOWED_MIMES_TC = ['application/tc', 'application/tcc']
 ALLOWED_MIMES_WAV = ['audio/wav', 'audio/x-wav']
+# Fake mime type to mark miscellaneous file generated during participation processing
+# (hence those files will be removed each time the participation is recomputed)
+ALLOWED_MIMES_PROCESSING_EXTRA = ['application/x-processing-extra']
 # Zipped file are short lived: they are only used to easier the upload and
 # will then be replaced by the files they contains during the
 # `process_participation` task. Hence is there is no need to try to display
@@ -121,6 +124,13 @@ def get_file_from_s3(fichier, data_path):
     else:
         signed_url = settings.DEV_FAKE_S3_URL + '/' + object_name
     r = requests.get(signed_url, stream=True, timeout=settings.REQUESTS_TIMEOUT)
+
+    if not data_path:
+        if 200 <= r.status_code < 300:
+            return r.content
+        else:
+            return None
+
     with open(data_path, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
             if chunk: # filter out keep-alive new chunks
@@ -241,6 +251,8 @@ def fichier_create():
             abort(422, {'titre': 'invalid name ' + titre})
     elif mime in ALLOWED_MIMES_ZIPPED:
         path = 'zip/'
+    elif mime in ALLOWED_MIMES_PROCESSING_EXTRA:
+        path = 'processing_extra/'
     else:
         path = 'others/'
     payload = {

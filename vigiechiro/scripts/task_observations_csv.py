@@ -6,7 +6,9 @@ import csv
 from flask import current_app
 from smtplib import SMTPSenderRefused
 
+
 from .queuer import task
+from ..resources.fichiers import ALLOWED_MIMES_PROCESSING_EXTRA, fichiers, get_file_from_s3
 from ..resources.taxons import taxons
 from ..settings import TASK_PARTICIPATION_DATASTORE_CACHE
 
@@ -17,6 +19,39 @@ HEADERS = ['nom du fichier',
            'observateur_probabilite', 'validateur_taxon', 'validateur_probabilite']
 
 MAX_UNCOMPRESSED_ATTACHEMENT_SIZE = 1024 * 1024  # 1mo
+
+
+def generate_csv_name(participation_id):
+    return "participation-%s-observations.csv" % participation_id
+
+
+def retrieve_observations_csv(participation_id, csv_name):
+    csv_obj = fichiers.find_one({
+        'lien_participation': participation_id,
+        'titre': csv_name,
+        'mime': {'$in': ALLOWED_MIMES_PROCESSING_EXTRA},
+        'disponible': True,
+    })
+    if not csv_obj:
+        return None
+    return get_file_from_s3(csv_obj)
+
+
+def upload_observations_csv(participation_id, csv_name, csv_data):
+    from .task_participation import _create_fichier
+    from ..resources.participations import participations
+
+    p = participations.find_one(participation_id)
+    proprietaire_id = p["observateur"]
+
+    _create_fichier(
+        titre=csv_name,
+        mime=ALLOWED_MIMES_PROCESSING_EXTRA[0],
+        proprietaire=proprietaire_id,
+        data_raw=csv_data,
+        lien_participation=participation_id,
+        force_upload=True
+    )
 
 
 def generate_observations_csv(participation_id):
@@ -83,8 +118,13 @@ def generate_observations_csv(participation_id):
 
 @task
 def email_observations_csv(participation_id, recipient, subject, body):
-    csv_data = generate_observations_csv(participation_id)
-    csv_name = "participation-%s-observations.csv" % participation_id
+    # Try to find the csv if it is already computed
+    csv_name = generate_csv_name(participation_id)
+    csv_data = retrieve_observations_csv(participation_id, csv_name)
+    if not csv_data:
+        # CSV not available, compute it
+        csv_data = generate_observations_csv(participation_id)
+        upload_observations_csv(participation_id, csv_name, csv_data)
 
     if len(csv_data) < MAX_UNCOMPRESSED_ATTACHEMENT_SIZE:
         attachement = (
