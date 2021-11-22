@@ -1,12 +1,10 @@
 #! /usr/bin/env python3
 
 import csv
-import hashlib
 import json
 import sys
 import uuid
-from json import JSONEncoder
-from bson.json_util import dumps
+from datetime import datetime
 
 
 OUTPUT_TEMPLATE_HEAD = '.output.{}.json'
@@ -20,6 +18,7 @@ MONGOIMPORT_USAGE_TEMPLATE = """
 
 def main(in_file):
     output_template = in_file + OUTPUT_TEMPLATE_HEAD
+    timestamp = datetime.now().timestamp()
     with open(in_file, 'r') as fd:
         reader = csv.reader(fd, delimiter=';')
         _ = next(reader)
@@ -37,8 +36,8 @@ def main(in_file):
                 else:
                     first = False
                 document = {
-                    "_updated": {"$date": 1422109554},
-                    "_created": {"$date": 1422109554},
+                    "_updated": {"$date": timestamp},
+                    "_created": {"$date": timestamp},
                     "_etag": uuid.uuid4().hex,
                     "centre": {
                         "type": "Point",
@@ -56,6 +55,7 @@ def main(in_file):
             output.close()
             if not any(reader):
                 break
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
