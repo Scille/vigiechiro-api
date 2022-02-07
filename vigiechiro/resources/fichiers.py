@@ -115,7 +115,7 @@ def delete_fichier_and_s3(fichier):
     return None
 
 
-def get_file_from_s3(fichier, data_path):
+def get_file_from_s3(fichier, data_path=None):
     object_name = fichier.get('s3_id')
     if not object_name:
         return None
