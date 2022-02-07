@@ -121,8 +121,7 @@ def generate_observations_csv(participation_id):
     return buff.getvalue().encode('utf-8')
 
 
-@task
-def email_observations_csv(participation_id, recipient, subject, body):
+def ensure_observations_csv_is_available(participation_id):
     # Try to find the csv if it is already computed
     csv_name = generate_csv_name(participation_id)
     csv_data = retrieve_observations_csv(participation_id, csv_name)
@@ -130,6 +129,12 @@ def email_observations_csv(participation_id, recipient, subject, body):
         # CSV not available, compute it
         csv_data = generate_observations_csv(participation_id)
         upload_observations_csv(participation_id, csv_name, csv_data)
+    return csv_name, csv_data
+
+
+@task
+def email_observations_csv(participation_id, recipient, subject, body):
+    csv_name, csv_data = ensure_observations_csv_is_available(participation_id)
 
     if len(csv_data) < MAX_UNCOMPRESSED_ATTACHEMENT_SIZE:
         attachement = (

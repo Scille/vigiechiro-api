@@ -38,6 +38,7 @@ from ..resources.fichiers import (fichiers as f_resource,
                                   ALLOWED_MIMES_PROCESSING_EXTRA, detect_mime,
                                   delete_fichier_and_s3, get_file_from_s3, _sign_request)
 from .queuer import task
+from .task_observations_csv import email_observations_csv, ensure_observations_csv_is_available
 
 
 def parallel_executor(task, elements):
@@ -408,13 +409,16 @@ def process_participation(participation_id, extra_pjs_ids=[], publique=True,
         p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
 
     mail_subject = "Votre participation vient d'être traitée !"
+    if not notify_msg:
+        notify_msg = mail_subject
     if TASK_PARTICIPATION_GENERATE_OBSERVATION_CSV:
-        from .task_observations_csv import email_observations_csv
-        email_observations_csv(participation_id, recipient=notify_mail, subject=mail_subject, body=notify_msg)
+        if notify_mail:
+            email_observations_csv(participation_id, recipient=notify_mail, subject=mail_subject, body=notify_msg)
+        else:
+            ensure_observations_csv_is_available(participation_id)
     else:
-        if not notify_mail:
-            return
-        current_app.mail.send(recipient=notify_mail, subject=mail_subject, body=notify_msg)
+        if notify_mail:
+            current_app.mail.send(recipient=notify_mail, subject=mail_subject, body=notify_msg)
 
 
 def _process_participation(participation_id, extra_pjs_ids=[], publique=True):
