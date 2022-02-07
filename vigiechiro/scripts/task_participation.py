@@ -381,6 +381,8 @@ def process_participation(participation_id, extra_pjs_ids=[], publique=True,
     extra_pjs_ids = [ObjectId(x) for x in extra_pjs_ids]
     p = p_resource.find_one(participation_id, projection={
         'protocole': False, 'messages': False, 'logs': False, 'bilan': False})
+    if not p:
+        raise RuntimeError(f"Unknown participation `{participation_id}`")
     traitement = {'etat': 'EN_COURS', 'date_debut': datetime.utcnow()}
     p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
     try:

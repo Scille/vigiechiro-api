@@ -31,7 +31,7 @@ def retrieve_observations_csv(participation_id, csv_name):
         'titre': csv_name,
         'mime': {'$in': ALLOWED_MIMES_PROCESSING_EXTRA},
         'disponible': True,
-    })
+    }, auto_abort=False)
     if not csv_obj:
         return None
     return get_file_from_s3(csv_obj)
@@ -41,7 +41,9 @@ def upload_observations_csv(participation_id, csv_name, csv_data):
     from .task_participation import _create_fichier
     from ..resources.participations import participations
 
-    p = participations.find_one(participation_id)
+    p = participations.find_one(participation_id, auto_abort=False)
+    if not p:
+        raise RuntimeError(f"Unknown participation `{participation_id}`")
     proprietaire_id = p["observateur"]
 
     _create_fichier(
@@ -67,7 +69,10 @@ def generate_observations_csv(participation_id):
         nonlocal taxons_cache
         if id not in taxons_cache:
             print('cache miss !', id)
-            taxons_cache[id] = taxons.find_one(id)
+            taxon = taxons.find_one(id, auto_abort=False)
+            if not taxon:
+                raise RuntimeError(f"Unknown taxon `{id}`")
+            taxons_cache[id] = taxon
         return taxons_cache[id]["libelle_court"]
 
     def format_row(obs, titre):
