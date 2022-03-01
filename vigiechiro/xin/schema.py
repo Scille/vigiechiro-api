@@ -518,7 +518,7 @@ class Validator(GenericValidator):
     def _run_attribute_postonly(self, context):
         """Field can be altered by non-admin during POST only"""
         post_only = context.schema['postonly']
-        if g.request_user['role'] == 'Administrateur':
+        if "request_user" in g and g.request_user['role'] == 'Administrateur':
             return
         if post_only and request.method != 'POST':
             context.add_error(ERROR_READONLY_FIELD)
@@ -528,7 +528,7 @@ class Validator(GenericValidator):
         write_roles = context.schema['writerights']
         if isinstance(write_roles, str):
             write_roles = [write_roles]
-        if g.request_user['role'] not in write_roles:
+        if "request_user" in g and g.request_user['role'] not in write_roles:
             context.add_error(ERROR_READONLY_FIELD)
 
     def _run_type_objectid(self, context):
