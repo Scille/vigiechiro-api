@@ -5,12 +5,12 @@ from bson import ObjectId
 from pprint import pprint
 from functools import wraps
 
-from vigiechiro.scripts import queuer, participation_generate_bilan, process_participation
+from vigiechiro.scripts import queuer, participation_generate_bilan, process_participation, participation_generate_observations_csv
 
 
 USAGE = """usage:
-{cmd} submit [participation|bilan] <partication_id>    Submit a task as a job for asynchronous execution
-{cmd} exec [participation|bilan] <partication_id>      Synchronous execution of the given task
+{cmd} submit [participation|bilan|observations_csv] <partication_id>    Submit a task as a job for asynchronous execution
+{cmd} exec [participation|bilan|observations_csv] <partication_id>      Synchronous execution of the given task
 {cmd} consume [<job_id>|next_job]                      Synchronous execution of the given job
 {cmd} pendings                                         Return number of pending jobs
 {cmd} info <job_id>                                    Return info on a given job
@@ -22,6 +22,8 @@ def get_task(shortname):
         return process_participation
     elif shortname == 'bilan':
         return participation_generate_bilan
+    elif shortname == "observations_csv":
+        return participation_generate_observations_csv
     else:
         raise RuntimeError('Unknown task %s' % shortname)
 

@@ -35,7 +35,7 @@ from ..resources.fichiers import (fichiers as f_resource,
                                   ALLOWED_MIMES_PHOTOS,
                                   ALLOWED_MIMES_TA, ALLOWED_MIMES_TC,
                                   ALLOWED_MIMES_WAV, ALLOWED_MIMES_ZIPPED,
-                                  ALLOWED_MIMES_PROCESSING_EXTRA, detect_mime,
+                                  detect_mime,
                                   delete_fichier_and_s3, get_file_from_s3, _sign_request)
 from .queuer import task
 from .task_observations_csv import email_observations_csv, ensure_observations_csv_is_available

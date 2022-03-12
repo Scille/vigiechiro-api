@@ -1,4 +1,3 @@
-import os
 from zipfile import ZipFile, ZIP_DEFLATED
 from bson import ObjectId
 from io import BytesIO, StringIO
@@ -8,10 +7,8 @@ from smtplib import SMTPSenderRefused
 
 
 from .queuer import task
-from ..resources.fichiers import ALLOWED_MIMES_PROCESSING_EXTRA, fichiers, get_file_from_s3
+from ..resources.fichiers import ALLOWED_MIMES_PROCESSING_EXTRA, delete_fichier_and_s3, fichiers, get_file_from_s3
 from ..resources.taxons import taxons
-from ..settings import TASK_PARTICIPATION_DATASTORE_CACHE
-
 
 HEADERS = ['nom du fichier',
            'temps_debut', 'temps_fin', 'frequence_mediane', 'tadarida_taxon',
@@ -133,6 +130,24 @@ def ensure_observations_csv_is_available(participation_id):
 
 
 @task
+def participation_generate_observations_csv(participation_id):
+    participation_id = ObjectId(participation_id)
+    csv_name = generate_csv_name(participation_id)
+
+    # Retrieve and remove the previous observation file if any
+    old_csv = current_app.data.db.fichiers.find_one({
+        'lien_participation': participation_id,
+        'titre': csv_name,
+    })
+    if old_csv:
+        delete_fichier_and_s3(old_csv)
+
+    # Regenerate CSV
+    csv_data = generate_observations_csv(participation_id)
+    upload_observations_csv(participation_id, csv_name, csv_data)
+
+
+@task
 def email_observations_csv(participation_id, recipient, subject, body):
     csv_name, csv_data = ensure_observations_csv_is_available(participation_id)
 
@@ -154,17 +169,6 @@ def email_observations_csv(participation_id, recipient, subject, body):
                 bytearray(zip_data.getvalue())
             )
 
-    # Save the CSV in datastore
-    if TASK_PARTICIPATION_DATASTORE_CACHE:
-        participation_datastore = '%s/%s' % (TASK_PARTICIPATION_DATASTORE_CACHE, participation_id)
-        if not os.path.exists(participation_datastore):
-            os.mkdir(participation_datastore)
-        csv_datastore_path = '%s/%s' % (participation_datastore, attachement[0])
-        with open(csv_datastore_path, "wb") as fd:
-            fd.write(attachement[2])
-    else:
-        csv_datastore_path = None
-
     try:
         current_app.mail.send(
             recipient=recipient,
@@ -176,9 +180,8 @@ def email_observations_csv(participation_id, recipient, subject, body):
         # Consider the size limit is the issue, so send without attachement
 
         attachement_size_mo = float(len(attachement[2])) / (1024 ** 2)
-        body += "\n\nPS: Le CSV n'a pas pu être inclus car trop gros ({size:.2f}Mo zippé)\n".format(size=attachement_size_mo)
-        if csv_datastore_path:
-            body += "Vous pouvez contacter le support en indiquant le chemin du fichier sur le serveur: {path}\n".format(path=csv_datastore_path)
+        body += "\n\nPS: Le CSV n'a pas pu être inclus car trop gros ({size:.2f}Mo zippé).\n".format(size=attachement_size_mo)
+        body += "Vous pouvez y accéder depuis le bouton « Afficher les autres fichiers de traitement » de la page de la participation.\n"
 
         current_app.mail.send(
             recipient=recipient,
