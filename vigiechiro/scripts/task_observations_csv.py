@@ -65,7 +65,7 @@ def generate_observations_csv(participation_id):
     def fetch_taxon_libelle_court(id):
         nonlocal taxons_cache
         if id not in taxons_cache:
-            print('cache miss !', id)
+            print('Taxon cache miss !', id)
             taxon = taxons.find_one(id, auto_abort=False)
             if not taxon:
                 raise RuntimeError(f"Unknown taxon `{id}`")

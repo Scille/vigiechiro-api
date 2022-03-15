@@ -106,7 +106,9 @@ def _create_fichier(titre, mime, proprietaire, data_path=None, data_raw=None, fo
                'disponible': force_upload or TASK_PARTICIPATION_UPLOAD_GENERATED_FILES}
     payload.update(kwargs)
     if payload['disponible']:
-        payload['s3_id'] = s3_dir + titre + '.' + uuid4().hex
+        # Prefix with an uuid to ensure name uniqueness
+        unique_titre = uuid4().hex + "-" + titre
+        payload['s3_id'] = s3_dir + unique_titre
         # Upload the fichier to S3
         sign = _sign_request(verb='PUT', object_name=payload['s3_id'],
                              content_type=payload['mime'])
