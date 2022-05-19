@@ -11,6 +11,7 @@ from datetime import datetime
 from uuid import uuid4
 import csv
 import shutil
+import time
 import tempfile
 import subprocess
 import requests
@@ -28,6 +29,7 @@ from ..settings import (BACKEND_DOMAIN, SCRIPT_WORKER_TOKEN, TADARIDA_D_OPTS,
                         TASK_PARTICIPATION_MAX_RETRY, TASK_PARTICIPATION_UPLOAD_GENERATED_FILES,
                         TASK_PARTICIPATION_EXTRACT_BACKEND,
                         TASK_PARTICIPATION_GENERATE_OBSERVATION_CSV,
+                        TASK_PARTICIPATION_SETTLE_DB_SLEEP,
                         REQUESTS_TIMEOUT,
 )
 from ..resources.fichiers import (fichiers as f_resource,
@@ -413,6 +415,10 @@ def process_participation(participation_id, extra_pjs_ids=[], publique=True,
     mail_subject = "Votre participation vient d'être traitée !"
     if not notify_msg:
         notify_msg = mail_subject
+
+    # TODO: hack to try to have the data synced into the db before generating the observation csv...    
+    time.sleep(TASK_PARTICIPATION_SETTLE_DB_SLEEP)
+
     if TASK_PARTICIPATION_GENERATE_OBSERVATION_CSV:
         if notify_mail:
             email_observations_csv(participation_id, recipient=notify_mail, subject=mail_subject, body=notify_msg)
