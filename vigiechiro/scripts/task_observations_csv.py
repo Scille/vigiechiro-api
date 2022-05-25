@@ -119,13 +119,30 @@ def generate_observations_csv(participation_id):
 
 
 def ensure_observations_csv_is_available(participation_id):
-    # Try to find the csv if it is already computed
+    participation_id = ObjectId(participation_id)
     csv_name = generate_csv_name(participation_id)
-    csv_data = retrieve_observations_csv(participation_id, csv_name)
-    if not csv_data:
-        # CSV not available, compute it
-        csv_data = generate_observations_csv(participation_id)
-        upload_observations_csv(participation_id, csv_name, csv_data)
+
+    # TEMPORARY FIX: currently csv are sometime generated without data, so
+    # forcing regeranation by using the sending by email function is convenient
+
+    # Retrieve and remove the previous observation file if any
+    old_csv = current_app.data.db.fichiers.find_one({
+        'lien_participation': participation_id,
+        'titre': csv_name,
+    })
+    if old_csv:
+        delete_fichier_and_s3(old_csv)
+    # Regenerate CSV
+    csv_data = generate_observations_csv(participation_id)
+    upload_observations_csv(participation_id, csv_name, csv_data)
+
+    # # Try to find the csv if it is already computed
+    # csv_name = generate_csv_name(participation_id)
+    # csv_data = retrieve_observations_csv(participation_id, csv_name)
+    # if not csv_data:
+    #     # CSV not available, compute it
+    #     csv_data = generate_observations_csv(participation_id)
+    #     upload_observations_csv(participation_id, csv_name, csv_data)
     return csv_name, csv_data
 
 
