@@ -83,6 +83,7 @@ MAIL_DEBUG = environ.get('MAIL_DEBUG', 'false').lower() == 'true'
 MAIL_USERNAME = environ.get('MAIL_USERNAME')
 MAIL_PASSWORD = environ.get('MAIL_PASSWORD')
 MAIL_DEFAULT_SENDER = environ.get('MAIL_DEFAULT_SENDER')
+MAIL_MODE = environ.get('MAIL_MODE')
 
 TASK_PARTICIPATION_BATCH_SIZE = int(environ.get('TASK_PARTICIPATION_BATCH_SIZE', 100))
 TASK_PARTICIPATION_KEEP_TMP_DIR = environ.get('TASK_PARTICIPATION_KEEP_TMP_DIR', 'false').lower() == 'true'
