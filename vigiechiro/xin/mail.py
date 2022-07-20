@@ -27,7 +27,7 @@ class Mail:
             self._send_ssl(recipient, msg)
         else:
             assert self.app.config["MAIL_MODE"].lower() == "tls"
-            self._send_ssl(recipient, msg)
+            self._send_tls(recipient, msg)
 
     def _send_ssl(self, recipient, msg):
         with smtplib.SMTP(host=self.app.config["MAIL_SERVER"], port=self.app.config["MAIL_PORT"]) as server:
