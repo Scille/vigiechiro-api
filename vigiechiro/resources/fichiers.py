@@ -178,7 +178,7 @@ def _sign_request(**kwargs):
         s3_path += '?' + sign_head
     s3_request = "{}\n{}\n{}\n{}\n{}{}".format(
         verb, content_md5, content_type, expires, amz_headers, s3_path)
-    signature = base64.encodestring(hmac.new(
+    signature = base64.encodebytes(hmac.new(
             current_app.config['AWS_SECRET_ACCESS_KEY'].encode(),
             s3_request.encode(),
             sha1).digest())
