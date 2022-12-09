@@ -6,24 +6,21 @@
 #
 authomatic==1.0.0
     # via -r requirements.in
-blinker==1.4
-    # via flask-mail
-certifi==2021.5.30
+certifi==2022.12.7
     # via requests
 charset-normalizer==2.0.3
     # via requests
 click==7.1.2
     # via flask
-flask-cache==0.13.1
-    # via -r requirements.in
-flask-pymongo==0.5.2
-    # via -r requirements.in
 flask==1.1.4
     # via
     #   -r requirements.in
     #   flask-cache
-    #   flask-mail
     #   flask-pymongo
+flask-cache==0.13.1
+    # via -r requirements.in
+flask-pymongo==0.5.2
+    # via -r requirements.in
 gunicorn==19.10.0
     # via -r requirements.in
 idna==3.2
