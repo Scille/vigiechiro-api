@@ -1,2 +1,1 @@
-pytest~=2.8
-pip-tools
+pytest~=3.0
