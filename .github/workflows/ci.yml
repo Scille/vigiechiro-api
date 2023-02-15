@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master", "prod" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  node-version: 4.5.0
+
+jobs:
+
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mongo:
+        # Docker Hub image
+        image: mongo
+        ports:
+          - "27017:27017"
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Build
+      run: |
+        set -eux
+        python -m venv venv
+        . ./venv/bin/activate
+        pip install -r requirements.txt
+        pip install -e .
+        pip install -r dev-requirements.txt
+        # Install R stuff (but nobody ain't no time for this !)
+        # echo 'options(repos=structure(c(CRAN="http://cran.r-project.org")))' > ~/.Rprofile
+        # export R_LIBS_USER=$HOME/Rlib && mkdir $R_LIBS_USER
+        # Rscript ./init.r
+
+    - name: Tests
+      run: |
+        set -eux
+        . ./venv/bin/activate
+        nohup bash -c "./runserver.py 2>&1 &" && sleep 1
+        # Desactivate tests on tadarida (R is soooo lame...)
+        echo YES | ./run_tests.py tests -v --runslow
+        # echo YES | ./run_tests.py tests -v --runslow --with-r-support
+        # cd docs && make doctest
+      env:
+        DEV_FAKE_AUTH: true
+        DEV_FAKE_S3_URL: http://localhost:8000
+        TADARIDAC_LEARNER_URL: https://s3-eu-west-1.amazonaws.com/vigie-chiro-site/ClassifEsp.learner
+
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: tests
+
+    if: ${{ github.ref == 'refs/heads/prod' || github.ref == 'refs/heads/master' }}
+
+    # Fake ternary, see https://github.com/actions/runner/issues/409#issuecomment-752775072
+    environment: ${{ ( github.ref == 'refs/heads/prod' && 'prod' ) || 'test' }}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Deploy
+      run: |
+        # /!\ Don't add `set -eux` here to avoid leaking secrets in the logs !
+
+        # Used to be needed in when we used Codeship CI, but let's keep it just in case...
+        # IN2P3_IP=`curl 'https://toolbox.googleapps.com/apps/dig/lookup?domain=cca7.lbd.in2p3.fr&type=A&nameserver=' | tr '\n' ' ' | sed -r 's/.* ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}).*/\1/'`
+        # echo "found in2p3 IP to be $IN2P3_IP"
+
+        # cleaning the dir before rsync
+        git rev-parse HEAD > COMMIT
+
+        # Yeah, in2p3 doesn't support .ssh/authorized_keys, so we have to hack with sshpass...
+        rsync --rsh="/usr/bin/sshpass -p ${{ secrets.IN2P3_SSH_PASSWORD }} -- \
+          ssh -o StrictHostKeyChecking=no -l ${{ secrets.IN2P3_SSH_LOGIN }}"  \
+          -avz --delete --delete-after --exclude="__pycache__" --exclude=".git" \
+          . \
+          ${{ secrets.IN2P3_SSH_LOGIN }}@cca7.in2p3.fr:'$HOME/${{ vars.DEPLOY_DIR }}/vigiechiro-api'
