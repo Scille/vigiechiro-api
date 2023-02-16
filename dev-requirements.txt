@@ -1,4 +1,1 @@
-pytest~=2.8
-autopep8
-sphinx
-pip-tools
+pytest~=3.0
