@@ -131,11 +131,13 @@ def get_file_from_s3(fichier, data_path=None):
         else:
             return None
 
-    with open(data_path, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk: # filter out keep-alive new chunks
-                f.write(chunk)
-                f.flush()
+    if 200 <= r.status_code < 300:
+        with open(data_path, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk: # filter out keep-alive new chunks
+                    f.write(chunk)
+                    f.flush()
+
     return r
 
 
