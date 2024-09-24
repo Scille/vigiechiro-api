@@ -814,7 +814,7 @@ class Participation:
         titre = 'participation-%s-logs' % (self.participation['_id'])
         new_logs = _create_fichier(titre, 'text/plain',
                                    self.participation['observateur'],
-                                   data_raw=str(logger.LOGS),
+                                   data_raw=str(logger.LOGS).encode('utf-8'),
                                    lien_participation=self.participation['_id'],
                                    force_upload=True)
         old_logs = self.participation.get('logs')
