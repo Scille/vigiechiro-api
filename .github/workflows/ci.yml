@@ -81,11 +81,12 @@ jobs:
         git rev-parse HEAD > COMMIT
 
         # Yeah, in2p3 doesn't support .ssh/authorized_keys, so we have to hack with sshpass...
-        rsync --rsh="/usr/bin/sshpass -p $IN2P3_SSH_PASSWORD -- \
+        # (`sshpass -e` means the password will loacated in the `SSHPASS` env var)
+        rsync --rsh="/usr/bin/sshpass -e -- \
           ssh -v -o StrictHostKeyChecking=no -l ${{ vars.IN2P3_SSH_LOGIN }}"  \
           --verbose --archive --compress --delete --delete-after \
           --exclude="__pycache__" --exclude=".git" \
           . \
           ${{ vars.IN2P3_SSH_LOGIN }}@cca9.in2p3.fr:'$HOME/${{ vars.DEPLOY_DIR }}/vigiechiro-api'
       env:
-        IN2P3_SSH_PASSWORD: ${{ secrets.IN2P3_SSH_PASSWORD }}
+        SSHPASS: ${{ secrets.IN2P3_SSH_PASSWORD }}
