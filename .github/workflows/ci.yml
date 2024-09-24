@@ -87,6 +87,6 @@ jobs:
           --verbose --archive --compress --delete --delete-after \
           --exclude="__pycache__" --exclude=".git" \
           . \
-          ${{ vars.IN2P3_SSH_LOGIN }}@cca9.in2p3.fr:'$HOME/${{ vars.DEPLOY_DIR }}/vigiechiro-api'
+          ${{ vars.IN2P3_SSH_LOGIN }}@cca9.in2p3.fr:'${{ vars.DEPLOY_DIR }}/vigiechiro-api'
       env:
         SSHPASS: ${{ secrets.IN2P3_SSH_PASSWORD }}
