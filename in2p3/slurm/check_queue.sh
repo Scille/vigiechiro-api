@@ -26,7 +26,11 @@ COND_INIT_PATH=$MINICONDA3_DIR/etc/profile.d/conda.sh
 SELF_SCRIPT_PATH=$VIGIECHIRO_DIR/slurm/check_queue.sh
 WORKER_SCRIPT_PATH=$VIGIECHIRO_DIR/slurm/worker.sh
 WORKER_JOB_NAME="w-$VIGIECHIRO_ENV_NAME"
-WORKER_JOB_OPTIONS="--ntasks=8 --mem=16G --job-name=$WORKER_JOB_NAME"
+# Set max time (i.e. `--time` param) to 2 days, basically we have:
+# - 4% of jobs >5h
+# - 1% of jobs >12h
+# - Longest observed so far is 54h
+WORKER_JOB_OPTIONS="--time=2-00:00:00 --cpus-per-task=1 --mem=32GB --constraint el9 --job-name=$WORKER_JOB_NAME"
 
 function get_scheduled_workers() {
     echo "import subprocess
@@ -38,11 +42,9 @@ print(len([l for l in out.splitlines()[1:] if l.strip()]))
 " | python
 }
 
-
-
-# Run the script for 60 * 600 == 10 hours
+# Run the script for 60 * 120 == 2 hours
 # This is much lower than the default maximum time (i.e. 7 days)
-for i in `seq 600`
+for i in `seq 120`
 do
     PENDINGS=`python $VIGIECHIRO_DIR/vigiechiro-api/bin/queuer.py pendings`
     SCHEDULED_WORKERS=`get_scheduled_workers`
@@ -61,12 +63,26 @@ do
     else
         printf "[$(date)] no pending jobs\n"
     fi
+    # Remove core dump given they flood very fast the home directory
+    rm -fv $HOME/vigiechiro-prod/Tadarida-C/tadaridaC_src/core.*
     sleep 60
 done
 
-# Then reload itself to prevent beeing killed by quotas
+# Then reload itself to prevent being killed by quotas
 # note: Couldn't use $(readlink -f $0) given slurm copy the
 # script in a temp folder before running it
 echo "[$(date)] restarting daemon"
+
+# --export option provides $VIGIECHIRO_DIR to the job process
 # --job-name=$SLURM_JOB_NAME seems broken, hence we must set this by using envvar
-SBATCH_JOB_NAME=$SLURM_JOB_NAME sbatch $SELF_SCRIPT_PATH
+# `--mem` `--time` and `--cpus-per-task` are rough estimates considering
+# `check_queue.sh` is a single small script restarting itself every 2h.
+#
+# /!\ This command must be similar than the one in `start_slurm_check_queue.sh` /!\
+SBATCH_JOB_NAME=$JOB_NAME sbatch \
+    --export=VIGIECHIRO_DIR \
+    --mem=100MB \
+    --time=0-04:00:00 \
+    --constraint el9 \
+    --cpus-per-task=1 \
+    $VIGIECHIRO_DIR/slurm/check_queue.sh
