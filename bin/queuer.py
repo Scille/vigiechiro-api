@@ -62,7 +62,7 @@ def main():
         if argv[1] == 'pendings' and len(argv) == 2:
             count = pending_jobs_count()
             print(count)
-            raise SystemExit(1 if count == 0 else 0)
+            raise SystemExit(0)
         elif argv[1] == 'info':
             if len(argv) == 2:
                 data = pending_jobs_info()
@@ -80,15 +80,18 @@ def main():
                 if argv[1] == 'submit':
                     job_id = submit_job(task, participation_id)
                     print('Submitted job %s' % job_id)
-                    return
+                    raise SystemExit(0)
                 else:
-                    return context(task)(participation_id)
+                    context(task)(participation_id)
+                    raise SystemExit(0)
         elif argv[1] == 'consume' and len(argv) == 3:
             if argv[2] == 'next_job':
-                return context(queuer.execute_next_job)()
+                context(queuer.execute_next_job)()
+                raise SystemExit(0)
             else:
                 job_id = ObjectId(argv[2])
-                return context(queuer.execute_job)(job_id)
+                context(queuer.execute_job)(job_id)
+                raise SystemExit(0)
     raise SystemExit(USAGE)
 
 

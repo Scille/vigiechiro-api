@@ -24,3 +24,8 @@ COND_INIT_PATH=$MINICONDA3_DIR/etc/profile.d/conda.sh
 . $VIGIECHIRO_DIR/init.env
 
 python $VIGIECHIRO_DIR/vigiechiro-api/bin/queuer.py consume next_job
+if ( [ $? -ne 0 ] )
+then
+    printf "[$(date)] command `python $VIGIECHIRO_DIR/vigiechiro-api/bin/queuer.py consume next_job` has failed\n"
+    exit 1
+fi

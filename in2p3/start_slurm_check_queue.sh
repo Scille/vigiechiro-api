@@ -21,5 +21,10 @@ SBATCH_JOB_NAME=$JOB_NAME sbatch \
     --constraint el9 \
     --cpus-per-task=1 \
     $VIGIECHIRO_DIR/slurm/check_queue.sh
+if ( [ $? -ne 0 ] )
+then
+    printf "[$(date)] Command `sbatch [...] $VIGIECHIRO_DIR/slurm/check_queue.sh` has failed :(\n"
+    exit 1
+fi
 
 popd

@@ -259,10 +259,10 @@ def participation_generate_bilan(participation_id):
                        json={'bilan': bilan.generate_payload()}, auth=AUTH,
                        timeout=REQUESTS_TIMEOUT)
     if r.status_code != 200:
-        logger.error('Cannot update bilan for participation {}, error {} : {}'.format(
-            participation_id, r.status_code, r.text))
-        return 1
-    return 0
+        raise RuntimeError(
+            'Cannot update bilan for participation {}, error {} : {}'.format(
+                participation_id, r.status_code, r.text)
+        )
 
 
 def extract_zipped_files_in_participation(participation):
@@ -402,11 +402,13 @@ def process_participation(participation_id, extra_pjs_ids=[], publique=True,
             traitement['retry'] = retry_count + 1
             traitement['date_fin'] = datetime.utcnow()
             traitement['message'] = msg
+            p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
         else:
             traitement['etat'] = 'ERREUR'
             traitement['date_fin'] = datetime.utcnow()
             traitement['message'] = msg
-        p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
+            p_resource.update(participation_id, {'traitement': traitement}, auto_abort=False)
+            raise
     else:
         traitement['etat'] = 'FINI'
         traitement['date_fin'] = datetime.utcnow()

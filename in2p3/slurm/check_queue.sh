@@ -47,6 +47,12 @@ print(len([l for l in out.splitlines()[1:] if l.strip()]))
 for i in `seq 120`
 do
     PENDINGS=`python $VIGIECHIRO_DIR/vigiechiro-api/bin/queuer.py pendings`
+    if ( [ $? -ne 0 ] )
+    then
+        printf "[$(date)] command `python $VIGIECHIRO_DIR/vigiechiro-api/bin/queuer.py pendings` has failed, exiting\n"
+        exit 1
+    fi
+
     SCHEDULED_WORKERS=`get_scheduled_workers`
     NEEDED_TO_START=$(($PENDINGS - $SCHEDULED_WORKERS))
     if ( [ "$NEEDED_TO_START" -gt 0 ] )
@@ -59,6 +65,11 @@ do
         pushd $LOG_FOLDER
         # --job-name=$WORKER_JOB_NAME seems broken, hence we must set this by using envvar
         SBATCH_JOB_NAME=$WORKER_JOB_NAME sbatch $WORKER_JOB_OPTIONS $WORKER_SCRIPT_PATH
+        if ( [ $? -ne 0 ] )
+        then
+            printf "[$(date)] command `sbatch $WORKER_JOB_OPTIONS $WORKER_SCRIPT_PATH` has failed, exiting\n"
+            exit 1
+        fi
         popd
     else
         printf "[$(date)] no pending jobs\n"
@@ -86,3 +97,8 @@ SBATCH_JOB_NAME=$JOB_NAME sbatch \
     --constraint el9 \
     --cpus-per-task=1 \
     $VIGIECHIRO_DIR/slurm/check_queue.sh
+if ( [ $? -ne 0 ] )
+then
+    printf "[$(date)] Auto-restart has failed :(\n"
+    exit 1
+fi
