@@ -9,7 +9,7 @@ import re
 from flask import request, g, current_app
 from bson import ObjectId
 from datetime import datetime
-from collections import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
 from .tools import str_to_date, parse_id
 from .snippets import get_resource
