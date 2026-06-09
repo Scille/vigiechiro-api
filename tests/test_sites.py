@@ -3,15 +3,13 @@ from bson import ObjectId
 from datetime import datetime
 
 from .common import db, administrateur, observateur, format_datetime
-from .test_grille_stoc import grille_stoc
 from .test_protocoles import protocoles_base, protocole_point_fixe
 from .test_taxons import taxons_base
 
 
 @pytest.fixture
-def obs_sites_base(request, protocoles_base, observateur, administrateur):
-    # Who knows why, cannot use grille_stoc as fixture...
-    grilles = grille_stoc(request)
+def obs_sites_base(request, protocoles_base, observateur, administrateur, grille_stoc):
+    grilles = grille_stoc
     protocole_id = str(protocoles_base[1]['_id'])
     # Register the observateur to a protocole
     r = observateur.put('/moi/protocoles/{}'.format(protocole_id))
@@ -191,9 +189,9 @@ def test_create_custom_name_site(administrateur, observateur, protocoles_base):
     assert r.status_code == 201, r.text
     assert r.json()['titre'] == 'custom-title'
 
-def test_same_grille_stoc_site(administrateur, protocole_point_fixe):
+def test_same_grille_stoc_site(administrateur, protocole_point_fixe, grille_stoc):
     protocole, taxon = protocole_point_fixe
-    grilles = grille_stoc()
+    grilles = grille_stoc
     # Register & validate admin in protocole
     protocole_id = str(protocole['_id'])
     r = administrateur.put('/moi/protocoles/{}'.format(protocole_id))

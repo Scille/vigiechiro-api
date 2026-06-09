@@ -1,31 +1,4 @@
-import pytest
-
-from .common import db, observateur
-
-
-@pytest.fixture
-def clean_grille_stoc(request):
-    def finalizer():
-        db.grille_stoc.remove()
-    request.addfinalizer(finalizer)
-
-
-@pytest.fixture
-def grille_stoc(request=None):
-    grille = [
-        {"centre" : {"type" : "Point", "coordinates" : [2.551195605, 51.0423964]}, "numero" : "590017"},
-        {"centre" : {"type" : "Point", "coordinates" : [2.181529126, 51.0245531]}, "numero" : "590018"},
-        {"centre" : {"type" : "Point", "coordinates" : [2.209959021, 51.02458538]}, "numero" : "590019"},
-        {"centre" : {"type" : "Point", "coordinates" : [2.238388948, 51.02461118]}, "numero" : "590020"},
-        {"centre" : {"type" : "Point", "coordinates" : [2.266818902, 51.0246305]}, "numero" : "590021"}
-    ]
-    for cell in grille:
-        db.grille_stoc.insert(cell)
-    def finalizer():
-        db.grille_stoc.remove()
-    if request:
-        request.addfinalizer(finalizer)
-    return grille
+from .common import observateur
 
 
 def test_grille_lookup(observateur, grille_stoc):
